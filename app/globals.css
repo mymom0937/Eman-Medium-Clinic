@@ -1,26 +1,255 @@
 @import "tailwindcss";
 
+/* Light Theme (Default) */
 :root {
+  /* Base colors */
   --background: #ffffff;
   --foreground: #171717;
+  --card-bg: #f8fafc;
+  --card-border: #e2e8f0;
+  
+  /* Text colors */
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  
+  /* Border colors */
+  --border-color: #e2e8f0;
+  --border-focus: #3b82f6;
+  
+  /* Accent colors */
+  --accent-color: #00D4AA;
+  --accent-hover: #00b894;
+  
+  /* Status colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+  
+  /* Medical theme colors */
+  --medical-primary: #2563eb;
+  --medical-secondary: #059669;
+  --medical-accent: #dc2626;
+  --medical-neutral: #6b7280;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+/* Dark Theme */
+.dark {
+  /* Base colors */
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --card-bg: #1e293b;
+  --card-border: #334155;
+  
+  /* Text colors */
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  
+  /* Border colors */
+  --border-color: #334155;
+  --border-focus: #60a5fa;
+  
+  /* Accent colors */
+  --accent-color: #00D4AA;
+  --accent-hover: #00b894;
+  
+  /* Status colors */
+  --success: #22c55e;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --info: #60a5fa;
+  
+  /* Medical theme colors */
+  --medical-primary: #3b82f6;
+  --medical-secondary: #10b981;
+  --medical-accent: #ef4444;
+  --medical-neutral: #9ca3af;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.3);
+}
+
+/* Color scheme variations */
+[data-color-scheme="medical"] {
+  --accent-color: var(--medical-primary);
+  --accent-hover: #1d4ed8;
+}
+
+/* Ensure theme variables are applied */
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+[data-color-scheme="modern"] {
+  --accent-color: #7c3aed;
+  --accent-hover: #6d28d9;
+}
+
+[data-color-scheme="classic"] {
+  --accent-color: #1f2937;
+  --accent-hover: #111827;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border-color);
+  --color-border-focus: var(--border-focus);
+  --color-accent: var(--accent-color);
+  --color-accent-hover: var(--accent-hover);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Base styles */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--card-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Focus styles */
+*:focus {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* Selection styles */
+::selection {
+  background: var(--accent-color);
+  color: white;
+}
+
+/* Toast notifications */
+.toast-notification {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Loading states */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Disabled states */
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Utility classes for theme-aware components */
+.bg-theme-background {
+  background-color: var(--background);
+}
+
+.bg-theme-card {
+  background-color: var(--card-bg);
+}
+
+.text-theme-primary {
+  color: var(--text-primary);
+}
+
+.text-theme-secondary {
+  color: var(--text-secondary);
+}
+
+.text-theme-muted {
+  color: var(--text-muted);
+}
+
+.border-theme {
+  border-color: var(--border-color);
+}
+
+.border-theme-focus {
+  border-color: var(--border-focus);
+}
+
+/* Animation utilities */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }

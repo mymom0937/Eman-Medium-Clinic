@@ -1,0 +1,112 @@
+import { NextRequest, NextResponse } from 'next/server';
+import clientPromise from '@/lib/config/db/connection';
+import { Patient } from '@/types/patient';
+
+export async function GET(request: NextRequest) {
+  try {
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    
+    const skip = (page - 1) * limit;
+    
+    // Build query
+    const query: any = {};
+    if (search) {
+      query.$or = [
+        { patientId: { $regex: search, $options: 'i' } },
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+      ];
+    }
+    
+    const patients = await db
+      .collection('patients')
+      .find(query)
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+    
+    const total = await db.collection('patients').countDocuments(query);
+    
+    return NextResponse.json({
+      success: true,
+      data: patients,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching patients:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch patients' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const client = await clientPromise;
+    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    
+    const body = await request.json();
+    
+    // Validate required fields
+    const requiredFields = ['firstName', 'lastName', 'phone'];
+    for (const field of requiredFields) {
+      if (!body[field]) {
+        return NextResponse.json(
+          { success: false, error: `Missing required field: ${field}` },
+          { status: 400 }
+        );
+      }
+    }
+    
+    // Generate unique patient ID
+    const lastPatient = await db
+      .collection('patients')
+      .findOne({}, { sort: { patientId: -1 } });
+    
+    const lastId = lastPatient ? parseInt(lastPatient.patientId.slice(3)) : 0;
+    const newId = lastId + 1;
+    const patientId = `PAT${newId.toString().padStart(6, '0')}`;
+    
+    const patient: Omit<Patient, '_id'> = {
+      patientId,
+      firstName: body.firstName,
+      lastName: body.lastName,
+      phone: body.phone,
+      email: body.email || '',
+      dateOfBirth: body.dateOfBirth || null,
+      gender: body.gender || '',
+      address: body.address || '',
+      emergencyContact: body.emergencyContact || '',
+      medicalHistory: body.medicalHistory || '',
+      allergies: body.allergies || [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    const result = await db.collection('patients').insertOne(patient);
+    
+    return NextResponse.json({
+      success: true,
+      data: { ...patient, _id: result.insertedId },
+    });
+  } catch (error) {
+    console.error('Error creating patient:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to create patient' },
+      { status: 500 }
+    );
+  }
+} 

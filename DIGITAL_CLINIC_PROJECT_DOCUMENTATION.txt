@@ -1,0 +1,395 @@
+# Digital Clinic Management Web Application - Project Documentation
+
+## 1. Project Overview
+
+This document outlines the requirements, business context, and technical approach for developing a digital clinic management web application for a client operating between Worabe and Dalocha, Southern Ethiopia. The goal is to digitalize and streamline the clinic's drug inventory, sales, and patient management, enabling remote supervision and real-time insights for the clinic owner.
+
+---
+
+## 2. Business Context & Problem Statement
+
+- **Location:**
+  - Owner resides in Worabe, Southern Ethiopia.
+  - Clinic is located in Dalocha, Southern Ethiopia (95km from Worabe).
+- **Staff:**
+  - 1 Nurse (conducts initial patient assessment and orders drugs based on lab results)
+  - 1 Laboratorist (performs patient checkups and provides test results)
+  - 1 Pharmacist (manages drug inventory, handles sales, and processes payments)
+- **Current Workflow:**
+  - Owner supplies drugs from Worabe to Dalocha (sometimes personally delivers).
+  - Patient visits start with Nurse conducting initial assessment and documenting patient case.
+  - Nurse sends patient case to Laboratorist for medical checkup and testing.
+  - Laboratorist performs tests and sends results back to Nurse.
+  - Nurse reviews lab results and orders appropriate drugs for the patient.
+  - Patient purchases drugs from Pharmacist who handles both inventory and payments.
+- **Challenges:**
+  - Manual tracking is error-prone and time-consuming.
+  - Owner lacks real-time visibility and control over sales, inventory, cash flow, and patient records.
+  - No remote access to business data or performance.
+  - Patient records are not centralized, leading to duplicate IDs and inefficiency.
+  - Communication between Nurse and Laboratorist is not digitized.
+
+---
+
+## 3. Project Goals & Objectives
+
+- **Digitalize** the clinic's drug inventory, sales, and patient management.
+- **Enable remote supervision** for the owner (super admin) via a secure web application.
+- **Automate** sales, inventory, cash, and patient record tracking.
+- **Streamline patient workflow** from initial assessment to drug purchase.
+- **Provide real-time insights** into:
+  - Drugs sold
+  - Remaining stock
+  - Total money collected
+  - Drugs needing restock
+  - Patient visit history and records
+  - Nurse-Laboratorist communication and test results
+- **Improve accuracy, transparency, and efficiency** of clinic operations.
+
+---
+
+## 4. Key Features & Functional Requirements
+
+### 4.1. User Roles
+- **Super Admin (Owner):**
+  - Full access to all data and controls
+  - Can monitor sales, inventory, cash flow, and patient records remotely
+  - Can manage users (nurse, laboratorist, pharmacist)
+  - Can view patient workflow from assessment to drug purchase
+- **Nurse:**
+  - Conducts initial patient assessment and documents patient case
+  - Sends patient case to Laboratorist for testing
+  - Receives and reviews lab results from Laboratorist
+  - Orders drugs for patients based on lab results
+  - Manages patient records (add new patients, update existing records, search by patient ID)
+  - Views patient visit history and treatment plans
+- **Laboratorist:**
+  - Receives patient cases from Nurse
+  - Performs medical checkups and tests based on patient documentation
+  - Sends test results back to Nurse digitally
+  - Manages test records and lab reports
+  - Views patient test history and results
+- **Pharmacist:**
+  - Manages drug inventory (add, update, remove drugs)
+  - Handles drug sales and processes payments (combined role)
+  - Views stock levels and generates restock requests
+  - Processes drug orders from Nurse
+  - Manages drug dispensing and payment collection
+  - Views sales and payment history
+
+### 4.2. Core Modules
+- **Authentication & Authorization:**
+  - Secure login for all users (Clerk integration)
+  - Role-based access control
+- **Patient Workflow Management:**
+  - Initial patient assessment by Nurse
+  - Digital communication between Nurse and Laboratorist
+  - Lab result management and review
+  - Drug ordering based on lab results
+  - Drug dispensing and payment processing
+- **Drug Inventory Management:**
+  - Add, update, and remove drugs
+  - Track stock levels in real-time
+  - Upload drug images (Cloudinary integration)
+- **Sales Management:**
+  - Record each drug sale (linked to inventory, payment, and patient)
+  - View sales history and analytics
+- **Cash Management:**
+  - Record payments received
+  - Track total money collected
+- **Patient Records Management:**
+  - Register new patients with unique patient ID (auto-generated and stored in DB)
+  - Retrieve existing patient records by ID or name
+  - View patient visit and purchase history
+  - Prevent duplicate patient IDs
+  - Update patient information as needed
+  - Track patient assessment, lab results, and treatment plans
+- **Lab Results Management:**
+  - Digital communication between Nurse and Laboratorist
+  - Test result documentation and storage
+  - Lab report generation and review
+- **Reporting & Dashboard:**
+  - Real-time dashboard for super admin
+  - Sales, inventory, cash flow, patient, and lab analytics
+  - Low-stock and restock alerts
+  - Patient workflow tracking
+
+### 4.3. Additional Recommended Features (Best Practices)
+- **Audit Logs:** Track all critical actions (e.g., inventory changes, patient record edits, lab results) for accountability.
+- **Data Export:** Allow exporting reports (sales, inventory, patient lists, lab results) to Excel/CSV for offline analysis.
+- **Search & Filter:** Advanced search and filtering for drugs, sales, patients, and lab results.
+- **Data Backup & Recovery:** Regular automated backups of all critical data.
+- **Mobile Responsiveness:** Ensure the app works well on tablets and smartphones for staff convenience.
+- **Notifications:** (Optional/Future) Email/SMS alerts for low stock, restock needs, lab results, or important events.
+
+---
+
+## 5. Technology Stack
+
+- **Frontend:**
+  - Next.js (React framework)
+  - TailwindCSS (UI styling)
+  - TypeScript
+- **Authentication:**
+  - Clerk (user authentication and management)
+- **Backend & Database:**
+  - Next.js API routes
+  - MongoDB Atlas (cloud database)
+- **Image Storage:**
+  - Cloudinary (drug images)
+- **Patient Records:**
+  - Stored securely in MongoDB Atlas, linked to sales, inventory, and lab modules
+
+---
+
+## 6. Recommended Project Folder Structure
+
+### 6.1. Root Directory Structure
+```
+eman-clinic/
+├── .env.local                    # Environment variables
+├── .env.example                  # Environment variables template
+├── .gitignore                    # Git ignore rules
+├── package.json                  # Dependencies and scripts
+├── tsconfig.json                 # TypeScript configuration
+├── tailwind.config.js            # Tailwind CSS configuration
+├── next.config.js                # Next.js configuration
+├── README.md                     # Project documentation
+├── public/                       # Static assets
+│   ├── images/
+│   ├── icons/
+│   └── favicon.ico
+├── app/                          # Next.js app router
+├── components/                   # Reusable components
+├── lib/                          # Utility libraries
+├── types/                        # TypeScript type definitions
+├── hooks/                        # Custom React hooks
+├── constants/                    # Application constants
+├── styles/                       # Global styles
+└── docs/                         # Additional documentation
+```
+
+### 6.2. Detailed Source Code Structure
+
+#### 6.2.1. App Router Structure (`app/`)
+```
+app/
+├── (auth)/                       # Route groups for authentication
+│   ├── sign-in/
+│   └── sign-up/
+├── (dashboard)/                  # Route groups for dashboard
+│   ├── dashboard/
+│   ├── inventory/
+│   ├── sales/
+│   ├── patients/
+│   ├── payments/
+│   ├── lab-results/
+│   └── reports/
+├── api/                          # API routes
+│   ├── auth/
+│   ├── drugs/
+│   ├── sales/
+│   ├── patients/
+│   ├── payments/
+│   ├── lab-results/
+│   ├── upload/
+│   └── webhooks/
+├── globals.css                   # Global styles
+├── layout.tsx                    # Root layout
+├── page.tsx                      # Home page
+├── loading.tsx                   # Loading UI
+├── error.tsx                     # Error UI
+└── not-found.tsx                 # 404 page
+```
+
+#### 6.2.2. Components Structure (`components/`)
+```
+components/
+├── ui/                           # Base UI components
+├── layout/                       # Layout components
+├── dashboard/                    # Dashboard-specific components
+├── inventory/                    # Inventory-specific components
+├── sales/                        # Sales-specific components
+├── patients/                     # Patient-specific components
+├── lab-results/                  # Lab results components
+├── forms/                        # Reusable form components
+├── data-display/                 # Data display components
+└── common/                       # Common utility components
+```
+
+#### 6.2.3. Library Structure (`lib/`)
+```
+lib/
+├── auth/                        # Authentication utilities
+├── db/                          # Database utilities
+│   ├── models/                  # Database models
+│   └── schemas/                 # Database schemas
+├── utils/                       # Utility functions
+├── services/                    # Business logic services
+├── hooks/                       # Custom React hooks
+└── config/                      # Configuration files
+```
+
+#### 6.2.4. Types Structure (`types/`)
+```
+types/
+├── auth.ts                      # Authentication types
+├── drug.ts                      # Drug-related types
+├── sale.ts                      # Sale-related types
+├── patient.ts                   # Patient-related types
+├── payment.ts                   # Payment-related types
+├── lab-result.ts                # Lab result types
+├── user.ts                      # User-related types
+├── api.ts                       # API response types
+├── common.ts                    # Common shared types
+└── index.ts                     # Export all types
+```
+
+#### 6.2.5. Constants Structure (`constants/`)
+```
+constants/
+├── routes.ts                    # Application routes
+├── api-endpoints.ts             # API endpoints
+├── user-roles.ts                # User role definitions
+├── drug-categories.ts           # Drug categories
+├── payment-methods.ts           # Payment methods
+├── lab-test-types.ts            # Lab test categories
+├── status-codes.ts              # Status codes
+├── validation-rules.ts          # Validation rules
+└── ui-constants.ts              # UI constants
+```
+
+### 6.3. Best Practices for Code Organization
+
+#### 6.3.1. File Naming Conventions
+- **Components:** PascalCase (e.g., `DrugCard.tsx`)
+- **Hooks:** camelCase with `use` prefix (e.g., `useDrugs.ts`)
+- **Utilities:** camelCase (e.g., `formatDate.ts`)
+- **Types:** camelCase (e.g., `drugTypes.ts`)
+- **Constants:** camelCase (e.g., `apiEndpoints.ts`)
+- **API routes:** kebab-case (e.g., `drug-inventory/route.ts`)
+
+#### 6.3.2. Import Organization
+1. React and Next.js imports
+2. Third-party library imports
+3. Internal imports (alphabetical order)
+
+#### 6.3.3. Component Structure
+1. Imports
+2. Types/Interfaces
+3. Component definition
+4. Hooks
+5. Event handlers
+6. Render method
+
+#### 6.3.4. API Route Structure
+- Consistent error handling
+- Input validation
+- Proper HTTP status codes
+- Type-safe responses
+
+### 6.4. Environment Variables Structure
+```bash
+# Database
+MONGODB_URI=your_mongodb_connection_string
+MONGODB_DB_NAME=eman_clinic
+
+# Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# Application
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NODE_ENV=development
+```
+
+### 6.5. Key Benefits of This Structure
+
+1. **Scalability:** Easy to add new features and modules
+2. **Maintainability:** Clear separation of concerns
+3. **Readability:** Consistent patterns and organization
+4. **Type Safety:** Comprehensive TypeScript integration
+5. **Performance:** Optimized imports and code splitting
+6. **Developer Experience:** Clear file locations and naming conventions
+
+---
+
+## 7. High-Level System Architecture
+
+- **Frontend (Next.js):**
+  - Responsive web app for all user roles
+  - Role-based UI and navigation
+- **Backend (API routes):**
+  - RESTful endpoints for inventory, sales, payments, patient records, lab results, and user management
+- **Database (MongoDB Atlas):**
+  - Collections: Users, Drugs, Sales, Payments, Patients, LabResults
+- **Image Storage (Cloudinary):**
+  - Secure upload and retrieval of drug images
+- **Authentication (Clerk):**
+  - Secure, role-based access for all users
+
+---
+
+## 8. User Stories
+
+- **As a Super Admin (Owner):**
+  - I want to log in securely and view real-time sales, inventory, cash flow, and patient records from anywhere.
+  - I want to see which drugs are sold, which are in stock, which need restocking, and which patients have visited.
+  - I want to track the complete patient workflow from assessment to drug purchase.
+  - I want to manage staff access and permissions.
+- **As a Nurse:**
+  - I want to conduct initial patient assessments and document patient cases.
+  - I want to send patient cases to the Laboratorist for testing.
+  - I want to receive and review lab results from the Laboratorist.
+  - I want to order drugs for patients based on lab results.
+  - I want to register new patients and retrieve existing patient records by ID.
+  - I want to view patient visit history and treatment plans.
+- **As a Laboratorist:**
+  - I want to receive patient cases from the Nurse.
+  - I want to perform medical checkups and tests based on patient documentation.
+  - I want to send test results back to the Nurse digitally.
+  - I want to manage test records and lab reports.
+  - I want to view patient test history and results.
+- **As a Pharmacist:**
+  - I want to add new drugs, update stock, and handle sales and payments.
+  - I want to see alerts for low-stock drugs.
+  - I want to process drug orders from the Nurse.
+  - I want to manage drug dispensing and payment collection.
+  - I want to view sales and payment history.
+
+---
+
+## 9. Security & Compliance
+
+- All user data and business information are protected via secure authentication (Clerk).
+- Sensitive operations are restricted by user roles.
+- All data is stored securely in MongoDB Atlas and Cloudinary.
+- Patient data is handled in compliance with privacy best practices (unique IDs, access control, audit logs).
+- Lab results and patient assessments are protected with appropriate access controls.
+
+---
+
+## 10. Future Enhancements (Optional)
+
+- SMS/email notifications for low stock, sales reports, lab results, or patient follow-ups
+- Multi-branch support for future expansion
+- Integration with accounting or ERP systems
+- Patient appointment scheduling and reminders
+- Integration with local health authority reporting
+- Advanced lab result analytics and trending
+
+---
+
+## 11. Conclusion
+
+This digital clinic management web application will modernize the client's business, providing real-time, remote control and insights, improving operational efficiency, and reducing manual errors. The new workflow with Nurse, Laboratorist, and Pharmacist roles ensures a streamlined patient experience from initial assessment to drug purchase. The proposed technology stack and folder structure ensure scalability, security, maintainability, and ease of use for all stakeholders.
+
+---
+
+*Prepared by: Seid E.*
+*Date: 7/28/2025* 

@@ -1,0 +1,118 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/utils/cn';
+import { ROUTES } from '@/constants/routes';
+import { USER_ROLES } from '@/constants/user-roles';
+
+interface SidebarProps {
+  userRole: string;
+  title?: string;
+  userName?: string;
+}
+
+const navigationItems = [
+  {
+    name: 'Dashboard',
+    href: ROUTES.DASHBOARD,
+    icon: '📊',
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.NURSE, USER_ROLES.LABORATORIST, USER_ROLES.PHARMACIST],
+  },
+  {
+    name: 'Patients',
+    href: ROUTES.PATIENTS,
+    icon: '👥',
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.NURSE, USER_ROLES.LABORATORIST],
+  },
+  {
+    name: 'Lab Results',
+    href: ROUTES.LAB_RESULTS,
+    icon: '🔬',
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.NURSE, USER_ROLES.LABORATORIST],
+  },
+  {
+    name: 'Drug Orders',
+    href: ROUTES.DRUG_ORDERS,
+    icon: '💊',
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.NURSE, USER_ROLES.PHARMACIST],
+  },
+  {
+    name: 'Inventory',
+    href: ROUTES.INVENTORY,
+    icon: '📦',
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.PHARMACIST],
+  },
+  {
+    name: 'Sales',
+    href: ROUTES.SALES,
+    icon: '💰',
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.PHARMACIST],
+  },
+  {
+    name: 'Payments',
+    href: ROUTES.PAYMENTS,
+    icon: '💳',
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.PHARMACIST],
+  },
+  {
+    name: 'Reports',
+    href: ROUTES.REPORTS,
+    icon: '📈',
+    roles: [USER_ROLES.SUPER_ADMIN],
+  },
+];
+
+export function Sidebar({ userRole, title, userName }: SidebarProps) {
+  const pathname = usePathname();
+
+  const filteredItems = navigationItems.filter(item => 
+    item.roles.includes(userRole as any)
+  );
+
+  return (
+    <div className="fixed left-0 w-24 lg:w-54 flex flex-col bg-gray-900 z-50" style={{ top: '3.5rem', height: 'calc(100vh - 3.5rem)' }}>
+      
+      <nav className="flex-1 space-y-1 px-1 lg:px-4 py-2 overflow-y-auto">
+        {filteredItems.map((item) => {
+          const isActive = pathname === item.href;
+          
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                'flex items-center px-2 lg:px-3 py-2 text-xs lg:text-sm font-medium rounded-md transition-colors',
+                isActive
+                  ? 'bg-gray-800 text-white'
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              )}
+              title={item.name}
+            >
+              <span className="mr-1 lg:mr-3 text-sm lg:text-lg">{item.icon}</span>
+              <span className="opacity-0 lg:opacity-100 transition-opacity">{item.name}</span>
+            </Link>
+          );
+        })}
+      </nav>
+      
+      <div className="border-t border-gray-700 p-2 lg:p-4 flex-shrink-0 bg-gray-900">
+        <div className="flex items-center">
+          <div className="flex-shrink-0">
+            <div className="h-6 w-6 lg:h-8 lg:w-8 rounded-full bg-gray-600 flex items-center justify-center">
+              <span className="text-xs lg:text-sm font-medium text-white">
+                {userRole.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          </div>
+          <div className="ml-2 lg:ml-3">
+            <p className="text-xs lg:text-sm font-medium text-white truncate opacity-0 lg:opacity-100 transition-opacity">
+              {userRole.replace('_', ' ')}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+} 
