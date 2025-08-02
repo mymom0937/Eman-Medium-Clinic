@@ -107,36 +107,36 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               {isSignedIn ? (
                 <Link href="/dashboard">
-                  <Button size="lg" className="text-lg px-8 py-4 bg-accent-color hover:bg-accent-hover text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
+                  <Button size="lg" className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
                     Access Dashboard
                   </Button>
                 </Link>
               ) : (
                 <>
                   <Link href="/sign-up">
-                    <Button size="lg" className="text-lg px-8 py-4 bg-accent-color hover:bg-accent-hover text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
+                    <Button size="lg" className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
                       Start Free Trial
                     </Button>
                   </Link>
                   <Link href="/sign-in">
-                    <Button variant="outline" size="lg" className="text-lg px-8 py-4 border-2 border-border-color text-text-primary hover:bg-card-bg cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
+                    <Button variant="outline" size="lg" className="text-lg px-8 py-4 border-2 border-border-color text-text-primary cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
                       Sign In
                     </Button>
                   </Link>
                 </>
               )}
             </div>
-            <div className="flex items-center justify-center space-x-8 text-sm text-text-muted">
+            <div className="flex items-center justify-center space-x-8 text-sm text-text-secondary font-medium">
               <div className="flex items-center">
-                <span className="text-success mr-2">✓</span>
+                <span className="text-success mr-2 font-bold">✓</span>
                 No credit card required
               </div>
               <div className="flex items-center">
-                <span className="text-success mr-2">✓</span>
+                <span className="text-success mr-2 font-bold">✓</span>
                 14-day free trial
               </div>
               <div className="flex items-center">
-                <span className="text-success mr-2">✓</span>
+                <span className="text-success mr-2 font-bold">✓</span>
                 Cancel anytime
               </div>
             </div>
@@ -229,31 +229,31 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-accent-color">
+      <section className="py-20" style={{ backgroundColor: '#F8FAFC' }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-text-primary mb-4">
             Ready to Transform Your Clinic?
           </h2>
-          <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-text-secondary mb-8 max-w-2xl mx-auto leading-relaxed font-medium">
             Join healthcare facilities that have already improved their operations 
             and patient care with our comprehensive management system.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {isSignedIn ? (
               <Link href="/dashboard">
-                <Button size="lg" variant="secondary" className="text-lg px-8 py-4 text-accent-color hover:bg-gray-700 cursor-pointer bg-[#1447E6]">
+                <Button size="lg" className="text-lg px-8 py-4 bg-accent-color bg-[#1447E6]  hover:bg-gray-700 text-white shadow-lg cursor-pointer">
                   Access Dashboard
                 </Button>
               </Link>
             ) : (
               <>
                 <Link href="/sign-up">
-                  <Button size="lg" variant="secondary" className="text-lg px-8 py-4  text-accent-color  hover:bg-gray-700 cursor-pointer bg-[#1447E6]">
+                  <Button size="lg" className="text-lg px-8 py-4 bg-accent-color bg-[#1447E6]  hover:bg-gray-700 text-white shadow-lg cursor-pointer">
                     Start Free Trial
                   </Button>
                 </Link>
                 <Link href="/sign-in">
-                  <Button size="lg" className="text-lg px-8 py-4 bg-card-bg text-text-primary border-2 border-card-bg  hover:bg-gray-700 cursor-pointer bg-[#1447E6] font-semibold">
+                  <Button size="lg" variant="outline" className="text-lg px-8 py-4 border-2 border-border-color text-text-primary bg-[#1447E6]  hover:bg-gray-700 cursor-pointer">
                     Sign In
                   </Button>
                 </Link>
