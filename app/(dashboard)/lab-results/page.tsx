@@ -113,7 +113,7 @@ export default function LabResultsPage() {
     }
   };
 
-  const formatDate = (dateString: string | Date) => {
+  const formatDate = (dateString: string | Date | null) => {
     if (!dateString) return 'N/A';
     
     try {
@@ -609,7 +609,7 @@ export default function LabResultsPage() {
             >
               Cancel
             </Button>
-            <Button
+            <Button  className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
               onClick={handleAddLabResult}
               loading={loading}
             >
@@ -719,7 +719,7 @@ export default function LabResultsPage() {
             >
               Cancel
             </Button>
-            <Button
+            <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
               onClick={handleUpdateLabResult}
               loading={loading}
             >

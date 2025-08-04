@@ -125,7 +125,7 @@ export default function DrugOrdersPage() {
     }
   };
 
-  const formatDate = (dateString: string | Date) => {
+  const formatDate = (dateString: string | Date | null) => {
     if (!dateString) return 'N/A';
     
     try {

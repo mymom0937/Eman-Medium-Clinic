@@ -885,6 +885,14 @@ export default function SalesPage() {
               />
             </FormField>
 
+            <FormField label="Patient ID" required error={errors.patientId}>
+              <Input
+                value={formData.patientId}
+                onChange={(e) => handleInputChange('patientId', e.target.value)}
+                placeholder="Enter patient ID"
+              />
+            </FormField>
+
             <FormField label="Drug" required error={errors.selectedDrug}>
               <Select
                 value={formData.selectedDrug}
@@ -915,6 +923,14 @@ export default function SalesPage() {
                 ]}
               />
             </FormField>
+
+            <FormField label="Status" required error={errors.status}>
+              <Select
+                value={formData.status}
+                onChange={(e) => handleInputChange('status', e.target.value)}
+                options={SALE_STATUS_OPTIONS}
+              />
+            </FormField>
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">
@@ -937,7 +953,7 @@ export default function SalesPage() {
             >
               Cancel
             </Button>
-            <Button
+            <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
               onClick={handleNewSale}
               loading={loading}
             >
@@ -1043,6 +1059,14 @@ export default function SalesPage() {
               />
             </FormField>
 
+            <FormField label="Patient ID" required error={errors.patientId}>
+              <Input
+                value={formData.patientId}
+                onChange={(e) => handleInputChange('patientId', e.target.value)}
+                placeholder="Enter patient ID"
+              />
+            </FormField>
+
             <FormField label="Drug" required error={errors.selectedDrug}>
               <Select
                 value={formData.selectedDrug}
@@ -1113,7 +1137,7 @@ export default function SalesPage() {
             >
               Cancel
             </Button>
-            <Button
+            <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
               onClick={handleUpdateSale}
               loading={loading}
             >

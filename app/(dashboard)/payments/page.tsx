@@ -174,7 +174,7 @@ export default function PaymentsPage() {
     }
   };
 
-  const formatDate = (dateString: string | Date) => {
+  const formatDate = (dateString: string | Date | null) => {
     if (!dateString) return 'N/A';
     
     try {
@@ -766,7 +766,7 @@ export default function PaymentsPage() {
             >
               Cancel
             </Button>
-            <Button
+            <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
               onClick={handleNewPayment}
               loading={loading}
             >
@@ -919,7 +919,7 @@ export default function PaymentsPage() {
             >
               Cancel
             </Button>
-            <Button
+            <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
               onClick={handleUpdatePayment}
               loading={loading}
             >

@@ -175,7 +175,7 @@ export default function PatientsPage() {
     }
   };
 
-  const formatDate = (dateString: string | Date) => {
+  const formatDate = (dateString: string | Date | null) => {
     if (!dateString) return 'N/A';
     
     try {
@@ -704,7 +704,7 @@ export default function PatientsPage() {
             >
               Cancel
             </Button>
-            <Button
+            <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
               onClick={handleAddPatient}
               loading={loading}
             >
@@ -818,7 +818,7 @@ export default function PatientsPage() {
             >
               Cancel
             </Button>
-            <Button
+            <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
               onClick={handleUpdatePatient}
               loading={loading}
             >

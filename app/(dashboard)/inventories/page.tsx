@@ -30,6 +30,7 @@ interface InventoryStats {
   totalValue: number;
 }
 
+
 export default function InventoryPage() {
   const { userRole, userName, isLoaded } = useUserRole();
   const [searchTerm, setSearchTerm] = useState('');
@@ -170,7 +171,7 @@ export default function InventoryPage() {
     }
   };
 
-  const formatDate = (dateString: string | Date) => {
+  const formatDate = (dateString: string | Date | null) => {
     if (!dateString) return 'N/A';
     
     try {
@@ -773,7 +774,7 @@ export default function InventoryPage() {
             >
               Cancel
             </Button>
-            <Button
+            <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
               onClick={handleAddDrug}
               loading={loading}
             >
@@ -878,7 +879,7 @@ export default function InventoryPage() {
             >
               Cancel
             </Button>
-            <Button
+            <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
               onClick={handleUpdateDrug}
               loading={loading}
             >
