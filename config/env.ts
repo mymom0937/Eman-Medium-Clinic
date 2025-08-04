@@ -1,6 +1,6 @@
 export const env = {
   // Database
-  MONGODB_URI: process.env.MONGODB_URI!,
+  MONGODB_URL: process.env.MONGODB_URL!,
   MONGODB_DB_NAME: process.env.MONGODB_DB_NAME || 'eman_clinic',
   
   // Authentication
@@ -20,7 +20,7 @@ export const env = {
 // Validate required environment variables
 export function validateEnv() {
   const required = [
-    'MONGODB_URI',
+    'MONGODB_URL',
     'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
     'CLERK_SECRET_KEY',
   ];

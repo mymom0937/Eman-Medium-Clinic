@@ -15,84 +15,6 @@ import { USER_ROLES } from '@/constants/user-roles';
 import { useUserRole } from '@/hooks/useUserRole';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 
-// Mock data for lab results
-const mockLabResults: LabResult[] = [
-  {
-    _id: '1',
-    patientId: 'PAT001',
-    patientName: 'John Doe',
-    testType: 'COMPLETE_BLOOD_COUNT',
-    testName: 'Complete Blood Count',
-    status: 'PENDING',
-    requestedBy: 'nurse1',
-    requestedAt: new Date('2024-01-15T10:30:00'),
-    completedBy: undefined,
-    completedAt: undefined,
-    results: [],
-    notes: 'Patient has fever and fatigue',
-    createdAt: new Date('2024-01-15T10:30:00'),
-    updatedAt: new Date('2024-01-15T10:30:00'),
-  },
-  {
-    _id: '2',
-    patientId: 'PAT002',
-    patientName: 'Jane Smith',
-    testType: 'URINE_ANALYSIS',
-    testName: 'Urine Analysis',
-    status: 'IN_PROGRESS',
-    requestedBy: 'nurse1',
-    requestedAt: new Date('2024-01-14T14:20:00'),
-    completedBy: 'lab1',
-    completedAt: undefined,
-    results: [
-      {
-        parameter: 'pH',
-        value: '6.5',
-        unit: '',
-        referenceRange: '4.5-8.0',
-        isAbnormal: false,
-        notes: 'Normal range',
-      },
-    ],
-    notes: 'Routine checkup',
-    createdAt: new Date('2024-01-14T14:20:00'),
-    updatedAt: new Date('2024-01-14T14:20:00'),
-  },
-  {
-    _id: '3',
-    patientId: 'PAT003',
-    patientName: 'Mike Johnson',
-    testType: 'BLOOD_GLUCOSE',
-    testName: 'Blood Glucose Test',
-    status: 'COMPLETED',
-    requestedBy: 'nurse2',
-    requestedAt: new Date('2024-01-13T09:15:00'),
-    completedBy: 'lab1',
-    completedAt: new Date('2024-01-13T11:30:00'),
-    results: [
-      {
-        parameter: 'Fasting Glucose',
-        value: '95',
-        unit: 'mg/dL',
-        referenceRange: '70-100',
-        isAbnormal: false,
-        notes: 'Normal fasting glucose',
-      },
-      {
-        parameter: 'Postprandial Glucose',
-        value: '140',
-        unit: 'mg/dL',
-        referenceRange: '70-140',
-        isAbnormal: false,
-        notes: 'Normal postprandial glucose',
-      },
-    ],
-    notes: 'Diabetes screening',
-    createdAt: new Date('2024-01-13T09:15:00'),
-    updatedAt: new Date('2024-01-13T11:30:00'),
-  },
-];
-
 const TEST_STATUS_OPTIONS = [
   { value: 'all', label: 'All Status' },
   { value: 'PENDING', label: 'Pending' },
@@ -120,8 +42,9 @@ interface LabResultFormData {
 export default function LabResultsPage() {
   const { userId } = useAuth();
   const { userRole, userName, isLoaded } = useUserRole();
-  const [labResults, setLabResults] = useState<LabResult[]>(mockLabResults);
+  const [labResults, setLabResults] = useState<LabResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedTestType, setSelectedTestType] = useState('all');
@@ -139,11 +62,27 @@ export default function LabResultsPage() {
   });
   const [errors, setErrors] = useState<Partial<LabResultFormData>>({});
 
+  // Load lab results data on component mount
   useEffect(() => {
-    if (isLoaded) {
-      // In real app, fetch from API
-      setLabResults(mockLabResults);
-    }
+    const loadLabResults = async () => {
+      if (!isLoaded) return;
+
+      try {
+        setInitialLoading(true);
+        const response = await fetch('/api/lab-results');
+        const result = await response.json();
+        
+        if (response.ok) {
+          setLabResults(result);
+        }
+      } catch (error) {
+        console.error('Error loading lab results:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadLabResults();
   }, [isLoaded]);
 
   // Filter lab results based on search and filters
@@ -196,25 +135,34 @@ export default function LabResultsPage() {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const newLabResult: LabResult = {
-        _id: (labResults.length + 1).toString(),
+      const labResultData = {
         patientId: formData.patientId,
         patientName: formData.patientName,
-        testType: formData.testType as any,
+        testType: formData.testType,
         testName: formData.testName,
-        status: 'PENDING',
-        requestedBy: userId || '',
-        requestedAt: new Date(),
-        results: [],
         notes: formData.notes,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       };
 
-      setLabResults([...labResults, newLabResult]);
+      const response = await fetch('/api/lab-results', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(labResultData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create lab result');
+      }
+
+      // Reload lab results data
+      const resultsResponse = await fetch('/api/lab-results');
+      const resultsResult = await resultsResponse.json();
+      
+      if (resultsResponse.ok) {
+        setLabResults(resultsResult);
+      }
+
       setIsAddModalOpen(false);
       resetForm();
     } catch (error) {
@@ -237,28 +185,38 @@ export default function LabResultsPage() {
   };
 
   const handleUpdateLabResult = async () => {
-    if (!validateForm()) return;
+    if (!validateForm() || !editingLabResult) return;
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const labResultData = {
+        patientId: formData.patientId,
+        patientName: formData.patientName,
+        testType: formData.testType,
+        testName: formData.testName,
+        notes: formData.notes,
+      };
 
-      const updatedLabResults = labResults.map(result =>
-        result._id === editingLabResult?._id
-          ? {
-              ...result,
-              patientId: formData.patientId,
-              patientName: formData.patientName,
-              testType: formData.testType as any,
-              testName: formData.testName,
-              notes: formData.notes,
-              updatedAt: new Date(),
-            }
-          : result
-      );
+      const response = await fetch(`/api/lab-results/${editingLabResult._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(labResultData),
+      });
 
-      setLabResults(updatedLabResults);
+      if (!response.ok) {
+        throw new Error('Failed to update lab result');
+      }
+
+      // Reload lab results data
+      const resultsResponse = await fetch('/api/lab-results');
+      const resultsResult = await resultsResponse.json();
+      
+      if (resultsResponse.ok) {
+        setLabResults(resultsResult);
+      }
+
       setIsEditModalOpen(false);
       setEditingLabResult(null);
       resetForm();
@@ -273,10 +231,21 @@ export default function LabResultsPage() {
     if (!confirm('Are you sure you want to delete this lab result?')) return;
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await fetch(`/api/lab-results/${id}`, {
+        method: 'DELETE',
+      });
 
-      setLabResults(labResults.filter(result => result._id !== id));
+      if (!response.ok) {
+        throw new Error('Failed to delete lab result');
+      }
+
+      // Reload lab results data
+      const resultsResponse = await fetch('/api/lab-results');
+      const resultsResult = await resultsResponse.json();
+      
+      if (resultsResponse.ok) {
+        setLabResults(resultsResult);
+      }
     } catch (error) {
       console.error('Error deleting lab result:', error);
     }
@@ -311,7 +280,7 @@ export default function LabResultsPage() {
     return false;
   };
 
-  if (!isLoaded) {
+  if (!isLoaded || initialLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-lg text-text-primary">Loading...</div>

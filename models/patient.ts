@@ -5,6 +5,8 @@ const patientSchema = new mongoose.Schema(
     patientId: { type: String, required: true, unique: true }, // Auto-generated unique ID
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
+    age: { type: Number },
+    bloodType: { type: String },
     dateOfBirth: { type: Date },
     gender: { 
       type: String, 

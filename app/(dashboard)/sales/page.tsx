@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -9,106 +9,35 @@ import { FormField, Input, Select, Button } from '@/components/ui/form';
 import { toastManager } from '@/lib/utils/toast';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 
-// Mock data - in real app, this would come from API
-const mockStats = [
-  {
-    title: 'Total Sales',
-    value: '189',
-    change: '+12% from last month',
-    changeType: 'positive' as const,
-    icon: '💰',
-  },
-  {
-    title: 'Total Revenue',
-    value: '$15,750',
-    change: '+8% from last month',
-    changeType: 'positive' as const,
-    icon: '💵',
-  },
-  {
-    title: 'Average Sale',
-    value: '$83.33',
-    change: '+5% from last month',
-    changeType: 'positive' as const,
-    icon: '📊',
-  },
-  {
-    title: "Today's Sales",
-    value: '12',
-    change: '+3 from yesterday',
-    changeType: 'positive' as const,
-    icon: '📅',
-  },
-];
+interface Sale {
+  _id: string;
+  saleId: string;
+  patientId: string;
+  patientName: string;
+  items: Array<{
+    drugId: string;
+    drugName: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  }>;
+  totalAmount: number;
+  discount: number;
+  finalAmount: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  soldBy: string;
+  soldAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-const mockSales = [
-  {
-    id: 1,
-    saleId: 'SALE000001',
-    patientName: 'John Doe',
-    items: [
-      { drugName: 'Paracetamol 500mg', quantity: 2, total: 31.00 },
-      { drugName: 'Ibuprofen 400mg', quantity: 1, total: 12.75 },
-    ],
-    totalAmount: 43.75,
-    paymentMethod: 'CASH',
-    saleStatus: 'COMPLETED',
-    soldAt: '2024-01-20T10:30:00Z',
-  },
-  {
-    id: 2,
-    saleId: 'SALE000002',
-    patientName: 'Jane Smith',
-    items: [
-      { drugName: 'Amoxicillin 250mg', quantity: 1, total: 25.00 },
-      { drugName: 'Omeprazole 20mg', quantity: 2, total: 40.00 },
-    ],
-    totalAmount: 65.00,
-    paymentMethod: 'CARD',
-    saleStatus: 'COMPLETED',
-    soldAt: '2024-01-20T11:15:00Z',
-  },
-  {
-    id: 3,
-    saleId: 'SALE000003',
-    patientName: 'Michael Johnson',
-    items: [
-      { drugName: 'Metformin 500mg', quantity: 3, total: 45.00 },
-    ],
-    totalAmount: 45.00,
-    paymentMethod: 'MOBILE_MONEY',
-    saleStatus: 'PENDING',
-    soldAt: '2024-01-20T12:00:00Z',
-  },
-];
-
-const SALE_STATUS_OPTIONS = [
-  { value: 'all', label: 'All Status' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
-
-const PAYMENT_METHOD_OPTIONS = [
-  { value: 'all', label: 'All Methods' },
-  { value: 'cash', label: 'Cash' },
-  { value: 'card', label: 'Card' },
-  { value: 'mobile_money', label: 'Mobile Money' },
-];
-
-const PATIENTS = [
-  { value: 'john_doe', label: 'John Doe' },
-  { value: 'jane_smith', label: 'Jane Smith' },
-  { value: 'michael_johnson', label: 'Michael Johnson' },
-];
-
-const DRUGS = [
-  { value: 'paracetamol', label: 'Paracetamol 500mg - ETB 15.50' },
-  { value: 'ibuprofen', label: 'Ibuprofen 400mg - ETB 12.75' },
-  { value: 'amoxicillin', label: 'Amoxicillin 250mg - ETB 25.00' },
-  { value: 'omeprazole', label: 'Omeprazole 20mg - ETB 20.00' },
-  { value: 'metformin', label: 'Metformin 500mg - ETB 15.00' },
-];
+interface SalesStats {
+  totalSales: number;
+  totalRevenue: number;
+  averageSale: number;
+  todaySales: number;
+}
 
 export default function SalesPage() {
   const { userRole, userName, isLoaded } = useUserRole();
@@ -118,10 +47,17 @@ export default function SalesPage() {
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
   const [isViewSaleModalOpen, setIsViewSaleModalOpen] = useState(false);
   const [isEditSaleModalOpen, setIsEditSaleModalOpen] = useState(false);
-  const [viewingSale, setViewingSale] = useState<any>(null);
-  const [editingSale, setEditingSale] = useState<any>(null);
-  const [sales, setSales] = useState(mockSales);
+  const [viewingSale, setViewingSale] = useState<Sale | null>(null);
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [stats, setStats] = useState<SalesStats>({
+    totalSales: 0,
+    totalRevenue: 0,
+    averageSale: 0,
+    todaySales: 0,
+  });
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
     patientName: '',
     selectedDrug: '',
@@ -130,7 +66,49 @@ export default function SalesPage() {
   });
   const [errors, setErrors] = useState<any>({});
 
-  if (!isLoaded) {
+  // Load sales data on component mount
+  useEffect(() => {
+    const loadSales = async () => {
+      if (!isLoaded) return;
+
+      try {
+        setInitialLoading(true);
+        const response = await fetch('/api/sales');
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          setSales(result.data);
+          
+          // Calculate stats
+          const totalSales = result.data.length;
+          const totalRevenue = result.data.reduce((sum: number, sale: Sale) => sum + (sale.totalAmount || 0), 0);
+          const averageSale = totalSales > 0 ? totalRevenue / totalSales : 0;
+          
+          // Calculate today's sales
+          const today = new Date();
+          const todaySales = result.data.filter((sale: Sale) => {
+            const saleDate = new Date(sale.soldAt || sale.createdAt);
+            return saleDate.toDateString() === today.toDateString();
+          }).length;
+
+          setStats({
+            totalSales,
+            totalRevenue,
+            averageSale,
+            todaySales,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading sales:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadSales();
+  }, [isLoaded]);
+
+  if (!isLoaded || initialLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-lg">Loading...</div>
@@ -142,7 +120,7 @@ export default function SalesPage() {
   const filteredSales = sales.filter(sale => {
     const matchesSearch = sale.saleId.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          sale.patientName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || sale.saleStatus.toLowerCase() === selectedStatus;
+    const matchesStatus = selectedStatus === 'all' || sale.paymentStatus.toLowerCase() === selectedStatus;
     const matchesMethod = selectedMethod === 'all' || sale.paymentMethod.toLowerCase().replace('_', '') === selectedMethod;
     return matchesSearch && matchesStatus && matchesMethod;
   });
@@ -173,12 +151,6 @@ export default function SalesPage() {
     }
   };
 
-  const generateSaleId = () => {
-    const lastSale = sales[sales.length - 1];
-    const lastNumber = lastSale ? parseInt(lastSale.saleId.replace('SALE', '')) : 0;
-    return `SALE${String(lastNumber + 1).padStart(6, '0')}`;
-  };
-
   const validateForm = (): boolean => {
     const newErrors: any = {};
 
@@ -204,32 +176,64 @@ export default function SalesPage() {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const selectedDrugInfo = DRUGS.find(drug => drug.value === formData.selectedDrug);
-      const unitPrice = parseFloat(selectedDrugInfo?.label.split('ETB ')[1] || '0');
-      const quantity = parseInt(formData.quantity);
-      const totalAmount = unitPrice * quantity;
-
-      const newSale = {
-        id: sales.length + 1,
-        saleId: generateSaleId(),
-        patientName: PATIENTS.find(p => p.value === formData.patientName)?.label || formData.patientName,
+      // This would be replaced with actual API call
+      const saleData = {
+        patientId: 'PAT001', // This should come from patient selection
+        patientName: formData.patientName,
         items: [
           { 
-            drugName: selectedDrugInfo?.label.split(' - ')[0] || 'Unknown Drug', 
-            quantity: quantity, 
-            total: totalAmount 
+            drugId: 'DRUG001',
+            drugName: formData.selectedDrug,
+            quantity: parseInt(formData.quantity),
+            unitPrice: 15.50, // This should come from drug selection
+            totalPrice: parseInt(formData.quantity) * 15.50,
           }
         ],
-        totalAmount: totalAmount,
+        totalAmount: parseInt(formData.quantity) * 15.50,
         paymentMethod: formData.paymentMethod.toUpperCase(),
-        saleStatus: 'COMPLETED',
-        soldAt: new Date().toISOString(),
+        paymentStatus: 'COMPLETED',
       };
 
-      setSales([newSale, ...sales]);
+      const response = await fetch('/api/sales', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(saleData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create sale');
+      }
+
+      // Reload sales data
+      const salesResponse = await fetch('/api/sales');
+      const salesResult = await salesResponse.json();
+      
+      if (salesResponse.ok && salesResult.success) {
+        setSales(salesResult.data);
+        
+        // Recalculate stats
+        const totalSales = salesResult.data.length;
+        const totalRevenue = salesResult.data.reduce((sum: number, sale: Sale) => sum + (sale.totalAmount || 0), 0);
+        const averageSale = totalSales > 0 ? totalRevenue / totalSales : 0;
+        
+        const today = new Date();
+        const todaySales = salesResult.data.filter((sale: Sale) => {
+          const saleDate = new Date(sale.soldAt || sale.createdAt);
+          return saleDate.toDateString() === today.toDateString();
+        }).length;
+
+        setStats({
+          totalSales,
+          totalRevenue,
+          averageSale,
+          todaySales,
+        });
+      }
+
       setIsNewSaleModalOpen(false);
       setFormData({
         patientName: '',
@@ -240,6 +244,7 @@ export default function SalesPage() {
       setErrors({});
       toastManager.success('Sale completed successfully!');
     } catch (error) {
+      console.error('Error creating sale:', error);
       toastManager.error('Failed to process sale. Please try again.');
     } finally {
       setLoading(false);
@@ -253,12 +258,12 @@ export default function SalesPage() {
     }
   };
 
-  const handleViewSale = (sale: any) => {
+  const handleViewSale = (sale: Sale) => {
     setViewingSale(sale);
     setIsViewSaleModalOpen(true);
   };
 
-  const handleEditSale = (sale: any) => {
+  const handleEditSale = (sale: Sale) => {
     setEditingSale(sale);
     setFormData({
       patientName: sale.patientName,
@@ -269,13 +274,47 @@ export default function SalesPage() {
     setIsEditSaleModalOpen(true);
   };
 
-  const handleDeleteSale = (saleId: number) => {
+  const handleDeleteSale = async (saleId: string) => {
     if (!confirm('Are you sure you want to delete this sale?')) return;
     
     try {
-      setSales(sales.filter(sale => sale.id !== saleId));
+      const response = await fetch(`/api/sales?saleId=${saleId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete sale');
+      }
+
+      // Reload sales data
+      const salesResponse = await fetch('/api/sales');
+      const salesResult = await salesResponse.json();
+      
+      if (salesResponse.ok && salesResult.success) {
+        setSales(salesResult.data);
+        
+        // Recalculate stats
+        const totalSales = salesResult.data.length;
+        const totalRevenue = salesResult.data.reduce((sum: number, sale: Sale) => sum + (sale.totalAmount || 0), 0);
+        const averageSale = totalSales > 0 ? totalRevenue / totalSales : 0;
+        
+        const today = new Date();
+        const todaySales = salesResult.data.filter((sale: Sale) => {
+          const saleDate = new Date(sale.soldAt || sale.createdAt);
+          return saleDate.toDateString() === today.toDateString();
+        }).length;
+
+        setStats({
+          totalSales,
+          totalRevenue,
+          averageSale,
+          todaySales,
+        });
+      }
+
       toastManager.success('Sale deleted successfully!');
     } catch (error) {
+      console.error('Error deleting sale:', error);
       toastManager.error('Failed to delete sale. Please try again.');
     }
   };
@@ -291,34 +330,107 @@ export default function SalesPage() {
   };
 
   const handleUpdateSale = async () => {
-    if (!validateForm()) return;
+    if (!validateForm() || !editingSale) return;
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const updateData = {
+        saleId: editingSale.saleId,
+        paymentStatus: 'COMPLETED',
+        soldBy: userName || 'System',
+      };
 
-      const updatedSales = sales.map(sale =>
-        sale.id === editingSale.id
-          ? {
-              ...sale,
-              patientName: formData.patientName,
-              paymentMethod: formData.paymentMethod.toUpperCase(),
-            }
-          : sale
-      );
+      const response = await fetch('/api/sales', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
 
-      setSales(updatedSales);
+      if (!response.ok) {
+        throw new Error('Failed to update sale');
+      }
+
+      // Reload sales data
+      const salesResponse = await fetch('/api/sales');
+      const salesResult = await salesResponse.json();
+      
+      if (salesResponse.ok && salesResult.success) {
+        setSales(salesResult.data);
+      }
+
       setIsEditSaleModalOpen(false);
       setEditingSale(null);
       resetForm();
       toastManager.success('Sale updated successfully!');
     } catch (error) {
+      console.error('Error updating sale:', error);
       toastManager.error('Failed to update sale. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  // Prepare stats for display
+  const displayStats = [
+    {
+      title: 'Total Sales',
+      value: stats.totalSales.toString(),
+      change: '+12% from last month',
+      changeType: 'positive' as const,
+      icon: '💰',
+    },
+    {
+      title: 'Total Revenue',
+      value: `$${stats.totalRevenue.toFixed(2)}`,
+      change: '+8% from last month',
+      changeType: 'positive' as const,
+      icon: '💵',
+    },
+    {
+      title: 'Average Sale',
+      value: `$${stats.averageSale.toFixed(2)}`,
+      change: '+5% from last month',
+      changeType: 'positive' as const,
+      icon: '📊',
+    },
+    {
+      title: "Today's Sales",
+      value: stats.todaySales.toString(),
+      change: '+3 from yesterday',
+      changeType: 'positive' as const,
+      icon: '📅',
+    },
+  ];
+
+  const SALE_STATUS_OPTIONS = [
+    { value: 'all', label: 'All Status' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'cancelled', label: 'Cancelled' },
+  ];
+
+  const PAYMENT_METHOD_OPTIONS = [
+    { value: 'all', label: 'All Methods' },
+    { value: 'cash', label: 'Cash' },
+    { value: 'card', label: 'Card' },
+    { value: 'mobile_money', label: 'Mobile Money' },
+  ];
+
+  const PATIENTS = [
+    { value: 'john_doe', label: 'John Doe' },
+    { value: 'jane_smith', label: 'Jane Smith' },
+    { value: 'michael_johnson', label: 'Michael Johnson' },
+  ];
+
+  const DRUGS = [
+    { value: 'paracetamol', label: 'Paracetamol 500mg - ETB 15.50' },
+    { value: 'ibuprofen', label: 'Ibuprofen 400mg - ETB 12.75' },
+    { value: 'amoxicillin', label: 'Amoxicillin 250mg - ETB 25.00' },
+    { value: 'omeprazole', label: 'Omeprazole 20mg - ETB 20.00' },
+    { value: 'metformin', label: 'Metformin 500mg - ETB 15.00' },
+  ];
 
   return (
     <DashboardLayout
@@ -329,7 +441,7 @@ export default function SalesPage() {
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {mockStats.map((stat, index) => (
+          {displayStats.map((stat, index) => (
             <StatsCard
               key={index}
               title={stat.title}
@@ -416,7 +528,7 @@ export default function SalesPage() {
               </thead>
               <tbody className="bg-background divide-y divide-border-color">
                 {filteredSales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-card-bg">
+                  <tr key={sale._id} className="hover:bg-card-bg">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
                       {sale.saleId}
                     </td>
@@ -427,7 +539,7 @@ export default function SalesPage() {
                       <div className="space-y-1">
                         {sale.items.map((item, index) => (
                           <div key={index} className="text-xs">
-                            {item.drugName} x{item.quantity} = ETB {item.total.toFixed(2)}
+                            {item.drugName} x{item.quantity} = ETB {item.totalPrice.toFixed(2)}
                           </div>
                         ))}
                       </div>
@@ -442,12 +554,12 @@ export default function SalesPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(sale.saleStatus)}`}>
-                        {sale.saleStatus.toUpperCase()}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(sale.paymentStatus)}`}>
+                        {sale.paymentStatus.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                      {new Date(sale.soldAt).toLocaleDateString()}
+                      {new Date(sale.soldAt || sale.createdAt).toLocaleDateString()}
                     </td>
                                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                        <button 
@@ -465,7 +577,7 @@ export default function SalesPage() {
                          <FaEdit size={16} />
                        </button>
                        <button 
-                         onClick={() => handleDeleteSale(sale.id)}
+                        onClick={() => handleDeleteSale(sale.saleId)}
                          className="text-error hover:text-error/80 p-1 rounded hover:bg-error/10 transition-colors cursor-pointer"
                          title="Delete Sale"
                        >
@@ -587,9 +699,9 @@ export default function SalesPage() {
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700">Items</label>
                 <div className="mt-1 space-y-1">
-                  {viewingSale.items.map((item: any, index: number) => (
+                  {viewingSale.items.map((item, index) => (
                     <div key={index} className="text-sm text-gray-900">
-                      {item.drugName} x{item.quantity} = ETB {item.total.toFixed(2)}
+                      {item.drugName} x{item.quantity} = ETB {item.totalPrice.toFixed(2)}
                     </div>
                   ))}
                 </div>
@@ -604,13 +716,13 @@ export default function SalesPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Status</label>
-                <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingSale.saleStatus)}`}>
-                  {viewingSale.saleStatus.toUpperCase()}
+                <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingSale.paymentStatus)}`}>
+                  {viewingSale.paymentStatus.toUpperCase()}
                 </span>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Date</label>
-                <p className="mt-1 text-sm text-gray-900">{new Date(viewingSale.soldAt).toLocaleDateString()}</p>
+                <p className="mt-1 text-sm text-gray-900">{new Date(viewingSale.soldAt || viewingSale.createdAt).toLocaleDateString()}</p>
               </div>
             </div>
             <div className="flex justify-end pt-4">

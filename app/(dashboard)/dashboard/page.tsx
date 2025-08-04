@@ -1,72 +1,177 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { useUserRole } from '@/hooks/useUserRole';
 import Link from 'next/link';
 import { USER_ROLES } from '@/constants/user-roles';
 
-// Mock data - in real app, this would come from API
-const mockStats = [
-  {
-    title: 'Total Sales',
-    value: '$12,450',
-    change: '+12% from last month',
-    changeType: 'positive' as const,
-    icon: '💰',
-  },
-  {
-    title: 'Drugs in Stock',
-    value: '1,234',
-    change: '-5% from last week',
-    changeType: 'negative' as const,
-    icon: '💊',
-  },
-  {
-    title: 'Total Patients',
-    value: '456',
-    change: '+8% from last month',
-    changeType: 'positive' as const,
-    icon: '👥',
-  },
-  {
-    title: 'Services Today',
-    value: '23',
-    change: '+15% from yesterday',
-    changeType: 'positive' as const,
-    icon: '📅',
-  },
-];
+interface DashboardStats {
+  totalSales: number;
+  totalRevenue: number;
+  totalPatients: number;
+  totalDrugs: number;
+  lowStockItems: number;
+  outOfStockItems: number;
+  pendingOrders: number;
+  todayServices: number;
+}
 
-const mockRecentActivity = [
-  {
-    id: 1,
-    action: 'Paracetamol sold to Patient #123',
-    time: '2 minutes ago',
+interface RecentActivity {
+  id: string;
+  action: string;
+  time: string;
+  type: 'sale' | 'patient' | 'service' | 'inventory';
+  amount?: string;
+}
+
+export default function DashboardPage() {
+  const { userRole, userName, isLoaded } = useUserRole();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalSales: 0,
+    totalRevenue: 0,
+    totalPatients: 0,
+    totalDrugs: 0,
+    lowStockItems: 0,
+    outOfStockItems: 0,
+    pendingOrders: 0,
+    todayServices: 0,
+  });
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!isLoaded) return;
+
+      try {
+        setLoading(true);
+        
+        // Fetch all data in parallel
+        const [patientsRes, salesRes, drugsRes, drugOrdersRes] = await Promise.all([
+          fetch('/api/patients'),
+          fetch('/api/sales'),
+          fetch('/api/drugs'),
+          fetch('/api/drug-orders'),
+        ]);
+
+        const patientsData = await patientsRes.json();
+        const salesData = await salesRes.json();
+        const drugsData = await drugsRes.json();
+        const drugOrdersData = await drugOrdersRes.json();
+
+        // Calculate stats
+        const totalPatients = patientsData.success ? patientsData.data.length : 0;
+        const totalSales = salesData.success ? salesData.data.length : 0;
+        const totalRevenue = salesData.success 
+          ? salesData.data.reduce((sum: number, sale: any) => sum + (sale.totalAmount || 0), 0)
+          : 0;
+        
+        const totalDrugs = drugsData.success ? drugsData.data.length : 0;
+        const lowStockItems = drugsData.success 
+          ? drugsData.data.filter((drug: any) => drug.quantity <= 10 && drug.quantity > 0).length
+          : 0;
+        const outOfStockItems = drugsData.success
+          ? drugsData.data.filter((drug: any) => drug.quantity === 0).length
+          : 0;
+
+        const pendingOrders = drugOrdersData.success
+          ? drugOrdersData.data.filter((order: any) => order.status === 'PENDING').length
+          : 0;
+
+        // Calculate today's services (approximation)
+        const today = new Date();
+        const todayServices = salesData.success
+          ? salesData.data.filter((sale: any) => {
+              const saleDate = new Date(sale.soldAt || sale.createdAt);
+              return saleDate.toDateString() === today.toDateString();
+            }).length
+          : 0;
+
+        setStats({
+          totalSales,
+          totalRevenue,
+          totalPatients,
+          totalDrugs,
+          lowStockItems,
+          outOfStockItems,
+          pendingOrders,
+          todayServices,
+        });
+
+        // Generate recent activity from actual data
+        const activities: RecentActivity[] = [];
+        
+        // Add recent sales
+        if (salesData.success && salesData.data.length > 0) {
+          const recentSales = salesData.data.slice(0, 3);
+          recentSales.forEach((sale: any) => {
+            activities.push({
+              id: sale.saleId || sale._id,
+              action: `Sale completed for ${sale.patientName}`,
+              time: getTimeAgo(new Date(sale.soldAt || sale.createdAt)),
     type: 'sale',
-    amount: '$15.50',
-  },
-  {
-    id: 2,
-    action: 'New patient registered: John Doe',
-    time: '15 minutes ago',
+              amount: `$${(sale.totalAmount || 0).toFixed(2)}`,
+            });
+          });
+        }
+
+        // Add recent patients
+        if (patientsData.success && patientsData.data.length > 0) {
+          const recentPatients = patientsData.data.slice(0, 2);
+          recentPatients.forEach((patient: any) => {
+            activities.push({
+              id: patient.patientId || patient._id,
+              action: `New patient registered: ${patient.firstName} ${patient.lastName}`,
+              time: getTimeAgo(new Date(patient.createdAt)),
     type: 'patient',
-  },
-  {
-    id: 3,
-    action: 'Consultation booked for Patient #456',
-    time: '1 hour ago',
+            });
+          });
+        }
+
+        // Add recent drug orders
+        if (drugOrdersData.success && drugOrdersData.data.length > 0) {
+          const recentOrders = drugOrdersData.data.slice(0, 2);
+          recentOrders.forEach((order: any) => {
+            activities.push({
+              id: order._id,
+              action: `Drug order created for ${order.patientName}`,
+              time: getTimeAgo(new Date(order.createdAt)),
     type: 'service',
-    amount: '$50.00',
-  },
-  {
-    id: 4,
-    action: 'New stock received: Antibiotics',
-    time: '2 hours ago',
-    type: 'inventory',
-  },
-];
+              amount: `$${(order.totalAmount || 0).toFixed(2)}`,
+            });
+          });
+        }
+
+        // Sort activities by time (most recent first)
+        activities.sort((a, b) => {
+          const timeA = new Date(a.time).getTime();
+          const timeB = new Date(b.time).getTime();
+          return timeB - timeA;
+        });
+
+        setRecentActivity(activities.slice(0, 6));
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [isLoaded]);
+
+  const getTimeAgo = (date: Date): string => {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  };
 
 const getRoleBasedQuickActions = (userRole: string) => {
   switch (userRole) {
@@ -238,10 +343,7 @@ const getActivityIcon = (type: string) => {
   }
 };
 
-export default function DashboardPage() {
-  const { userRole, userName, isLoaded } = useUserRole();
-
-  if (!isLoaded) {
+  if (!isLoaded || loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-lg">Loading...</div>
@@ -250,6 +352,38 @@ export default function DashboardPage() {
   }
 
   const quickActions = getRoleBasedQuickActions(userRole);
+
+  // Prepare stats for display
+  const displayStats = [
+    {
+      title: 'Total Sales',
+      value: stats.totalSales.toString(),
+      change: '+12% from last month',
+      changeType: 'positive' as const,
+      icon: '💰',
+    },
+    {
+      title: 'Drugs in Stock',
+      value: stats.totalDrugs.toString(),
+      change: stats.lowStockItems > 0 ? `${stats.lowStockItems} low stock items` : 'All items in stock',
+      changeType: stats.lowStockItems > 0 ? 'negative' as const : 'positive' as const,
+      icon: '💊',
+    },
+    {
+      title: 'Total Patients',
+      value: stats.totalPatients.toString(),
+      change: '+8% from last month',
+      changeType: 'positive' as const,
+      icon: '👥',
+    },
+    {
+      title: 'Services Today',
+      value: stats.todayServices.toString(),
+      change: '+15% from yesterday',
+      changeType: 'positive' as const,
+      icon: '📅',
+    },
+  ];
 
   return (
     <DashboardLayout
@@ -281,7 +415,7 @@ export default function DashboardPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {mockStats.map((stat, index) => (
+          {displayStats.map((stat, index) => (
             <StatsCard
               key={index}
               title={stat.title}
@@ -326,7 +460,8 @@ export default function DashboardPage() {
                 </Link>
               </div>
               <div className="space-y-3">
-                {mockRecentActivity.map((activity) => (
+                {recentActivity.length > 0 ? (
+                  recentActivity.map((activity) => (
                   <div key={activity.id} className="flex items-center justify-between p-3 bg-background rounded-lg hover:bg-card-bg transition-colors">
                     <div className="flex items-center space-x-3">
                       <span className="text-lg">{getActivityIcon(activity.type)}</span>
@@ -339,7 +474,13 @@ export default function DashboardPage() {
                       <span className="text-sm font-semibold text-success">{activity.amount}</span>
                     )}
                   </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-text-secondary">No recent activity</p>
+                    <p className="text-sm text-text-muted mt-2">Activity will appear here as you use the system.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -351,7 +492,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-text-secondary">Today's Revenue</p>
-                <p className="text-2xl font-bold text-text-primary">$2,450</p>
+                <p className="text-2xl font-bold text-text-primary">${stats.totalRevenue.toFixed(2)}</p>
               </div>
               <span className="text-2xl">💰</span>
             </div>
@@ -364,7 +505,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-text-secondary">Patients Today</p>
-                <p className="text-2xl font-bold text-text-primary">18</p>
+                <p className="text-2xl font-bold text-text-primary">{stats.todayServices}</p>
               </div>
               <span className="text-2xl">👥</span>
             </div>
@@ -377,7 +518,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-text-secondary">Pending Orders</p>
-                <p className="text-2xl font-bold text-text-primary">7</p>
+                <p className="text-2xl font-bold text-text-primary">{stats.pendingOrders}</p>
               </div>
               <span className="text-2xl">📋</span>
             </div>

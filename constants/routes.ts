@@ -3,7 +3,7 @@ export const ROUTES = {
   SIGN_IN: '/sign-in',
   SIGN_UP: '/sign-up',
   DASHBOARD: '/dashboard',
-  INVENTORY: '/inventory',
+  INVENTORIES: '/inventories',
   SALES: '/sales',
   PATIENTS: '/patients',
   PAYMENTS: '/payments',
@@ -15,7 +15,7 @@ export const ROUTES = {
 
 export const PROTECTED_ROUTES = [
   ROUTES.DASHBOARD,
-  ROUTES.INVENTORY,
+  ROUTES.INVENTORIES,
   ROUTES.SALES,
   ROUTES.PATIENTS,
   ROUTES.PAYMENTS,

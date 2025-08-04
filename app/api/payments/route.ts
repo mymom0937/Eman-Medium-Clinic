@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/config/db/connection';
+import dbConnect from '@/config/connection';
 import { Payment, PaymentMethod, PaymentStatus } from '@/types/payment';
 
 export async function GET(request: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -63,8 +67,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
 
     const body = await request.json();
 
@@ -120,8 +128,12 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
 
     const body = await request.json();
     const { paymentId, status, processedBy } = body;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -9,67 +9,25 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, Button } from '@/components/ui/form';
 import { toastManager } from '@/lib/utils/toast';
 
-// Mock data - in real app, this would come from API
-const mockStats = [
-  {
-    title: 'Total Revenue',
-    value: '$15,750',
-    change: '+8% from last month',
-    changeType: 'positive' as const,
-    icon: '💵',
-  },
-  {
-    title: 'Pending Amount',
-    value: '$2,450',
-    change: '-12% from last week',
-    changeType: 'negative' as const,
-    icon: '⏳',
-  },
-  {
-    title: 'Completed Payments',
-    value: '156',
-    change: '+15% from last month',
-    changeType: 'positive' as const,
-    icon: '✅',
-  },
-  {
-    title: 'Total Transactions',
-    value: '189',
-    change: '+22% from last month',
-    changeType: 'positive' as const,
-    icon: '💳',
-  },
-];
+interface Payment {
+  _id: string;
+  patientId: string;
+  patientName: string;
+  amount: number;
+  paymentMethod: string;
+  status: string;
+  reference?: string;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-const mockPayments = [
-  {
-    id: 1,
-    paymentId: 'PAY000001',
-    patientName: 'John Doe',
-    amount: 45.50,
-    paymentMethod: 'CASH',
-    status: 'COMPLETED',
-    date: '2024-01-20T10:30:00Z',
-  },
-  {
-    id: 2,
-    paymentId: 'PAY000002',
-    patientName: 'Jane Smith',
-    amount: 125.00,
-    paymentMethod: 'CARD',
-    status: 'COMPLETED',
-    date: '2024-01-20T11:15:00Z',
-  },
-  {
-    id: 3,
-    paymentId: 'PAY000003',
-    patientName: 'Michael Johnson',
-    amount: 75.25,
-    paymentMethod: 'MOBILE_MONEY',
-    status: 'PENDING',
-    date: '2024-01-20T12:00:00Z',
-  },
-];
+interface PaymentStats {
+  totalRevenue: number;
+  pendingAmount: number;
+  completedPayments: number;
+  totalTransactions: number;
+}
 
 const PATIENTS = [
   { value: 'john_doe', label: 'John Doe' },
@@ -99,10 +57,17 @@ export default function PaymentsPage() {
   const [isNewPaymentModalOpen, setIsNewPaymentModalOpen] = useState(false);
   const [isViewPaymentModalOpen, setIsViewPaymentModalOpen] = useState(false);
   const [isEditPaymentModalOpen, setIsEditPaymentModalOpen] = useState(false);
-  const [viewingPayment, setViewingPayment] = useState<any>(null);
-  const [editingPayment, setEditingPayment] = useState<any>(null);
-  const [payments, setPayments] = useState(mockPayments);
+  const [viewingPayment, setViewingPayment] = useState<Payment | null>(null);
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [stats, setStats] = useState<PaymentStats>({
+    totalRevenue: 0,
+    pendingAmount: 0,
+    completedPayments: 0,
+    totalTransactions: 0,
+  });
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
     patientName: '',
     amount: '',
@@ -112,7 +77,45 @@ export default function PaymentsPage() {
   });
   const [errors, setErrors] = useState<any>({});
 
-  if (!isLoaded) {
+  // Load payments data on component mount
+  useEffect(() => {
+    const loadPayments = async () => {
+      if (!isLoaded) return;
+
+      try {
+        setInitialLoading(true);
+        const response = await fetch('/api/payments');
+        const result = await response.json();
+        
+        if (response.ok) {
+          setPayments(result);
+          
+          // Calculate stats
+          const totalRevenue = result.reduce((sum: number, payment: Payment) => 
+            payment.status === 'completed' ? sum + payment.amount : sum, 0);
+          const pendingAmount = result.reduce((sum: number, payment: Payment) => 
+            payment.status === 'pending' ? sum + payment.amount : sum, 0);
+          const completedPayments = result.filter((payment: Payment) => payment.status === 'completed').length;
+          const totalTransactions = result.length;
+
+          setStats({
+            totalRevenue,
+            pendingAmount,
+            completedPayments,
+            totalTransactions,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading payments:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadPayments();
+  }, [isLoaded]);
+
+  if (!isLoaded || initialLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-lg">Loading...</div>
@@ -122,7 +125,7 @@ export default function PaymentsPage() {
 
   // Filter payments based on search, status, and method
   const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment.paymentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = payment._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          payment.patientName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedStatus === 'all' || payment.status.toLowerCase() === selectedStatus;
     const matchesMethod = selectedMethod === 'all' || payment.paymentMethod.toLowerCase().replace('_', '') === selectedMethod;
@@ -155,12 +158,6 @@ export default function PaymentsPage() {
     }
   };
 
-  const generatePaymentId = () => {
-    const lastPayment = payments[payments.length - 1];
-    const lastNumber = lastPayment ? parseInt(lastPayment.paymentId.replace('PAY', '')) : 0;
-    return `PAY${String(lastNumber + 1).padStart(6, '0')}`;
-  };
-
   const validateForm = (): boolean => {
     const newErrors: any = {};
 
@@ -186,32 +183,54 @@ export default function PaymentsPage() {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const newPayment = {
-        id: payments.length + 1,
-        paymentId: generatePaymentId(),
-        patientName: PATIENTS.find(p => p.value === formData.patientName)?.label || formData.patientName,
+      const paymentData = {
+        patientName: formData.patientName,
         amount: parseFloat(formData.amount),
-        paymentMethod: formData.paymentMethod.toUpperCase(),
-        status: formData.status.toUpperCase(),
-        date: new Date().toISOString(),
+        paymentMethod: formData.paymentMethod,
+        status: formData.status,
         reference: formData.reference,
       };
 
-      setPayments([newPayment, ...payments]);
-      setIsNewPaymentModalOpen(false);
-      setFormData({
-        patientName: '',
-        amount: '',
-        paymentMethod: 'cash',
-        status: 'completed',
-        reference: '',
+      const response = await fetch('/api/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData),
       });
-      setErrors({});
+
+      if (!response.ok) {
+        throw new Error('Failed to create payment');
+      }
+
+      // Reload payments data
+      const paymentsResponse = await fetch('/api/payments');
+      const paymentsResult = await paymentsResponse.json();
+      
+      if (paymentsResponse.ok) {
+        setPayments(paymentsResult);
+        
+        // Recalculate stats
+        const totalRevenue = paymentsResult.reduce((sum: number, payment: Payment) => 
+          payment.status === 'completed' ? sum + payment.amount : sum, 0);
+        const pendingAmount = paymentsResult.reduce((sum: number, payment: Payment) => 
+          payment.status === 'pending' ? sum + payment.amount : sum, 0);
+        const completedPayments = paymentsResult.filter((payment: Payment) => payment.status === 'completed').length;
+        const totalTransactions = paymentsResult.length;
+
+        setStats({
+          totalRevenue,
+          pendingAmount,
+          completedPayments,
+          totalTransactions,
+        });
+      }
+
+      setIsNewPaymentModalOpen(false);
+      resetForm();
       toastManager.success('Payment recorded successfully!');
     } catch (error) {
+      console.error('Error creating payment:', error);
       toastManager.error('Failed to record payment. Please try again.');
     } finally {
       setLoading(false);
@@ -225,12 +244,12 @@ export default function PaymentsPage() {
     }
   };
 
-  const handleViewPayment = (payment: any) => {
+  const handleViewPayment = (payment: Payment) => {
     setViewingPayment(payment);
     setIsViewPaymentModalOpen(true);
   };
 
-  const handleEditPayment = (payment: any) => {
+  const handleEditPayment = (payment: Payment) => {
     setEditingPayment(payment);
     setFormData({
       patientName: payment.patientName,
@@ -242,13 +261,44 @@ export default function PaymentsPage() {
     setIsEditPaymentModalOpen(true);
   };
 
-  const handleDeletePayment = (paymentId: number) => {
+  const handleDeletePayment = async (paymentId: string) => {
     if (!confirm('Are you sure you want to delete this payment?')) return;
     
     try {
-      setPayments(payments.filter(payment => payment.id !== paymentId));
+      const response = await fetch(`/api/payments/${paymentId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete payment');
+      }
+
+      // Reload payments data
+      const paymentsResponse = await fetch('/api/payments');
+      const paymentsResult = await paymentsResponse.json();
+      
+      if (paymentsResponse.ok) {
+        setPayments(paymentsResult);
+        
+        // Recalculate stats
+        const totalRevenue = paymentsResult.reduce((sum: number, payment: Payment) => 
+          payment.status === 'completed' ? sum + payment.amount : sum, 0);
+        const pendingAmount = paymentsResult.reduce((sum: number, payment: Payment) => 
+          payment.status === 'pending' ? sum + payment.amount : sum, 0);
+        const completedPayments = paymentsResult.filter((payment: Payment) => payment.status === 'completed').length;
+        const totalTransactions = paymentsResult.length;
+
+        setStats({
+          totalRevenue,
+          pendingAmount,
+          completedPayments,
+          totalTransactions,
+        });
+      }
+
       toastManager.success('Payment deleted successfully!');
     } catch (error) {
+      console.error('Error deleting payment:', error);
       toastManager.error('Failed to delete payment. Please try again.');
     }
   };
@@ -265,37 +315,96 @@ export default function PaymentsPage() {
   };
 
   const handleUpdatePayment = async () => {
-    if (!validateForm()) return;
+    if (!validateForm() || !editingPayment) return;
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const updatedPayments = payments.map(payment =>
-        payment.id === editingPayment.id
-          ? {
-              ...payment,
+      const paymentData = {
               patientName: formData.patientName,
               amount: parseFloat(formData.amount),
-              paymentMethod: formData.paymentMethod.toUpperCase(),
-              status: formData.status.toUpperCase(),
+        paymentMethod: formData.paymentMethod,
+        status: formData.status,
               reference: formData.reference,
-            }
-          : payment
-      );
+      };
 
-      setPayments(updatedPayments);
+      const response = await fetch(`/api/payments/${editingPayment._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update payment');
+      }
+
+      // Reload payments data
+      const paymentsResponse = await fetch('/api/payments');
+      const paymentsResult = await paymentsResponse.json();
+      
+      if (paymentsResponse.ok) {
+        setPayments(paymentsResult);
+        
+        // Recalculate stats
+        const totalRevenue = paymentsResult.reduce((sum: number, payment: Payment) => 
+          payment.status === 'completed' ? sum + payment.amount : sum, 0);
+        const pendingAmount = paymentsResult.reduce((sum: number, payment: Payment) => 
+          payment.status === 'pending' ? sum + payment.amount : sum, 0);
+        const completedPayments = paymentsResult.filter((payment: Payment) => payment.status === 'completed').length;
+        const totalTransactions = paymentsResult.length;
+
+        setStats({
+          totalRevenue,
+          pendingAmount,
+          completedPayments,
+          totalTransactions,
+        });
+      }
+
       setIsEditPaymentModalOpen(false);
       setEditingPayment(null);
       resetForm();
       toastManager.success('Payment updated successfully!');
     } catch (error) {
+      console.error('Error updating payment:', error);
       toastManager.error('Failed to update payment. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  // Prepare stats for display
+  const displayStats = [
+    {
+      title: 'Total Revenue',
+      value: `$${stats.totalRevenue.toFixed(2)}`,
+      change: '+8% from last month',
+      changeType: 'positive' as const,
+      icon: '💵',
+    },
+    {
+      title: 'Pending Amount',
+      value: `$${stats.pendingAmount.toFixed(2)}`,
+      change: '-12% from last week',
+      changeType: 'negative' as const,
+      icon: '⏳',
+    },
+    {
+      title: 'Completed Payments',
+      value: stats.completedPayments.toString(),
+      change: '+15% from last month',
+      changeType: 'positive' as const,
+      icon: '✅',
+    },
+    {
+      title: 'Total Transactions',
+      value: stats.totalTransactions.toString(),
+      change: '+22% from last month',
+      changeType: 'positive' as const,
+      icon: '💳',
+    },
+  ];
 
   return (
     <DashboardLayout
@@ -306,7 +415,7 @@ export default function PaymentsPage() {
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {mockStats.map((stat, index) => (
+          {displayStats.map((stat, index) => (
             <StatsCard
               key={index}
               title={stat.title}
@@ -390,9 +499,9 @@ export default function PaymentsPage() {
               </thead>
               <tbody className="bg-background divide-y divide-border-color">
                 {filteredPayments.map((payment) => (
-                  <tr key={payment.id} className="hover:bg-card-bg">
+                  <tr key={payment._id} className="hover:bg-card-bg">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                      {payment.paymentId}
+                      {payment._id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                       {payment.patientName}
@@ -430,7 +539,7 @@ export default function PaymentsPage() {
                         <FaEdit size={16} />
                       </button>
                       <button 
-                        onClick={() => handleDeletePayment(payment.id)}
+                        onClick={() => handleDeletePayment(payment._id)}
                         className="text-error hover:text-error/80 p-1 rounded hover:bg-error/10 transition-colors cursor-pointer"
                         title="Delete Payment"
                       >
@@ -558,7 +667,7 @@ export default function PaymentsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Payment ID</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPayment.paymentId}</p>
+                <p className="mt-1 text-sm text-gray-900">{viewingPayment._id}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Patient</label>

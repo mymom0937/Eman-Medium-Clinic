@@ -17,7 +17,7 @@ export class DatabaseService {
 
   private constructor() {
     this.config = {
-      uri: process.env.MONGODB_URI || 'mongodb://localhost:27017',
+      uri: process.env.MONGODB_URL || 'mongodb://localhost:27017',
       dbName: process.env.MONGODB_DB_NAME || 'eman_clinic',
       options: {
         maxPoolSize: 10,

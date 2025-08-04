@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+if (!process.env.MONGODB_URL) {
+  throw new Error('Please define the MONGODB_URL environment variable inside .env.local');
 }
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URL = process.env.MONGODB_URL;
 const DB_NAME = process.env.MONGODB_DB_NAME || 'eman_clinic';
 
 interface Cached {
@@ -32,8 +32,11 @@ async function dbConnect() {
       bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
-      console.log('Connected to MongoDB Atlas');
+    cached.promise = mongoose.connect(MONGODB_URL, {
+      ...opts,
+      dbName: DB_NAME,
+    }).then((mongooseInstance) => {
+      console.log(`Connected to MongoDB Atlas - Database: ${DB_NAME}`);
       return mongooseInstance;
     });
   }

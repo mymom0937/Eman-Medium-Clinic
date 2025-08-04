@@ -30,7 +30,60 @@ export async function GET(
   }
 }
 
-// PATCH /api/drug-orders/[id] - Update drug order
+// PUT /api/drug-orders/[id] - Update drug order (full update)
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    await connectToDatabase();
+    const body = await request.json();
+    const { patientId, patientName, labResultId, items, notes } = body;
+
+    // Validate required fields
+    if (!patientId || !patientName || !items || items.length === 0) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Calculate total amount
+    const totalAmount = items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
+
+    const updateData = {
+      patientId,
+      patientName,
+      labResultId,
+      items: items.map((item: any) => ({
+        ...item,
+        totalPrice: item.quantity * item.unitPrice,
+      })),
+      totalAmount,
+      notes,
+      updatedAt: new Date(),
+    };
+
+    const drugOrder = await DrugOrder.findByIdAndUpdate(
+      params.id,
+      { $set: updateData },
+      { new: true }
+    );
+
+    if (!drugOrder) {
+      return NextResponse.json({ error: 'Drug order not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: 'Drug order updated successfully' });
+  } catch (error) {
+    console.error('Error updating drug order:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// PATCH /api/drug-orders/[id] - Update drug order (partial update)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }

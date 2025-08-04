@@ -30,7 +30,53 @@ export async function GET(
   }
 }
 
-// PATCH /api/lab-results/[id] - Update lab result
+// PUT /api/lab-results/[id] - Update lab result (full update)
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    await connectToDatabase();
+    const body = await request.json();
+    const { patientId, patientName, testType, testName, notes } = body;
+
+    // Validate required fields
+    if (!patientId || !patientName || !testType || !testName) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const updateData = {
+      patientId,
+      patientName,
+      testType,
+      testName,
+      notes,
+      updatedAt: new Date(),
+    };
+
+    const labResult = await LabResult.findByIdAndUpdate(
+      params.id,
+      { $set: updateData },
+      { new: true }
+    );
+
+    if (!labResult) {
+      return NextResponse.json({ error: 'Lab result not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: 'Lab result updated successfully' });
+  } catch (error) {
+    console.error('Error updating lab result:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// PATCH /api/lab-results/[id] - Update lab result (partial update)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }

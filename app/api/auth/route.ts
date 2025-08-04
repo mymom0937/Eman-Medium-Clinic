@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/config/db/connection';
+import dbConnect from '@/config/connection';
 import { User, UserRole } from '@/types/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
 
     const body = await request.json();
     const { action, email, password, firstName, lastName, role } = body;
@@ -107,8 +111,12 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
 
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');

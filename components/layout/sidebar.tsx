@@ -39,8 +39,8 @@ const navigationItems = [
     roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.NURSE, USER_ROLES.PHARMACIST],
   },
   {
-    name: 'Inventory',
-    href: ROUTES.INVENTORY,
+    name: 'Inventories',
+    href: ROUTES.INVENTORIES,
     icon: '📦',
     roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.PHARMACIST],
   },

@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/config/db/connection';
+import dbConnect from '@/config/connection';
 import { Patient } from '@/types/patient';
 
 export async function GET(request: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
     
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -55,8 +59,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
     
     const body = await request.json();
     
@@ -80,10 +88,13 @@ export async function POST(request: NextRequest) {
     const newId = lastId + 1;
     const patientId = `PAT${newId.toString().padStart(6, '0')}`;
     
-    const patient: Omit<Patient, '_id'> = {
+    const patient = {
+      id: patientId, // Add the required id field
       patientId,
       firstName: body.firstName,
       lastName: body.lastName,
+      age: body.age ? parseInt(body.age) : null,
+      bloodType: body.bloodType || '',
       phone: body.phone,
       email: body.email || '',
       dateOfBirth: body.dateOfBirth || null,

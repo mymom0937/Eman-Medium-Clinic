@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -9,79 +9,30 @@ import { FormField, Input, Select, TextArea, Button } from '@/components/ui/form
 import { toastManager } from '@/lib/utils/toast';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 
-// Mock data - in real app, this would come from API
-const mockStats = [
-  {
-    title: 'Total Patients',
-    value: '456',
-    change: '+12% from last month',
-    changeType: 'positive' as const,
-    icon: '👥',
-  },
-  {
-    title: 'New This Month',
-    value: '23',
-    change: '+5 from last month',
-    changeType: 'positive' as const,
-    icon: '🆕',
-  },
-  {
-    title: 'Active Patients',
-    value: '389',
-    change: '+8% from last month',
-    changeType: 'positive' as const,
-    icon: '✅',
-  },
-  {
-    title: 'Average Age',
-    value: '42',
-    change: 'No change',
-    changeType: 'neutral' as const,
-    icon: '📊',
-  },
-];
+interface Patient {
+  _id: string;
+  patientId: string;
+  firstName: string;
+  lastName: string;
+  age: number;
+  gender: string;
+  phone: string;
+  email: string;
+  address: string;
+  bloodType: string;
+  lastVisit: string;
+  isActive: boolean;
+  medicalHistory: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-const mockPatients = [
-  {
-    id: 1,
-    patientId: 'PAT000001',
-    name: 'John Doe',
-    age: 35,
-    gender: 'Male',
-    phone: '+251-911-123-456',
-    email: 'john.doe@email.com',
-    address: 'Addis Ababa, Ethiopia',
-    bloodType: 'O+',
-    lastVisit: '2024-01-15T10:30:00Z',
-    status: 'ACTIVE',
-  },
-  {
-    id: 2,
-    patientId: 'PAT000002',
-    name: 'Jane Smith',
-    age: 28,
-    gender: 'Female',
-    phone: '+251-922-234-567',
-    email: 'jane.smith@email.com',
-    address: 'Addis Ababa, Ethiopia',
-    bloodType: 'A+',
-    lastVisit: '2024-01-18T14:15:00Z',
-    status: 'ACTIVE',
-  },
-  {
-    id: 3,
-    patientId: 'PAT000003',
-    name: 'Michael Johnson',
-    age: 45,
-    gender: 'Male',
-    phone: '+251-933-345-678',
-    email: 'michael.johnson@email.com',
-    address: 'Addis Ababa, Ethiopia',
-    bloodType: 'B+',
-    lastVisit: '2024-01-10T09:00:00Z',
-    status: 'INACTIVE',
-  },
-];
+interface PatientStats {
+  totalPatients: number;
+  newThisMonth: number;
+  activePatients: number;
+  averageAge: number;
+}
 
 const PATIENT_STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
@@ -124,10 +75,17 @@ export default function PatientsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [editingPatient, setEditingPatient] = useState<any>(null);
-  const [viewingPatient, setViewingPatient] = useState<any>(null);
-  const [patients, setPatients] = useState(mockPatients);
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [stats, setStats] = useState<PatientStats>({
+    totalPatients: 0,
+    newThisMonth: 0,
+    activePatients: 0,
+    averageAge: 0,
+  });
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [formData, setFormData] = useState<PatientFormData>({
     name: '',
     age: '',
@@ -141,7 +99,52 @@ export default function PatientsPage() {
   });
   const [errors, setErrors] = useState<Partial<PatientFormData>>({});
 
-  if (!isLoaded) {
+  // Load patients from API on component mount
+  useEffect(() => {
+    const loadPatients = async () => {
+      try {
+        setInitialLoading(true);
+        const response = await fetch('/api/patients');
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          setPatients(result.data);
+          
+          // Calculate stats from real data
+          const totalPatients = result.data.length;
+          const activePatients = result.data.filter((patient: Patient) => patient.isActive).length;
+          const averageAge = result.data.length > 0 
+            ? Math.round(result.data.reduce((sum: number, patient: Patient) => sum + (patient.age || 0), 0) / (result.data.filter((patient: Patient) => patient.age).length || 1))
+            : 0;
+          
+          // Calculate new patients this month
+          const currentMonth = new Date().getMonth();
+          const currentYear = new Date().getFullYear();
+          const newThisMonth = result.data.filter((patient: Patient) => {
+            const createdAt = new Date(patient.createdAt);
+            return createdAt.getMonth() === currentMonth && createdAt.getFullYear() === currentYear;
+          }).length;
+
+          setStats({
+            totalPatients,
+            newThisMonth,
+            activePatients,
+            averageAge,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading patients:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    if (isLoaded) {
+      loadPatients();
+    }
+  }, [isLoaded]);
+
+  if (!isLoaded || initialLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-lg">Loading...</div>
@@ -151,11 +154,12 @@ export default function PatientsPage() {
 
   // Filter patients based on search, status, and gender
   const filteredPatients = patients.filter(patient => {
+    const fullName = `${patient.firstName} ${patient.lastName}`.trim();
     const matchesSearch = patient.patientId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          patient.phone.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || patient.status.toLowerCase() === selectedStatus;
+    const matchesStatus = selectedStatus === 'all' || (patient.isActive ? 'active' : 'inactive') === selectedStatus;
     const matchesGender = selectedGender === 'all' || patient.gender.toLowerCase() === selectedGender;
     return matchesSearch && matchesStatus && matchesGender;
   });
@@ -176,6 +180,38 @@ export default function PatientsPage() {
     const lastNumber = lastPatient ? parseInt(lastPatient.patientId.replace('PAT', '')) : 0;
     return `PAT${String(lastNumber + 1).padStart(6, '0')}`;
   };
+
+  // Create display stats from real data
+  const displayStats = [
+    {
+      title: 'Total Patients',
+      value: stats.totalPatients.toString(),
+      change: '+12% from last month',
+      changeType: 'positive' as const,
+      icon: '👥',
+    },
+    {
+      title: 'New This Month',
+      value: stats.newThisMonth.toString(),
+      change: '+5 from last month',
+      changeType: 'positive' as const,
+      icon: '🆕',
+    },
+    {
+      title: 'Active Patients',
+      value: stats.activePatients.toString(),
+      change: '+8% from last month',
+      changeType: 'positive' as const,
+      icon: '✅',
+    },
+    {
+      title: 'Average Age',
+      value: stats.averageAge.toString(),
+      change: 'No change',
+      changeType: 'neutral' as const,
+      icon: '📊',
+    },
+  ];
 
   const validateForm = (): boolean => {
     const newErrors: Partial<PatientFormData> = {};
@@ -200,9 +236,7 @@ export default function PatientsPage() {
     if (!formData.address.trim()) {
       newErrors.address = 'Address is required';
     }
-    if (!formData.bloodType) {
-      newErrors.bloodType = 'Blood type is required';
-    }
+    // Blood type is optional
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -213,99 +247,149 @@ export default function PatientsPage() {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Split full name into first and last name
+      const nameParts = formData.name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
 
-      const newPatient = {
-        id: patients.length + 1,
-        patientId: generatePatientId(),
-        name: formData.name,
-        age: parseInt(formData.age),
-        gender: formData.gender,
+      const patientData = {
+        firstName,
+        lastName,
+        age: formData.age ? parseInt(formData.age) : null,
+        bloodType: formData.bloodType || '',
         phone: formData.phone,
         email: formData.email,
+        dateOfBirth: null, // You can add date picker later
+        gender: formData.gender.toUpperCase(),
         address: formData.address,
-        bloodType: formData.bloodType,
-        lastVisit: new Date().toISOString(),
-        status: formData.status.toUpperCase(),
-        notes: formData.notes,
+        emergencyContact: '',
+        medicalHistory: formData.notes,
+        allergies: [],
       };
 
-      setPatients([...patients, newPatient]);
+      const response = await fetch('/api/patients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(patientData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to add patient');
+      }
+
+      if (result.success) {
+        setPatients([...patients, result.data]);
+      } else {
+        throw new Error(result.error || 'Failed to add patient');
+      }
       setIsAddModalOpen(false);
       resetForm();
       toastManager.success('Patient added successfully!');
     } catch (error) {
+      console.error('Error adding patient:', error);
       toastManager.error('Failed to add patient. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEditPatient = (patient: any) => {
+  const handleEditPatient = (patient: Patient) => {
     setEditingPatient(patient);
     setFormData({
-      name: patient.name,
-      age: patient.age.toString(),
-      gender: patient.gender.toLowerCase(),
-      phone: patient.phone,
-      email: patient.email,
-      address: patient.address,
-      bloodType: patient.bloodType,
-      status: patient.status.toLowerCase(),
-      notes: patient.notes || '',
+      name: `${patient.firstName} ${patient.lastName}`,
+      age: patient.age?.toString() || '',
+      gender: patient.gender?.toLowerCase() || '',
+      phone: patient.phone || '',
+      email: patient.email || '',
+      address: patient.address || '',
+      bloodType: patient.bloodType || '',
+      status: patient.isActive ? 'active' : 'inactive',
+      notes: patient.medicalHistory || '',
     });
     setIsEditModalOpen(true);
   };
 
   const handleUpdatePatient = async () => {
-    if (!validateForm()) return;
+    if (!validateForm() || !editingPatient) return;
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Split full name into first and last name
+      const nameParts = formData.name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
 
-      const updatedPatients = patients.map(patient =>
-        patient.id === editingPatient.id
-          ? {
-              ...patient,
-              name: formData.name,
-              age: parseInt(formData.age),
-              gender: formData.gender,
-              phone: formData.phone,
-              email: formData.email,
-              address: formData.address,
-              bloodType: formData.bloodType,
-              status: formData.status.toUpperCase(),
-              notes: formData.notes,
-            }
-          : patient
-      );
+      const patientData = {
+        firstName,
+        lastName,
+        phone: formData.phone,
+        email: formData.email,
+        dateOfBirth: null,
+        gender: formData.gender.toUpperCase(),
+        address: formData.address,
+        bloodType: formData.bloodType,
+        age: parseInt(formData.age),
+        isActive: formData.status === 'active',
+        medicalHistory: formData.notes,
+      };
 
-      setPatients(updatedPatients);
-      setIsEditModalOpen(false);
-      setEditingPatient(null);
-      resetForm();
-      toastManager.success('Patient updated successfully!');
+      const response = await fetch(`/api/patients/${editingPatient._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(patientData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update patient');
+      }
+
+      if (result.success) {
+        setPatients(patients.map(patient =>
+          patient._id === editingPatient._id ? result.data : patient
+        ));
+        setIsEditModalOpen(false);
+        setEditingPatient(null);
+        resetForm();
+        toastManager.success('Patient updated successfully!');
+      } else {
+        throw new Error(result.error || 'Failed to update patient');
+      }
     } catch (error) {
+      console.error('Error updating patient:', error);
       toastManager.error('Failed to update patient. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeletePatient = async (patientId: number) => {
+  const handleDeletePatient = async (patientId: string) => {
     if (!confirm('Are you sure you want to delete this patient?')) return;
 
+    setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await fetch(`/api/patients/${patientId}`, {
+        method: 'DELETE',
+      });
 
-      setPatients(patients.filter(patient => patient.id !== patientId));
-      toastManager.success('Patient deleted successfully!');
+      if (response.ok) {
+        setPatients(patients.filter(patient => patient._id !== patientId));
+        toastManager.success('Patient deleted successfully!');
+      } else {
+        toastManager.error('Failed to delete patient');
+      }
     } catch (error) {
-      toastManager.error('Failed to delete patient. Please try again.');
+      console.error('Error deleting patient:', error);
+      toastManager.error('Failed to delete patient');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -331,7 +415,7 @@ export default function PatientsPage() {
     }
   };
 
-  const handleViewPatient = (patient: any) => {
+  const handleViewPatient = (patient: Patient) => {
     setViewingPatient(patient);
     setIsViewModalOpen(true);
   };
@@ -345,7 +429,7 @@ export default function PatientsPage() {
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {mockStats.map((stat, index) => (
+          {displayStats.map((stat, index) => (
             <StatsCard
               key={index}
               title={stat.title}
@@ -437,15 +521,15 @@ export default function PatientsPage() {
               </thead>
               <tbody className="bg-background divide-y divide-border-color">
                 {filteredPatients.map((patient) => (
-                  <tr key={patient.id} className="hover:bg-card-bg">
+                  <tr key={patient._id} className="hover:bg-card-bg">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
                       {patient.patientId}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
-                      {patient.name}
+                      {`${patient.firstName} ${patient.lastName}`}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
-                      {patient.age}
+                      {patient.age || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                       {patient.gender}
@@ -457,14 +541,14 @@ export default function PatientsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
-                      {patient.bloodType}
+                      {patient.bloodType || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                       {new Date(patient.lastVisit).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(patient.status)}`}>
-                        {patient.status.toUpperCase()}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(patient.isActive ? 'active' : 'inactive')}`}>
+                        {patient.isActive ? 'ACTIVE' : 'INACTIVE'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -483,7 +567,7 @@ export default function PatientsPage() {
                         <FaEdit size={16} />
                       </button>
                       <button 
-                        onClick={() => handleDeletePatient(patient.id)}
+                        onClick={() => handleDeletePatient(patient._id)}
                         className="text-error hover:text-error/80 p-1 rounded hover:bg-error/10 transition-colors cursor-pointer"
                         title="Delete Patient"
                       >
@@ -743,11 +827,11 @@ export default function PatientsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Full Name</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPatient.name}</p>
+                <p className="mt-1 text-sm text-gray-900">{`${viewingPatient.firstName} ${viewingPatient.lastName}`}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Age</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPatient.age} years</p>
+                                        <p className="mt-1 text-sm text-gray-900">{viewingPatient.age ? `${viewingPatient.age} years` : 'Not specified'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Gender</label>
@@ -763,12 +847,12 @@ export default function PatientsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Blood Type</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPatient.bloodType}</p>
+                <p className="mt-1 text-sm text-gray-900">{viewingPatient.bloodType || 'Not specified'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Status</label>
-                <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingPatient.status)}`}>
-                  {viewingPatient.status.toUpperCase()}
+                <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingPatient.isActive ? 'active' : 'inactive')}`}>
+                  {viewingPatient.isActive ? 'ACTIVE' : 'INACTIVE'}
                 </span>
               </div>
               <div>
@@ -782,10 +866,10 @@ export default function PatientsPage() {
                 <p className="mt-1 text-sm text-gray-900">{viewingPatient.address}</p>
               </div>
             )}
-            {viewingPatient.notes && (
+            {viewingPatient.medicalHistory && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Notes</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPatient.notes}</p>
+                <p className="mt-1 text-sm text-gray-900">{viewingPatient.medicalHistory}</p>
               </div>
             )}
             <div className="flex justify-end pt-4">

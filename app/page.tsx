@@ -229,7 +229,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20" style={{ backgroundColor: '#F8FAFC' }}>
+      <section className="py-20 bg-card-bg">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-text-primary mb-4">
             Ready to Transform Your Clinic?
@@ -241,19 +241,19 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {isSignedIn ? (
               <Link href="/dashboard">
-                <Button size="lg" className="text-lg px-8 py-4 bg-accent-color bg-[#1447E6]  hover:bg-gray-700 text-white shadow-lg cursor-pointer">
+                <Button size="lg" className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg  hover:bg-gray-700 cursor-pointer bg-[#1447E6]">
                   Access Dashboard
                 </Button>
               </Link>
             ) : (
               <>
                 <Link href="/sign-up">
-                  <Button size="lg" className="text-lg px-8 py-4 bg-accent-color bg-[#1447E6]  hover:bg-gray-700 text-white shadow-lg cursor-pointer">
+                  <Button size="lg" className="text-lg px-8 py-4 bg-accent-color hover:bg-accent-hover text-white shadow-lg cursor-pointer">
                     Start Free Trial
                   </Button>
                 </Link>
                 <Link href="/sign-in">
-                  <Button size="lg" variant="outline" className="text-lg px-8 py-4 border-2 border-border-color text-text-primary bg-[#1447E6]  hover:bg-gray-700 cursor-pointer">
+                  <Button size="lg" variant="outline" className="text-lg px-8 py-4 border-2 border-border-color text-text-primary hover:bg-card-bg cursor-pointer">
                     Sign In
                   </Button>
                 </Link>
@@ -311,7 +311,7 @@ export default function HomePage() {
             </div>
           </div>
           
-          <div className="border-t border-border-color mt-8 pt-8 text-center text-text-muted text-sm">
+          <div className="border-t border-border-color mt-8 pt-8 text-center text-text-muted text-sm font-semibold">
             <p>&copy; 2024 Eman Clinic. All rights reserved.</p>
           </div>
         </div>

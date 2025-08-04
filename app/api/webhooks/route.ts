@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/config/db/connection';
+import dbConnect from '@/config/connection';
 
 export async function POST(request: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
 
     const body = await request.json();
     const { type, data, source } = body;
@@ -64,8 +68,12 @@ export async function POST(request: NextRequest) {
 
 async function handlePaymentCompleted(data: any) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
 
     // Update payment status
     await db.collection('payments').updateOne(
@@ -100,8 +108,12 @@ async function handlePaymentCompleted(data: any) {
 
 async function handleInventoryLow(data: any) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
 
     // Create notification
     await db.collection('notifications').insertOne({
@@ -122,8 +134,12 @@ async function handleInventoryLow(data: any) {
 
 async function handleAppointmentReminder(data: any) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
 
     // Create notification
     await db.collection('notifications').insertOne({
@@ -145,8 +161,12 @@ async function handleAppointmentReminder(data: any) {
 
 async function handleDrugExpiry(data: any) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
 
     // Create notification
     await db.collection('notifications').insertOne({
@@ -167,8 +187,12 @@ async function handleDrugExpiry(data: any) {
 
 export async function GET(request: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'eman_clinic');
+    await dbConnect();
+    const db = (await import('mongoose')).connection.db;
+    
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');

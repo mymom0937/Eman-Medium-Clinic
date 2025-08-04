@@ -16,90 +16,78 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { toastManager } from '@/lib/utils/toast';
 import { FaEdit, FaSave, FaTimes } from 'react-icons/fa';
 
-// Mock data for lab result
-const mockLabResult: LabResult = {
-  _id: '1',
-  patientId: 'PAT001',
-  patientName: 'John Doe',
-  testType: 'COMPLETE_BLOOD_COUNT',
-  testName: 'Complete Blood Count',
-  status: 'IN_PROGRESS',
-  requestedBy: 'nurse1',
-  requestedAt: new Date('2024-01-15T10:30:00'),
-  completedBy: 'lab1',
-  completedAt: undefined,
-  results: [
-    {
-      parameter: 'Hemoglobin',
-      value: '14.2',
-      unit: 'g/dL',
-      referenceRange: '13.5-17.5',
-      isAbnormal: false,
-      notes: 'Normal range',
-    },
-    {
-      parameter: 'White Blood Cells',
-      value: '11.5',
-      unit: 'K/μL',
-      referenceRange: '4.5-11.0',
-      isAbnormal: true,
-      notes: 'Slightly elevated',
-    },
-    {
-      parameter: 'Platelets',
-      value: '250',
-      unit: 'K/μL',
-      referenceRange: '150-450',
-      isAbnormal: false,
-      notes: 'Normal range',
-    },
-  ],
-  notes: 'Patient has fever and fatigue. CBC shows slightly elevated WBC count.',
-  createdAt: new Date('2024-01-15T10:30:00'),
-  updatedAt: new Date('2024-01-15T10:30:00'),
-};
+
 
 export default function LabResultDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { userId } = useAuth();
   const { userRole, userName, isLoaded } = useUserRole();
-  const [labResult, setLabResult] = useState<LabResult | null>(mockLabResult);
+  const [labResult, setLabResult] = useState<LabResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [results, setResults] = useState<LabTestResult[]>(mockLabResult.results || []);
-  const [notes, setNotes] = useState(mockLabResult.notes || '');
+  const [results, setResults] = useState<LabTestResult[]>([]);
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
-    if (isLoaded && params.id) {
-      // In real app, fetch from API
-      setLabResult(mockLabResult);
-      setResults(mockLabResult.results || []);
-      setNotes(mockLabResult.notes || '');
-    }
-  }, [isLoaded, params.id]);
+    const loadLabResult = async () => {
+      if (!isLoaded || !params.id) return;
+
+      try {
+        setInitialLoading(true);
+        const response = await fetch(`/api/lab-results/${params.id}`);
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          setLabResult(result.data);
+          setResults(result.data.results || []);
+          setNotes(result.data.notes || '');
+        } else {
+          toastManager.error('Failed to load lab result');
+          router.push('/lab-results');
+        }
+      } catch (error) {
+        console.error('Error loading lab result:', error);
+        toastManager.error('Failed to load lab result');
+        router.push('/lab-results');
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadLabResult();
+  }, [isLoaded, params.id, router]);
 
   const updateLabResult = async () => {
+    if (!labResult) return;
+    
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch(`/api/lab-results/${labResult._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          results,
+          notes,
+          status: 'COMPLETED',
+          completedBy: userId || '',
+          completedAt: new Date(),
+        }),
+      });
 
-      const updatedLabResult: LabResult = {
-        ...labResult!,
-        results,
-        notes,
-        status: 'COMPLETED' as const,
-        completedBy: userId || '',
-        completedAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      setLabResult(updatedLabResult);
-      setIsEditing(false);
-      setShowEditModal(false);
-      toastManager.success('Lab result updated successfully!');
+      if (response.ok) {
+        const result = await response.json();
+        setLabResult(result.data);
+        setIsEditing(false);
+        setShowEditModal(false);
+        toastManager.success('Lab result updated successfully!');
+      } else {
+        toastManager.error('Failed to update lab result');
+      }
     } catch (error) {
       console.error('Error updating lab result:', error);
       toastManager.error('Failed to update lab result. Please try again.');
@@ -138,7 +126,7 @@ export default function LabResultDetailPage() {
     return false;
   };
 
-  if (!isLoaded) {
+  if (!isLoaded || initialLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-lg">Loading...</div>

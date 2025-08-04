@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -13,14 +13,14 @@ import { USER_ROLES } from '@/constants/user-roles';
 import { useUserRole } from '@/hooks/useUserRole';
 import { toastManager } from '@/lib/utils/toast';
 
-// Mock data for patient suggestions
-const MOCK_PATIENTS = [
-  { id: 'PAT001', name: 'John Doe', age: 35, gender: 'Male' },
-  { id: 'PAT002', name: 'Jane Smith', age: 28, gender: 'Female' },
-  { id: 'PAT003', name: 'Mike Johnson', age: 42, gender: 'Male' },
-  { id: 'PAT004', name: 'Sarah Wilson', age: 31, gender: 'Female' },
-  { id: 'PAT005', name: 'David Brown', age: 55, gender: 'Male' },
-];
+interface Patient {
+  _id: string;
+  patientId: string;
+  firstName: string;
+  lastName: string;
+  age: number;
+  gender: string;
+}
 
 interface FormData {
   patientId: string;
@@ -37,6 +37,8 @@ export default function NewLabResultPage() {
   const [loading, setLoading] = useState(false);
   const [showPatientModal, setShowPatientModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [formData, setFormData] = useState<FormData>({
     patientId: '',
     patientName: '',
@@ -45,6 +47,27 @@ export default function NewLabResultPage() {
     notes: '',
   });
   const [errors, setErrors] = useState<Partial<FormData>>({});
+
+  // Load patients for patient selection
+  useEffect(() => {
+    const loadPatients = async () => {
+      if (!isLoaded) return;
+
+      try {
+        const response = await fetch('/api/patients');
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          setPatients(result.data);
+          setFilteredPatients(result.data);
+        }
+      } catch (error) {
+        console.error('Error loading patients:', error);
+      }
+    };
+
+    loadPatients();
+  }, [isLoaded]);
 
   if (!isLoaded) {
     return (
@@ -94,14 +117,28 @@ export default function NewLabResultPage() {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch('/api/lab-results', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patientId: formData.patientId,
+          patientName: formData.patientName,
+          testType: formData.testType,
+          testName: formData.testName,
+          notes: formData.notes,
+          requestedBy: userId || '',
+        }),
+      });
 
-      // In real app, this would be an API call
-      console.log('Creating lab result:', formData);
-      
-      toastManager.success('Lab test request created successfully!');
-      router.push('/lab-results');
+      if (response.ok) {
+        toastManager.success('Lab test request created successfully!');
+        router.push('/lab-results');
+      } else {
+        const error = await response.json();
+        toastManager.error(error.error || 'Failed to create lab test request');
+      }
     } catch (error) {
       console.error('Error creating lab result:', error);
       toastManager.error('Failed to create lab test request. Please try again.');
@@ -110,16 +147,21 @@ export default function NewLabResultPage() {
     }
   };
 
-  const filteredPatients = MOCK_PATIENTS.filter(patient =>
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter patients based on search term
+  useEffect(() => {
+    const filtered = patients.filter(patient => {
+      const fullName = `${patient.firstName} ${patient.lastName}`;
+      return fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             patient.patientId.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+    setFilteredPatients(filtered);
+  }, [searchTerm, patients]);
 
-  const selectPatient = (patient: typeof MOCK_PATIENTS[0]) => {
+  const selectPatient = (patient: Patient) => {
     setFormData(prev => ({
       ...prev,
-      patientId: patient.id,
-      patientName: patient.name,
+      patientId: patient.patientId,
+      patientName: `${patient.firstName} ${patient.lastName}`,
     }));
     setShowPatientModal(false);
     setSearchTerm('');
@@ -244,14 +286,14 @@ export default function NewLabResultPage() {
               <div className="space-y-2">
                 {filteredPatients.map((patient) => (
                   <div
-                    key={patient.id}
+                    key={patient._id}
                     className="border p-3 rounded-lg hover:bg-gray-50 cursor-pointer"
                     onClick={() => selectPatient(patient)}
                   >
                     <div className="flex justify-between items-center">
                       <div>
-                        <p className="font-medium">{patient.name}</p>
-                        <p className="text-sm text-gray-500">ID: {patient.id}</p>
+                        <p className="font-medium">{`${patient.firstName} ${patient.lastName}`}</p>
+                        <p className="text-sm text-gray-500">ID: {patient.patientId}</p>
                       </div>
                       <div className="text-sm text-gray-500">
                         {patient.age} years, {patient.gender}

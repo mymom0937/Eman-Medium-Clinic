@@ -15,112 +15,6 @@ import { USER_ROLES } from '@/constants/user-roles';
 import { useUserRole } from '@/hooks/useUserRole';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 
-// Mock data for drug orders
-const mockDrugOrders: DrugOrder[] = [
-  {
-    _id: '1',
-    patientId: 'PAT001',
-    patientName: 'John Doe',
-    labResultId: 'LAB001',
-    status: 'PENDING',
-    orderedBy: 'nurse1',
-    orderedAt: new Date('2024-01-15T10:30:00'),
-    approvedBy: undefined,
-    approvedAt: undefined,
-    dispensedBy: undefined,
-    dispensedAt: undefined,
-    items: [
-      {
-        drugId: 'DRUG001',
-        drugName: 'Paracetamol 500mg',
-        quantity: 20,
-        unitPrice: 15.50,
-        totalPrice: 310.00,
-        dosage: '1 tablet every 6 hours',
-        instructions: 'Take with food',
-      },
-      {
-        drugId: 'DRUG002',
-        drugName: 'Amoxicillin 250mg',
-        quantity: 14,
-        unitPrice: 25.00,
-        totalPrice: 350.00,
-        dosage: '1 capsule twice daily',
-        instructions: 'Take on empty stomach',
-      },
-    ],
-    totalAmount: 660.00,
-    notes: 'Patient has fever and bacterial infection',
-    createdAt: new Date('2024-01-15T10:30:00'),
-    updatedAt: new Date('2024-01-15T10:30:00'),
-  },
-  {
-    _id: '2',
-    patientId: 'PAT002',
-    patientName: 'Jane Smith',
-    labResultId: 'LAB002',
-    status: 'APPROVED',
-    orderedBy: 'nurse1',
-    orderedAt: new Date('2024-01-14T14:20:00'),
-    approvedBy: 'pharmacist1',
-    approvedAt: new Date('2024-01-14T15:30:00'),
-    dispensedBy: undefined,
-    dispensedAt: undefined,
-    items: [
-      {
-        drugId: 'DRUG003',
-        drugName: 'Ibuprofen 400mg',
-        quantity: 30,
-        unitPrice: 12.75,
-        totalPrice: 382.50,
-        dosage: '1 tablet every 8 hours',
-        instructions: 'Take with food',
-      },
-    ],
-    totalAmount: 382.50,
-    notes: 'Pain management for chronic condition',
-    createdAt: new Date('2024-01-14T14:20:00'),
-    updatedAt: new Date('2024-01-14T15:30:00'),
-  },
-  {
-    _id: '3',
-    patientId: 'PAT003',
-    patientName: 'Mike Johnson',
-    labResultId: 'LAB003',
-    status: 'DISPENSED',
-    orderedBy: 'nurse2',
-    orderedAt: new Date('2024-01-13T09:15:00'),
-    approvedBy: 'pharmacist1',
-    approvedAt: new Date('2024-01-13T10:00:00'),
-    dispensedBy: 'pharmacist1',
-    dispensedAt: new Date('2024-01-13T11:30:00'),
-    items: [
-      {
-        drugId: 'DRUG004',
-        drugName: 'Metformin 500mg',
-        quantity: 60,
-        unitPrice: 8.50,
-        totalPrice: 510.00,
-        dosage: '1 tablet twice daily',
-        instructions: 'Take with meals',
-      },
-      {
-        drugId: 'DRUG005',
-        drugName: 'Vitamin D3 1000IU',
-        quantity: 30,
-        unitPrice: 5.00,
-        totalPrice: 150.00,
-        dosage: '1 tablet daily',
-        instructions: 'Take in the morning',
-      },
-    ],
-    totalAmount: 660.00,
-    notes: 'Diabetes management and vitamin supplement',
-    createdAt: new Date('2024-01-13T09:15:00'),
-    updatedAt: new Date('2024-01-13T11:30:00'),
-  },
-];
-
 const ORDER_STATUS_OPTIONS = [
   { value: 'all', label: 'All Status' },
   { value: 'PENDING', label: 'Pending' },
@@ -129,16 +23,16 @@ const ORDER_STATUS_OPTIONS = [
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
-const MOCK_DRUGS = [
-  { id: 'DRUG001', name: 'Paracetamol 500mg', price: 15.50 },
-  { id: 'DRUG002', name: 'Amoxicillin 250mg', price: 25.00 },
-  { id: 'DRUG003', name: 'Ibuprofen 400mg', price: 12.75 },
-  { id: 'DRUG004', name: 'Metformin 500mg', price: 8.50 },
-  { id: 'DRUG005', name: 'Vitamin D3 1000IU', price: 5.00 },
-  { id: 'DRUG006', name: 'Omeprazole 20mg', price: 18.00 },
-  { id: 'DRUG007', name: 'Cetirizine 10mg', price: 7.50 },
-  { id: 'DRUG008', name: 'Loratadine 10mg', price: 9.25 },
-];
+interface Drug {
+  _id: string;
+  name: string;
+  sellingPrice: number;
+  stockQuantity: number;
+  category: string;
+  manufacturer: string;
+  dosageForm: string;
+  strength: string;
+}
 
 interface DrugOrderFormData {
   patientId: string;
@@ -151,8 +45,10 @@ interface DrugOrderFormData {
 export default function DrugOrdersPage() {
   const { userId } = useAuth();
   const { userRole, userName, isLoaded } = useUserRole();
-  const [drugOrders, setDrugOrders] = useState<DrugOrder[]>(mockDrugOrders);
+  const [drugOrders, setDrugOrders] = useState<DrugOrder[]>([]);
+  const [drugs, setDrugs] = useState<Drug[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -169,11 +65,37 @@ export default function DrugOrdersPage() {
   });
   const [errors, setErrors] = useState<Partial<DrugOrderFormData>>({});
 
+  // Load drug orders and drugs data on component mount
   useEffect(() => {
-    if (isLoaded) {
-      // In real app, fetch from API
-      setDrugOrders(mockDrugOrders);
-    }
+    const loadData = async () => {
+      if (!isLoaded) return;
+
+      try {
+        setInitialLoading(true);
+        
+        // Fetch drug orders
+        const ordersResponse = await fetch('/api/drug-orders');
+        const ordersResult = await ordersResponse.json();
+        
+        if (ordersResponse.ok) {
+          setDrugOrders(ordersResult);
+        }
+
+        // Fetch drugs
+        const drugsResponse = await fetch('/api/drugs');
+        const drugsResult = await drugsResponse.json();
+        
+        if (drugsResponse.ok && drugsResult.success) {
+          setDrugs(drugsResult.data);
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadData();
   }, [isLoaded]);
 
   // Filter drug orders based on search and filters
@@ -187,15 +109,15 @@ export default function DrugOrdersPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'DISPENSED':
-        return 'bg-success/10 text-success';
+        return 'bg-green-100 text-green-800';
       case 'APPROVED':
-        return 'bg-warning/10 text-warning';
+        return 'bg-yellow-100 text-yellow-800';
       case 'PENDING':
-        return 'bg-info/10 text-info';
+        return 'bg-blue-100 text-blue-800';
       case 'CANCELLED':
-        return 'bg-error/10 text-error';
+        return 'bg-red-100 text-red-800';
       default:
-        return 'bg-text-muted/10 text-text-muted';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -221,26 +143,34 @@ export default function DrugOrdersPage() {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const totalAmount = formData.items.reduce((sum, item) => sum + item.totalPrice, 0);
-      const newDrugOrder: DrugOrder = {
-        _id: (drugOrders.length + 1).toString(),
+      const orderData = {
         patientId: formData.patientId,
         patientName: formData.patientName,
         labResultId: formData.labResultId || undefined,
-        status: 'PENDING',
-        orderedBy: userId || '',
-        orderedAt: new Date(),
         items: formData.items,
-        totalAmount,
         notes: formData.notes,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       };
 
-      setDrugOrders([...drugOrders, newDrugOrder]);
+      const response = await fetch('/api/drug-orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create drug order');
+      }
+
+      // Reload drug orders data
+      const ordersResponse = await fetch('/api/drug-orders');
+      const ordersResult = await ordersResponse.json();
+      
+      if (ordersResponse.ok) {
+        setDrugOrders(ordersResult);
+      }
+
       setIsAddModalOpen(false);
       resetForm();
     } catch (error) {
@@ -263,30 +193,38 @@ export default function DrugOrdersPage() {
   };
 
   const handleUpdateDrugOrder = async () => {
-    if (!validateForm()) return;
+    if (!validateForm() || !editingDrugOrder) return;
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const orderData = {
+        patientId: formData.patientId,
+        patientName: formData.patientName,
+        labResultId: formData.labResultId || undefined,
+        items: formData.items,
+        notes: formData.notes,
+      };
 
-      const totalAmount = formData.items.reduce((sum, item) => sum + item.totalPrice, 0);
-      const updatedDrugOrders = drugOrders.map(order =>
-        order._id === editingDrugOrder?._id
-          ? {
-              ...order,
-              patientId: formData.patientId,
-              patientName: formData.patientName,
-              labResultId: formData.labResultId || undefined,
-              items: formData.items,
-              totalAmount,
-              notes: formData.notes,
-              updatedAt: new Date(),
-            }
-          : order
-      );
+      const response = await fetch(`/api/drug-orders/${editingDrugOrder._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
 
-      setDrugOrders(updatedDrugOrders);
+      if (!response.ok) {
+        throw new Error('Failed to update drug order');
+      }
+
+      // Reload drug orders data
+      const ordersResponse = await fetch('/api/drug-orders');
+      const ordersResult = await ordersResponse.json();
+      
+      if (ordersResponse.ok) {
+        setDrugOrders(ordersResult);
+      }
+
       setIsEditModalOpen(false);
       setEditingDrugOrder(null);
       resetForm();
@@ -301,10 +239,21 @@ export default function DrugOrdersPage() {
     if (!confirm('Are you sure you want to delete this drug order?')) return;
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await fetch(`/api/drug-orders/${id}`, {
+        method: 'DELETE',
+      });
 
-      setDrugOrders(drugOrders.filter(order => order._id !== id));
+      if (!response.ok) {
+        throw new Error('Failed to delete drug order');
+      }
+
+      // Reload drug orders data
+      const ordersResponse = await fetch('/api/drug-orders');
+      const ordersResult = await ordersResponse.json();
+      
+      if (ordersResponse.ok) {
+        setDrugOrders(ordersResult);
+      }
     } catch (error) {
       console.error('Error deleting drug order:', error);
     }
@@ -375,10 +324,10 @@ export default function DrugOrdersPage() {
     return false;
   };
 
-  if (!isLoaded) {
+  if (!isLoaded || initialLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-lg text-text-primary">Loading...</div>
+        <div className="text-lg text-gray-900">Loading...</div>
       </div>
     );
   }
@@ -392,8 +341,8 @@ export default function DrugOrdersPage() {
       >
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent-color"></div>
-            <p className="mt-4 text-text-primary">Loading drug orders...</p>
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-gray-900">Loading drug orders...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -408,43 +357,46 @@ export default function DrugOrdersPage() {
     >
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-text-primary">Drug Orders</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Drug Orders</h1>
           {(userRole === USER_ROLES.NURSE || userRole === USER_ROLES.SUPER_ADMIN) && (
-            <Button onClick={() => setIsAddModalOpen(true)} className="cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
+            <Button 
+              onClick={() => setIsAddModalOpen(true)} 
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors duration-200"
+            >
               Create New Order
             </Button>
           )}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Drug Orders Overview</CardTitle>
+        <Card className="bg-white shadow-lg rounded-lg">
+          <CardHeader className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+            <CardTitle className="text-xl font-semibold text-gray-900">Drug Orders Overview</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-warning">
+              <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="text-2xl font-bold text-yellow-600">
                   {drugOrders.filter(o => o.status === 'PENDING').length}
                 </div>
-                <div className="text-sm text-text-secondary">Pending</div>
+                <div className="text-sm text-yellow-700">Pending</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-info">
+              <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-2xl font-bold text-blue-600">
                   {drugOrders.filter(o => o.status === 'APPROVED').length}
                 </div>
-                <div className="text-sm text-text-secondary">Approved</div>
+                <div className="text-sm text-blue-700">Approved</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-success">
+              <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="text-2xl font-bold text-green-600">
                   {drugOrders.filter(o => o.status === 'DISPENSED').length}
                 </div>
-                <div className="text-sm text-text-secondary">Dispensed</div>
+                <div className="text-sm text-green-700">Dispensed</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-error">
+              <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
+                <div className="text-2xl font-bold text-red-600">
                   {drugOrders.filter(o => o.status === 'CANCELLED').length}
                 </div>
-                <div className="text-sm text-text-secondary">Cancelled</div>
+                <div className="text-sm text-red-700">Cancelled</div>
               </div>
             </div>
 
@@ -455,12 +407,12 @@ export default function DrugOrdersPage() {
                 placeholder="Search by patient ID or name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary placeholder-text-muted bg-background text-sm"
+                className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 bg-white text-sm"
               />
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background text-sm"
+                className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white text-sm"
               >
                 {ORDER_STATUS_OPTIONS.map(option => (
                   <option key={option.value} value={option.value}>
@@ -470,69 +422,69 @@ export default function DrugOrdersPage() {
               </select>
             </div>
 
-            <Table>
+            <Table className="w-full">
               <TableHeader>
-                <TableRow>
-                  <TableHead>Patient</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Total Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ordered</TableHead>
-                  <TableHead>Actions</TableHead>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Patient</TableHead>
+                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Items</TableHead>
+                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Total Amount</TableHead>
+                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Status</TableHead>
+                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Ordered</TableHead>
+                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredDrugOrders.map((order) => (
-                  <TableRow key={order._id}>
-                    <TableCell>
+                  <TableRow key={order._id} className="border-b border-gray-200 hover:bg-gray-50">
+                    <TableCell className="py-3 px-4">
                       <div>
-                        <div className="font-medium text-text-primary">{order.patientName}</div>
-                        <div className="text-sm text-text-secondary">{order.patientId}</div>
+                        <div className="font-medium text-gray-900">{order.patientName}</div>
+                        <div className="text-sm text-gray-500">{order.patientId}</div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-text-primary">
+                    <TableCell className="py-3 px-4">
+                      <div className="text-sm text-gray-900">
                         {order.items.length} item(s)
                       </div>
                     </TableCell>
-                    <TableCell className="text-text-primary">
+                    <TableCell className="py-3 px-4 text-gray-900">
                       ${order.totalAmount.toFixed(2)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-3 px-4">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}>
                         {DRUG_ORDER_STATUS_LABELS[order.status]}
                       </span>
                     </TableCell>
-                    <TableCell className="text-text-secondary">
+                    <TableCell className="py-3 px-4 text-gray-500">
                       {new Date(order.orderedAt).toLocaleDateString()}
                     </TableCell>
-                                         <TableCell className="whitespace-nowrap text-xs sm:text-sm font-medium">
-                       <button 
-                         onClick={() => handleViewDrugOrder(order)}
-                         className="text-accent-color hover:text-accent-hover mr-3 p-1 rounded hover:bg-accent-color/10 transition-colors cursor-pointer"
-                         title="View Drug Order"
-                       >
-                         <FaEye size={16} />
-                       </button>
-                       {(userRole === USER_ROLES.NURSE || userRole === USER_ROLES.SUPER_ADMIN) && (
-                         <button 
-                           onClick={() => handleEditDrugOrder(order)}
-                           className="text-success hover:text-success/80 mr-3 p-1 rounded hover:bg-success/10 transition-colors cursor-pointer"
-                           title="Edit Drug Order"
-                         >
-                           <FaEdit size={16} />
-                         </button>
-                       )}
-                       {userRole === USER_ROLES.SUPER_ADMIN && (
-                         <button 
-                           onClick={() => handleDeleteDrugOrder(order._id)}
-                           className="text-error hover:text-error/80 p-1 rounded hover:bg-error/10 transition-colors cursor-pointer"
-                           title="Delete Drug Order"
-                         >
-                           <FaTrash size={16} />
-                         </button>
-                       )}
-                     </TableCell>
+                    <TableCell className="py-3 px-4 whitespace-nowrap text-xs sm:text-sm font-medium">
+                      <button 
+                        onClick={() => handleViewDrugOrder(order)}
+                        className="text-blue-600 hover:text-blue-800 mr-3 p-1 rounded hover:bg-blue-100 transition-colors cursor-pointer"
+                        title="View Drug Order"
+                      >
+                        <FaEye size={16} />
+                      </button>
+                      {(userRole === USER_ROLES.NURSE || userRole === USER_ROLES.SUPER_ADMIN) && (
+                        <button 
+                          onClick={() => handleEditDrugOrder(order)}
+                          className="text-green-600 hover:text-green-800 mr-3 p-1 rounded hover:bg-green-100 transition-colors cursor-pointer"
+                          title="Edit Drug Order"
+                        >
+                          <FaEdit size={16} />
+                        </button>
+                      )}
+                      {userRole === USER_ROLES.SUPER_ADMIN && (
+                        <button 
+                          onClick={() => handleDeleteDrugOrder(order._id)}
+                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-100 transition-colors cursor-pointer"
+                          title="Delete Drug Order"
+                        >
+                          <FaTrash size={16} />
+                        </button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -558,6 +510,7 @@ export default function DrugOrdersPage() {
                 value={formData.patientId}
                 onChange={(e) => handleInputChange('patientId', e.target.value)}
                 placeholder="Enter patient ID"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </FormField>
 
@@ -566,6 +519,7 @@ export default function DrugOrdersPage() {
                 value={formData.patientName}
                 onChange={(e) => handleInputChange('patientName', e.target.value)}
                 placeholder="Enter patient name"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </FormField>
 
@@ -574,28 +528,30 @@ export default function DrugOrdersPage() {
                 value={formData.labResultId}
                 onChange={(e) => handleInputChange('labResultId', e.target.value)}
                 placeholder="Enter lab result ID (optional)"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </FormField>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">Drug Items</label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Drug Items</label>
             {formData.items.map((item, index) => (
-              <div key={index} className="border border-border-color p-4 rounded-lg mb-4 bg-card-bg">
+              <div key={index} className="border border-gray-300 p-4 rounded-lg mb-4 bg-gray-50">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField label="Drug">
                     <Select
                       value={item.drugId}
                       onChange={(e) => {
-                        const drug = MOCK_DRUGS.find(d => d.id === e.target.value);
+                        const drug = drugs.find(d => d._id === e.target.value);
                         updateDrugItem(index, 'drugId', e.target.value);
                         updateDrugItem(index, 'drugName', drug?.name || '');
-                        updateDrugItem(index, 'unitPrice', drug?.price || 0);
+                        updateDrugItem(index, 'unitPrice', drug?.sellingPrice || 0);
                       }}
-                      options={MOCK_DRUGS.map(drug => ({
-                        value: drug.id,
-                        label: drug.name,
+                      options={drugs.map(drug => ({
+                        value: drug._id,
+                        label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
                       }))}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </FormField>
 
@@ -605,6 +561,7 @@ export default function DrugOrdersPage() {
                       value={item.quantity}
                       onChange={(e) => updateDrugItem(index, 'quantity', parseInt(e.target.value))}
                       min="1"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </FormField>
 
@@ -615,6 +572,7 @@ export default function DrugOrdersPage() {
                       value={item.unitPrice}
                       onChange={(e) => updateDrugItem(index, 'unitPrice', parseFloat(e.target.value))}
                       min="0"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </FormField>
 
@@ -624,6 +582,7 @@ export default function DrugOrdersPage() {
                       step="0.01"
                       value={item.totalPrice}
                       disabled
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-500"
                     />
                   </FormField>
 
@@ -632,6 +591,7 @@ export default function DrugOrdersPage() {
                       value={item.dosage}
                       onChange={(e) => updateDrugItem(index, 'dosage', e.target.value)}
                       placeholder="e.g., 1 tablet twice daily"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </FormField>
 
@@ -640,6 +600,7 @@ export default function DrugOrdersPage() {
                       value={item.instructions}
                       onChange={(e) => updateDrugItem(index, 'instructions', e.target.value)}
                       placeholder="e.g., Take with food"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </FormField>
                 </div>
@@ -648,14 +609,14 @@ export default function DrugOrdersPage() {
                   variant="destructive"
                   size="sm"
                   onClick={() => removeDrugItem(index)}
-                  className="mt-2"
+                  className="mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
                 >
                   Remove Item
                 </Button>
               </div>
             ))}
 
-            <Button onClick={addDrugItem} variant="outline" className="w-full">
+            <Button onClick={addDrugItem} variant="outline" className="w-full border border-gray-300 text-gray-700 hover:bg-gray-50">
               Add Drug Item
             </Button>
           </div>
@@ -666,6 +627,7 @@ export default function DrugOrdersPage() {
               onChange={(e) => handleInputChange('notes', e.target.value)}
               placeholder="Add any additional notes..."
               rows={4}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </FormField>
 
@@ -676,12 +638,14 @@ export default function DrugOrdersPage() {
                 setIsAddModalOpen(false);
                 resetForm();
               }}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAddDrugOrder}
               loading={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
             >
               Create Order
             </Button>
@@ -707,6 +671,7 @@ export default function DrugOrdersPage() {
                 value={formData.patientId}
                 onChange={(e) => handleInputChange('patientId', e.target.value)}
                 placeholder="Enter patient ID"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </FormField>
 
@@ -715,6 +680,7 @@ export default function DrugOrdersPage() {
                 value={formData.patientName}
                 onChange={(e) => handleInputChange('patientName', e.target.value)}
                 placeholder="Enter patient name"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </FormField>
 
@@ -723,28 +689,30 @@ export default function DrugOrdersPage() {
                 value={formData.labResultId}
                 onChange={(e) => handleInputChange('labResultId', e.target.value)}
                 placeholder="Enter lab result ID (optional)"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </FormField>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">Drug Items</label>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Drug Items</label>
             {formData.items.map((item, index) => (
-              <div key={index} className="border border-border-color p-4 rounded-lg mb-4 bg-card-bg">
+              <div key={index} className="border border-gray-300 p-4 rounded-lg mb-4 bg-gray-50">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField label="Drug">
                     <Select
                       value={item.drugId}
                       onChange={(e) => {
-                        const drug = MOCK_DRUGS.find(d => d.id === e.target.value);
+                        const drug = drugs.find(d => d._id === e.target.value);
                         updateDrugItem(index, 'drugId', e.target.value);
                         updateDrugItem(index, 'drugName', drug?.name || '');
-                        updateDrugItem(index, 'unitPrice', drug?.price || 0);
+                        updateDrugItem(index, 'unitPrice', drug?.sellingPrice || 0);
                       }}
-                      options={MOCK_DRUGS.map(drug => ({
-                        value: drug.id,
-                        label: drug.name,
+                      options={drugs.map(drug => ({
+                        value: drug._id,
+                        label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
                       }))}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </FormField>
 
@@ -754,6 +722,7 @@ export default function DrugOrdersPage() {
                       value={item.quantity}
                       onChange={(e) => updateDrugItem(index, 'quantity', parseInt(e.target.value))}
                       min="1"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </FormField>
 
@@ -764,6 +733,7 @@ export default function DrugOrdersPage() {
                       value={item.unitPrice}
                       onChange={(e) => updateDrugItem(index, 'unitPrice', parseFloat(e.target.value))}
                       min="0"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </FormField>
 
@@ -773,6 +743,7 @@ export default function DrugOrdersPage() {
                       step="0.01"
                       value={item.totalPrice}
                       disabled
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-500"
                     />
                   </FormField>
 
@@ -781,6 +752,7 @@ export default function DrugOrdersPage() {
                       value={item.dosage}
                       onChange={(e) => updateDrugItem(index, 'dosage', e.target.value)}
                       placeholder="e.g., 1 tablet twice daily"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </FormField>
 
@@ -789,6 +761,7 @@ export default function DrugOrdersPage() {
                       value={item.instructions}
                       onChange={(e) => updateDrugItem(index, 'instructions', e.target.value)}
                       placeholder="e.g., Take with food"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </FormField>
                 </div>
@@ -797,14 +770,14 @@ export default function DrugOrdersPage() {
                   variant="destructive"
                   size="sm"
                   onClick={() => removeDrugItem(index)}
-                  className="mt-2"
+                  className="mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
                 >
                   Remove Item
                 </Button>
               </div>
             ))}
 
-            <Button onClick={addDrugItem} variant="outline" className="w-full">
+            <Button onClick={addDrugItem} variant="outline" className="w-full border border-gray-300 text-gray-700 hover:bg-gray-50">
               Add Drug Item
             </Button>
           </div>
@@ -815,6 +788,7 @@ export default function DrugOrdersPage() {
               onChange={(e) => handleInputChange('notes', e.target.value)}
               placeholder="Add any additional notes..."
               rows={4}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </FormField>
 
@@ -826,12 +800,14 @@ export default function DrugOrdersPage() {
                 setEditingDrugOrder(null);
                 resetForm();
               }}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded"
             >
               Cancel
             </Button>
             <Button
               onClick={handleUpdateDrugOrder}
               loading={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
             >
               Update Order
             </Button>
@@ -853,69 +829,69 @@ export default function DrugOrdersPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary">Patient ID</label>
-                <p className="mt-1 text-sm text-text-secondary">{viewingDrugOrder.patientId}</p>
+                <label className="block text-sm font-medium text-gray-900">Patient ID</label>
+                <p className="mt-1 text-sm text-gray-600">{viewingDrugOrder.patientId}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary">Patient Name</label>
-                <p className="mt-1 text-sm text-text-secondary">{viewingDrugOrder.patientName}</p>
+                <label className="block text-sm font-medium text-gray-900">Patient Name</label>
+                <p className="mt-1 text-sm text-gray-600">{viewingDrugOrder.patientName}</p>
               </div>
               {viewingDrugOrder.labResultId && (
                 <div>
-                  <label className="block text-sm font-medium text-text-primary">Lab Result ID</label>
-                  <p className="mt-1 text-sm text-text-secondary">{viewingDrugOrder.labResultId}</p>
+                  <label className="block text-sm font-medium text-gray-900">Lab Result ID</label>
+                  <p className="mt-1 text-sm text-gray-600">{viewingDrugOrder.labResultId}</p>
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-text-primary">Status</label>
+                <label className="block text-sm font-medium text-gray-900">Status</label>
                 <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingDrugOrder.status)}`}>
                   {DRUG_ORDER_STATUS_LABELS[viewingDrugOrder.status]}
                 </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary">Ordered At</label>
-                <p className="mt-1 text-sm text-text-secondary">
+                <label className="block text-sm font-medium text-gray-900">Ordered At</label>
+                <p className="mt-1 text-sm text-gray-600">
                   {new Date(viewingDrugOrder.orderedAt).toLocaleString()}
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary">Total Amount</label>
-                <p className="mt-1 text-sm text-text-secondary">${viewingDrugOrder.totalAmount.toFixed(2)}</p>
+                <label className="block text-sm font-medium text-gray-900">Total Amount</label>
+                <p className="mt-1 text-sm text-gray-600">${viewingDrugOrder.totalAmount.toFixed(2)}</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">Drug Items</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Drug Items</label>
               <div className="space-y-2">
                 {viewingDrugOrder.items.map((item, index) => (
-                  <div key={index} className="border border-border-color p-3 rounded-lg bg-card-bg">
+                  <div key={index} className="border border-gray-300 p-3 rounded-lg bg-gray-50">
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="text-text-muted">Drug:</span>
-                        <p className="font-medium text-text-primary">{item.drugName}</p>
+                        <span className="text-gray-500">Drug:</span>
+                        <p className="font-medium text-gray-900">{item.drugName}</p>
                       </div>
                       <div>
-                        <span className="text-text-muted">Quantity:</span>
-                        <p className="font-medium text-text-primary">{item.quantity}</p>
+                        <span className="text-gray-500">Quantity:</span>
+                        <p className="font-medium text-gray-900">{item.quantity}</p>
                       </div>
                       <div>
-                        <span className="text-text-muted">Unit Price:</span>
-                        <p className="font-medium text-text-primary">${item.unitPrice.toFixed(2)}</p>
+                        <span className="text-gray-500">Unit Price:</span>
+                        <p className="font-medium text-gray-900">${item.unitPrice.toFixed(2)}</p>
                       </div>
                       <div>
-                        <span className="text-text-muted">Total Price:</span>
-                        <p className="font-medium text-text-primary">${item.totalPrice.toFixed(2)}</p>
+                        <span className="text-gray-500">Total Price:</span>
+                        <p className="font-medium text-gray-900">${item.totalPrice.toFixed(2)}</p>
                       </div>
                       {item.dosage && (
                         <div>
-                          <span className="text-text-muted">Dosage:</span>
-                          <p className="font-medium text-text-primary">{item.dosage}</p>
+                          <span className="text-gray-500">Dosage:</span>
+                          <p className="font-medium text-gray-900">{item.dosage}</p>
                         </div>
                       )}
                       {item.instructions && (
                         <div>
-                          <span className="text-text-muted">Instructions:</span>
-                          <p className="font-medium text-text-primary">{item.instructions}</p>
+                          <span className="text-gray-500">Instructions:</span>
+                          <p className="font-medium text-gray-900">{item.instructions}</p>
                         </div>
                       )}
                     </div>
@@ -926,8 +902,8 @@ export default function DrugOrdersPage() {
 
             {viewingDrugOrder.notes && (
               <div>
-                <label className="block text-sm font-medium text-text-primary">Notes</label>
-                <p className="mt-1 text-sm text-text-secondary">{viewingDrugOrder.notes}</p>
+                <label className="block text-sm font-medium text-gray-900">Notes</label>
+                <p className="mt-1 text-sm text-gray-600">{viewingDrugOrder.notes}</p>
               </div>
             )}
 
@@ -938,6 +914,7 @@ export default function DrugOrdersPage() {
                   setIsViewModalOpen(false);
                   setViewingDrugOrder(null);
                 }}
+                className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded"
               >
                 Close
               </Button>
