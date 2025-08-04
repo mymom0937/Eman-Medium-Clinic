@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     const discount = parseFloat(body.discount || '0');
     const finalAmount = totalAmount - discount;
 
-    const sale: Omit<Sale, '_id'> = {
+    const sale = {
       saleId,
       patientId: body.patientId,
       patientName: body.patientName,
@@ -122,8 +122,8 @@ export async function POST(request: NextRequest) {
       totalAmount,
       discount,
       finalAmount,
-      paymentMethod: body.paymentMethod || 'CASH' as PaymentMethod,
-      paymentStatus: body.paymentStatus || 'PENDING' as PaymentStatus,
+      paymentMethod: body.paymentMethod || 'CASH',
+      paymentStatus: body.paymentStatus || 'PENDING',
       soldBy: body.soldBy || 'System',
       soldAt: new Date(),
       createdAt: new Date(),
@@ -134,8 +134,9 @@ export async function POST(request: NextRequest) {
 
     // Update inventory quantities
     for (const item of sale.items) {
+      const { ObjectId } = await import('mongodb');
       await db.collection('drugs').updateOne(
-        { _id: item.drugId },
+        { _id: new ObjectId(item.drugId) },
         { $inc: { quantity: -item.quantity } }
       );
     }
@@ -240,8 +241,9 @@ export async function DELETE(request: NextRequest) {
 
     // Restore inventory quantities
     for (const item of sale.items) {
+      const { ObjectId } = await import('mongodb');
       await db.collection('drugs').updateOne(
-        { _id: item.drugId },
+        { _id: new ObjectId(item.drugId) },
         { $inc: { quantity: item.quantity } }
       );
     }

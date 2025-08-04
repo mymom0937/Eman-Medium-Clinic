@@ -8,6 +8,12 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, Button } from '@/components/ui/form';
 import { toastManager } from '@/lib/utils/toast';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
+import { 
+  SALE_PAYMENT_STATUS_OPTIONS, 
+  SALE_STATUS_OPTIONS,
+  SALE_PAYMENT_STATUS_LABELS,
+  SALE_STATUS_LABELS
+} from '@/constants/sales-status';
 
 interface Sale {
   _id: string;
@@ -26,6 +32,7 @@ interface Sale {
   finalAmount: number;
   paymentMethod: string;
   paymentStatus: string;
+  status: string;
   soldBy: string;
   soldAt: string;
   createdAt: string;
@@ -37,6 +44,10 @@ interface SalesStats {
   totalRevenue: number;
   averageSale: number;
   todaySales: number;
+  pendingSales: number;
+  completedSales: number;
+  failedSales: number;
+  refundedSales: number;
 }
 
 export default function SalesPage() {
@@ -55,57 +66,103 @@ export default function SalesPage() {
     totalRevenue: 0,
     averageSale: 0,
     todaySales: 0,
+    pendingSales: 0,
+    completedSales: 0,
+    failedSales: 0,
+    refundedSales: 0,
   });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
+    patientId: '',
     patientName: '',
     selectedDrug: '',
     quantity: '',
-    paymentMethod: 'cash',
+    paymentMethod: 'CASH',
+    paymentStatus: 'PENDING',
+    status: 'PENDING',
+    discount: '0',
   });
   const [errors, setErrors] = useState<any>({});
+  const [patients, setPatients] = useState<any[]>([]);
+  const [drugs, setDrugs] = useState<any[]>([]);
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+
+  const calculateStats = (salesData: Sale[]) => {
+    const totalSales = salesData.length;
+    const totalRevenue = salesData.reduce((sum: number, sale: Sale) => sum + (sale.totalAmount || 0), 0);
+    const averageSale = totalSales > 0 ? totalRevenue / totalSales : 0;
+    
+    const today = new Date();
+    const todaySales = salesData.filter((sale: Sale) => {
+      const saleDate = new Date(sale.soldAt || sale.createdAt);
+      return saleDate.toDateString() === today.toDateString();
+    }).length;
+
+    // Calculate status-based stats
+    const pendingSales = salesData.filter((sale: Sale) => sale.paymentStatus === 'PENDING').length;
+    const completedSales = salesData.filter((sale: Sale) => sale.paymentStatus === 'COMPLETED').length;
+    const failedSales = salesData.filter((sale: Sale) => sale.paymentStatus === 'FAILED').length;
+    const refundedSales = salesData.filter((sale: Sale) => sale.paymentStatus === 'REFUNDED').length;
+
+    return {
+      totalSales,
+      totalRevenue,
+      averageSale,
+      todaySales,
+      pendingSales,
+      completedSales,
+      failedSales,
+      refundedSales,
+    };
+  };
+
+  // Helper function to update stats from sales data
+  const updateStatsFromSales = (salesData: Sale[]) => {
+    setStats(calculateStats(salesData));
+  };
 
   // Load sales data on component mount
   useEffect(() => {
-    const loadSales = async () => {
+    const loadData = async () => {
       if (!isLoaded) return;
 
       try {
         setInitialLoading(true);
-        const response = await fetch('/api/sales');
-        const result = await response.json();
         
-        if (response.ok && result.success) {
-          setSales(result.data);
+        // Fetch sales
+        const salesResponse = await fetch('/api/sales');
+        const salesResult = await salesResponse.json();
+        
+        if (salesResponse.ok && salesResult.success) {
+          setSales(salesResult.data);
           
-          // Calculate stats
-          const totalSales = result.data.length;
-          const totalRevenue = result.data.reduce((sum: number, sale: Sale) => sum + (sale.totalAmount || 0), 0);
-          const averageSale = totalSales > 0 ? totalRevenue / totalSales : 0;
-          
-          // Calculate today's sales
-          const today = new Date();
-          const todaySales = result.data.filter((sale: Sale) => {
-            const saleDate = new Date(sale.soldAt || sale.createdAt);
-            return saleDate.toDateString() === today.toDateString();
-          }).length;
+          updateStatsFromSales(salesResult.data);
+        }
 
-          setStats({
-            totalSales,
-            totalRevenue,
-            averageSale,
-            todaySales,
-          });
+        // Fetch patients
+        const patientsResponse = await fetch('/api/patients');
+        const patientsResult = await patientsResponse.json();
+        
+        if (patientsResponse.ok && patientsResult.success) {
+          setPatients(patientsResult.data);
+        }
+
+        // Fetch drugs
+        const drugsResponse = await fetch('/api/drugs');
+        const drugsResult = await drugsResponse.json();
+        
+        if (drugsResponse.ok && drugsResult.success) {
+          setDrugs(drugsResult.data);
         }
       } catch (error) {
-        console.error('Error loading sales:', error);
+        console.error('Error loading data:', error);
       } finally {
         setInitialLoading(false);
       }
     };
 
-    loadSales();
+    loadData();
   }, [isLoaded]);
 
   if (!isLoaded || initialLoading) {
@@ -120,19 +177,21 @@ export default function SalesPage() {
   const filteredSales = sales.filter(sale => {
     const matchesSearch = sale.saleId.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          sale.patientName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || sale.paymentStatus.toLowerCase() === selectedStatus;
+    const matchesStatus = selectedStatus === 'all' || sale.paymentStatus.toUpperCase() === selectedStatus;
     const matchesMethod = selectedMethod === 'all' || sale.paymentMethod.toLowerCase().replace('_', '') === selectedMethod;
     return matchesSearch && matchesStatus && matchesMethod;
   });
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
         return 'bg-green-100 text-green-800';
-      case 'pending':
+      case 'PENDING':
         return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled':
+      case 'FAILED':
         return 'bg-red-100 text-red-800';
+      case 'REFUNDED':
+        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -154,7 +213,7 @@ export default function SalesPage() {
   const validateForm = (): boolean => {
     const newErrors: any = {};
 
-    if (!formData.patientName) {
+    if (!formData.patientId) {
       newErrors.patientName = 'Patient is required';
     }
     if (!formData.selectedDrug) {
@@ -166,6 +225,12 @@ export default function SalesPage() {
     if (!formData.paymentMethod) {
       newErrors.paymentMethod = 'Payment method is required';
     }
+    if (!formData.paymentStatus) {
+      newErrors.paymentStatus = 'Payment status is required';
+    }
+    if (!formData.status) {
+      newErrors.status = 'Sale status is required';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -176,20 +241,30 @@ export default function SalesPage() {
 
     setLoading(true);
     try {
-      // This would be replaced with actual API call
+      // Find the selected drug to get its details
+      const selectedDrug = drugs.find(drug => drug._id === formData.selectedDrug);
+      if (!selectedDrug) {
+        toastManager.error('Selected drug not found');
+        return;
+      }
+
+      const quantity = parseInt(formData.quantity);
+      const unitPrice = selectedDrug.sellingPrice || selectedDrug.price || 0;
+      const totalPrice = quantity * unitPrice;
+
       const saleData = {
-        patientId: 'PAT001', // This should come from patient selection
+        patientId: formData.patientId,
         patientName: formData.patientName,
         items: [
           { 
-            drugId: 'DRUG001',
-            drugName: formData.selectedDrug,
-            quantity: parseInt(formData.quantity),
-            unitPrice: 15.50, // This should come from drug selection
-            totalPrice: parseInt(formData.quantity) * 15.50,
+            drugId: selectedDrug._id,
+            drugName: selectedDrug.name,
+            quantity: quantity,
+            unitPrice: unitPrice,
+            totalPrice: totalPrice,
           }
         ],
-        totalAmount: parseInt(formData.quantity) * 15.50,
+        totalAmount: totalPrice,
         paymentMethod: formData.paymentMethod.toUpperCase(),
         paymentStatus: 'COMPLETED',
       };
@@ -231,15 +306,23 @@ export default function SalesPage() {
           totalRevenue,
           averageSale,
           todaySales,
+          pendingSales: 0,
+          completedSales: 0,
+          failedSales: 0,
+          refundedSales: 0,
         });
       }
 
       setIsNewSaleModalOpen(false);
       setFormData({
+        patientId: '',
         patientName: '',
         selectedDrug: '',
         quantity: '',
-        paymentMethod: 'cash',
+        paymentMethod: 'CASH',
+        paymentStatus: 'PENDING',
+        status: 'PENDING',
+        discount: '0',
       });
       setErrors({});
       toastManager.success('Sale completed successfully!');
@@ -266,10 +349,14 @@ export default function SalesPage() {
   const handleEditSale = (sale: Sale) => {
     setEditingSale(sale);
     setFormData({
+      patientId: sale.patientId,
       patientName: sale.patientName,
-      selectedDrug: '',
-      quantity: '',
-      paymentMethod: sale.paymentMethod.toLowerCase(),
+      selectedDrug: sale.items[0]?.drugId || '',
+      quantity: sale.items[0]?.quantity?.toString() || '',
+      paymentMethod: sale.paymentMethod,
+      paymentStatus: sale.paymentStatus,
+      status: sale.status || 'PENDING',
+      discount: sale.discount?.toString() || '0',
     });
     setIsEditSaleModalOpen(true);
   };
@@ -309,6 +396,10 @@ export default function SalesPage() {
           totalRevenue,
           averageSale,
           todaySales,
+          pendingSales: 0,
+          completedSales: 0,
+          failedSales: 0,
+          refundedSales: 0,
         });
       }
 
@@ -321,12 +412,83 @@ export default function SalesPage() {
 
   const resetForm = () => {
     setFormData({
+      patientId: '',
       patientName: '',
       selectedDrug: '',
       quantity: '',
-      paymentMethod: 'cash',
+      paymentMethod: 'CASH',
+      paymentStatus: 'PENDING',
+      status: 'PENDING',
+      discount: '0',
     });
     setErrors({});
+  };
+
+  const canUpdateStatus = (sale: Sale) => {
+    if (userRole === 'SUPER_ADMIN') return true;
+    if (userRole === 'PHARMACIST') return true;
+    if (userRole === 'CASHIER') return true;
+    return false;
+  };
+
+  const handleStatusUpdate = async (saleId: string, newStatus: string) => {
+    if (!canUpdateStatus({} as Sale)) return;
+
+    setStatusUpdating(saleId);
+    try {
+      const response = await fetch('/api/sales', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          saleId, 
+          paymentStatus: newStatus,
+          soldBy: userName || 'System'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+
+      // Reload sales data
+      const salesResponse = await fetch('/api/sales');
+      const salesResult = await salesResponse.json();
+      
+      if (salesResponse.ok && salesResult.success) {
+        setSales(salesResult.data);
+        
+        // Recalculate stats
+        const totalSales = salesResult.data.length;
+        const totalRevenue = salesResult.data.reduce((sum: number, sale: Sale) => sum + (sale.totalAmount || 0), 0);
+        const averageSale = totalSales > 0 ? totalRevenue / totalSales : 0;
+        
+        const today = new Date();
+        const todaySales = salesResult.data.filter((sale: Sale) => {
+          const saleDate = new Date(sale.soldAt || sale.createdAt);
+          return saleDate.toDateString() === today.toDateString();
+        }).length;
+
+        setStats({
+          totalSales,
+          totalRevenue,
+          averageSale,
+          todaySales,
+          pendingSales: 0,
+          completedSales: 0,
+          failedSales: 0,
+          refundedSales: 0,
+        });
+      }
+
+      toastManager.success('Status updated successfully');
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toastManager.error('Failed to update status');
+    } finally {
+      setStatusUpdating(null);
+    }
   };
 
   const handleUpdateSale = async () => {
@@ -334,9 +496,38 @@ export default function SalesPage() {
 
     setLoading(true);
     try {
+      // Find the selected drug to get its details
+      const selectedDrug = drugs.find(drug => drug._id === formData.selectedDrug);
+      if (!selectedDrug) {
+        toastManager.error('Selected drug not found');
+        return;
+      }
+
+      const quantity = parseInt(formData.quantity);
+      const unitPrice = selectedDrug.sellingPrice || selectedDrug.price || 0;
+      const totalPrice = quantity * unitPrice;
+      const discount = parseFloat(formData.discount || '0');
+      const finalAmount = totalPrice - discount;
+
       const updateData = {
         saleId: editingSale.saleId,
-        paymentStatus: 'COMPLETED',
+        patientId: formData.patientId,
+        patientName: formData.patientName,
+        items: [
+          { 
+            drugId: selectedDrug._id,
+            drugName: selectedDrug.name,
+            quantity: quantity,
+            unitPrice: unitPrice,
+            totalPrice: totalPrice,
+          }
+        ],
+        totalAmount: totalPrice,
+        discount: discount,
+        finalAmount: finalAmount,
+        paymentMethod: formData.paymentMethod,
+        paymentStatus: formData.paymentStatus,
+        status: formData.status,
         soldBy: userName || 'System',
       };
 
@@ -358,6 +549,28 @@ export default function SalesPage() {
       
       if (salesResponse.ok && salesResult.success) {
         setSales(salesResult.data);
+        
+        // Recalculate stats
+        const totalSales = salesResult.data.length;
+        const totalRevenue = salesResult.data.reduce((sum: number, sale: Sale) => sum + (sale.totalAmount || 0), 0);
+        const averageSale = totalSales > 0 ? totalRevenue / totalSales : 0;
+        
+        const today = new Date();
+        const todaySales = salesResult.data.filter((sale: Sale) => {
+          const saleDate = new Date(sale.soldAt || sale.createdAt);
+          return saleDate.toDateString() === today.toDateString();
+        }).length;
+
+        setStats({
+          totalSales,
+          totalRevenue,
+          averageSale,
+          todaySales,
+          pendingSales: 0,
+          completedSales: 0,
+          failedSales: 0,
+          refundedSales: 0,
+        });
       }
 
       setIsEditSaleModalOpen(false);
@@ -374,27 +587,8 @@ export default function SalesPage() {
 
   // Prepare stats for display
   const displayStats = [
-    {
-      title: 'Total Sales',
-      value: stats.totalSales.toString(),
-      change: '+12% from last month',
-      changeType: 'positive' as const,
-      icon: '💰',
-    },
-    {
-      title: 'Total Revenue',
-      value: `$${stats.totalRevenue.toFixed(2)}`,
-      change: '+8% from last month',
-      changeType: 'positive' as const,
-      icon: '💵',
-    },
-    {
-      title: 'Average Sale',
-      value: `$${stats.averageSale.toFixed(2)}`,
-      change: '+5% from last month',
-      changeType: 'positive' as const,
-      icon: '📊',
-    },
+    
+   
     {
       title: "Today's Sales",
       value: stats.todaySales.toString(),
@@ -402,13 +596,50 @@ export default function SalesPage() {
       changeType: 'positive' as const,
       icon: '📅',
     },
+     {
+      title: 'Average Sale',
+      value: `$${stats.averageSale.toFixed(2)}`,
+      change: '+5% from last month',
+      changeType: 'positive' as const,
+      icon: '📊',
+    },
+  ];
+
+  // Prepare status-based stats for display
+  const statusStats = [
+    {
+      title: 'Pending Sales',
+      value: stats.pendingSales.toString(),
+      change: 'Awaiting payment',
+      changeType: 'neutral' as const,
+      icon: '⏳',
+    },
+    {
+      title: 'Completed Sales',
+      value: stats.completedSales.toString(),
+      change: 'Successfully processed',
+      changeType: 'positive' as const,
+      icon: '✅',
+    },
+    {
+      title: 'Failed Sales',
+      value: stats.failedSales.toString(),
+      change: 'Payment issues',
+      changeType: 'negative' as const,
+      icon: '❌',
+    },
+    {
+      title: 'Refunded Sales',
+      value: stats.refundedSales.toString(),
+      change: 'Returned payments',
+      changeType: 'neutral' as const,
+      icon: '🔄',
+    },
   ];
 
   const SALE_STATUS_OPTIONS = [
     { value: 'all', label: 'All Status' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'cancelled', label: 'Cancelled' },
+    ...SALE_PAYMENT_STATUS_OPTIONS,
   ];
 
   const PAYMENT_METHOD_OPTIONS = [
@@ -418,19 +649,16 @@ export default function SalesPage() {
     { value: 'mobile_money', label: 'Mobile Money' },
   ];
 
-  const PATIENTS = [
-    { value: 'john_doe', label: 'John Doe' },
-    { value: 'jane_smith', label: 'Jane Smith' },
-    { value: 'michael_johnson', label: 'Michael Johnson' },
-  ];
+  // Prepare dynamic options for patients and drugs
+  const PATIENT_OPTIONS = patients.map(patient => ({
+    value: patient.patientId,
+    label: `${patient.firstName} ${patient.lastName} (${patient.patientId})`
+  }));
 
-  const DRUGS = [
-    { value: 'paracetamol', label: 'Paracetamol 500mg - ETB 15.50' },
-    { value: 'ibuprofen', label: 'Ibuprofen 400mg - ETB 12.75' },
-    { value: 'amoxicillin', label: 'Amoxicillin 250mg - ETB 25.00' },
-    { value: 'omeprazole', label: 'Omeprazole 20mg - ETB 20.00' },
-    { value: 'metformin', label: 'Metformin 500mg - ETB 15.00' },
-  ];
+  const DRUG_OPTIONS = drugs.map(drug => ({
+    value: drug._id,
+    label: `${drug.name} ${drug.strength} - ETB ${drug.sellingPrice?.toFixed(2) || drug.price?.toFixed(2) || '0.00'}`
+  }));
 
   return (
     <DashboardLayout
@@ -444,6 +672,20 @@ export default function SalesPage() {
           {displayStats.map((stat, index) => (
             <StatsCard
               key={index}
+              title={stat.title}
+              value={stat.value}
+              change={stat.change}
+              changeType={stat.changeType}
+              icon={stat.icon}
+            />
+          ))}
+        </div>
+
+        {/* Status-based Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {statusStats.map((stat, index) => (
+            <StatsCard
+              key={`status-${index}`}
               title={stat.title}
               value={stat.value}
               change={stat.change}
@@ -554,9 +796,26 @@ export default function SalesPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(sale.paymentStatus)}`}>
-                        {sale.paymentStatus.toUpperCase()}
-                      </span>
+                      {canUpdateStatus(sale) ? (
+                        <div className="relative">
+                          <Select
+                            value={sale.paymentStatus}
+                            onChange={(e) => handleStatusUpdate(sale.saleId, e.target.value)}
+                            disabled={statusUpdating === sale.saleId}
+                            options={SALE_PAYMENT_STATUS_OPTIONS}
+                            className="w-32 text-sm"
+                          />
+                          {statusUpdating === sale.saleId && (
+                            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(sale.paymentStatus)}`}>
+                          {sale.paymentStatus.toUpperCase()}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                       {new Date(sale.soldAt || sale.createdAt).toLocaleDateString()}
@@ -598,10 +857,14 @@ export default function SalesPage() {
         onClose={() => {
           setIsNewSaleModalOpen(false);
           setFormData({
+            patientId: '',
             patientName: '',
             selectedDrug: '',
             quantity: '',
-            paymentMethod: 'cash',
+            paymentMethod: 'CASH',
+            paymentStatus: 'PENDING',
+            status: 'PENDING',
+            discount: '0',
           });
           setErrors({});
         }}
@@ -612,9 +875,13 @@ export default function SalesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Patient" required error={errors.patientName}>
               <Select
-                value={formData.patientName}
-                onChange={(e) => handleInputChange('patientName', e.target.value)}
-                options={PATIENTS}
+                value={formData.patientId}
+                onChange={(e) => {
+                  const selectedPatient = patients.find(p => p.patientId === e.target.value);
+                  handleInputChange('patientId', e.target.value);
+                  handleInputChange('patientName', selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : '');
+                }}
+                options={PATIENT_OPTIONS}
               />
             </FormField>
 
@@ -622,7 +889,7 @@ export default function SalesPage() {
               <Select
                 value={formData.selectedDrug}
                 onChange={(e) => handleInputChange('selectedDrug', e.target.value)}
-                options={DRUGS}
+                options={DRUG_OPTIONS}
               />
             </FormField>
 
@@ -641,9 +908,10 @@ export default function SalesPage() {
                 value={formData.paymentMethod}
                 onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
                 options={[
-                  { value: 'cash', label: 'Cash' },
-                  { value: 'card', label: 'Card' },
-                  { value: 'mobile_money', label: 'Mobile Money' },
+                  { value: 'CASH', label: 'Cash' },
+                  { value: 'CARD', label: 'Card' },
+                  { value: 'MOBILE_MONEY', label: 'Mobile Money' },
+                  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
                 ]}
               />
             </FormField>
@@ -655,10 +923,14 @@ export default function SalesPage() {
               onClick={() => {
                 setIsNewSaleModalOpen(false);
                 setFormData({
+                  patientId: '',
                   patientName: '',
                   selectedDrug: '',
                   quantity: '',
-                  paymentMethod: 'cash',
+                  paymentMethod: 'CASH',
+                  paymentStatus: 'PENDING',
+                  status: 'PENDING',
+                  discount: '0',
                 });
                 setErrors({});
               }}
@@ -715,9 +987,15 @@ export default function SalesPage() {
                 <p className="mt-1 text-sm text-gray-900">{viewingSale.paymentMethod.replace('_', ' ')}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <label className="block text-sm font-medium text-gray-700">Payment Status</label>
                 <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingSale.paymentStatus)}`}>
-                  {viewingSale.paymentStatus.toUpperCase()}
+                  {SALE_PAYMENT_STATUS_LABELS[viewingSale.paymentStatus as keyof typeof SALE_PAYMENT_STATUS_LABELS] || viewingSale.paymentStatus.toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Sale Status</label>
+                <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingSale.status)}`}>
+                  {SALE_STATUS_LABELS[viewingSale.status as keyof typeof SALE_STATUS_LABELS] || viewingSale.status.toUpperCase()}
                 </span>
               </div>
               <div>
@@ -755,9 +1033,31 @@ export default function SalesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Patient" required error={errors.patientName}>
               <Select
-                value={formData.patientName}
-                onChange={(e) => handleInputChange('patientName', e.target.value)}
-                options={PATIENTS}
+                value={formData.patientId}
+                onChange={(e) => {
+                  const selectedPatient = patients.find(p => p.patientId === e.target.value);
+                  handleInputChange('patientId', e.target.value);
+                  handleInputChange('patientName', selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : '');
+                }}
+                options={PATIENT_OPTIONS}
+              />
+            </FormField>
+
+            <FormField label="Drug" required error={errors.selectedDrug}>
+              <Select
+                value={formData.selectedDrug}
+                onChange={(e) => handleInputChange('selectedDrug', e.target.value)}
+                options={DRUG_OPTIONS}
+              />
+            </FormField>
+
+            <FormField label="Quantity" required error={errors.quantity}>
+              <Input
+                type="number"
+                value={formData.quantity}
+                onChange={(e) => handleInputChange('quantity', e.target.value)}
+                placeholder="Enter quantity"
+                min="1"
               />
             </FormField>
 
@@ -766,10 +1066,38 @@ export default function SalesPage() {
                 value={formData.paymentMethod}
                 onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
                 options={[
-                  { value: 'cash', label: 'Cash' },
-                  { value: 'card', label: 'Card' },
-                  { value: 'mobile_money', label: 'Mobile Money' },
+                  { value: 'CASH', label: 'Cash' },
+                  { value: 'CARD', label: 'Card' },
+                  { value: 'MOBILE_MONEY', label: 'Mobile Money' },
+                  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
                 ]}
+              />
+            </FormField>
+
+            <FormField label="Payment Status" required error={errors.paymentStatus}>
+              <Select
+                value={formData.paymentStatus}
+                onChange={(e) => handleInputChange('paymentStatus', e.target.value)}
+                options={SALE_PAYMENT_STATUS_OPTIONS}
+              />
+            </FormField>
+
+            <FormField label="Sale Status" required error={errors.status}>
+              <Select
+                value={formData.status}
+                onChange={(e) => handleInputChange('status', e.target.value)}
+                options={SALE_STATUS_OPTIONS}
+              />
+            </FormField>
+
+            <FormField label="Discount" error={errors.discount}>
+              <Input
+                type="number"
+                value={formData.discount}
+                onChange={(e) => handleInputChange('discount', e.target.value)}
+                placeholder="Enter discount amount"
+                min="0"
+                step="0.01"
               />
             </FormField>
           </div>
