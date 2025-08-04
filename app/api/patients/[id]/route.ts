@@ -4,12 +4,13 @@ import Patient from '@/models/patient';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await connectToDatabase();
     
-    const patient = await Patient.findById(params.id);
+    const patient = await Patient.findById(id);
     
     if (!patient) {
       return NextResponse.json(
@@ -33,9 +34,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await connectToDatabase();
     
     const body = await request.json();
@@ -52,7 +54,7 @@ export async function PUT(
     }
 
     const updatedPatient = await Patient.findByIdAndUpdate(
-      params.id,
+      id,
       {
         firstName: body.firstName,
         lastName: body.lastName,
@@ -94,16 +96,17 @@ export async function PUT(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await connectToDatabase();
     
     const body = await request.json();
     
     const updatedPatient = await Patient.findByIdAndUpdate(
-      params.id,
-      { ...body, updatedAt: new Date() },
+      id,
+      { $set: body },
       { new: true }
     );
 
@@ -129,13 +132,14 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await connectToDatabase();
-    
-    const deletedPatient = await Patient.findByIdAndDelete(params.id);
-    
+
+    const deletedPatient = await Patient.findByIdAndDelete(id);
+
     if (!deletedPatient) {
       return NextResponse.json(
         { success: false, error: 'Patient not found' },

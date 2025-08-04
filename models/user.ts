@@ -9,8 +9,8 @@ const userSchema = new mongoose.Schema(
     role: { 
       type: String, 
       required: true, 
-      enum: ['SUPER_ADMIN', 'PHARMACIST', 'CASHIER'],
-      default: 'CASHIER'
+      enum: ['SUPER_ADMIN', 'NURSE', 'LABORATORIST', 'PHARMACIST'],
+      default: 'NURSE'
     },
     isActive: { type: Boolean, default: true },
     lastLoginAt: { type: Date },

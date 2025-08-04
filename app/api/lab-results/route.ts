@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/config/database';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { LabResult } from '@/models/lab-result';
 import { CreateLabResultRequest } from '@/types/lab-result';
 import { USER_ROLES } from '@/constants/user-roles';
@@ -49,13 +49,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is Nurse or Super Admin
-    await connectToDatabase();
-    const User = (await import('@/models/user')).default;
-    const user = await User.findOne({ clerkId: userId });
+    // Get current user from Clerk
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check user role from Clerk's public metadata or database
+    let userRole = user.publicMetadata?.role as string;
     
-    if (!user || (user.role !== USER_ROLES.NURSE && user.role !== USER_ROLES.SUPER_ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // If role is not in metadata, check database
+    if (!userRole) {
+      await connectToDatabase();
+      const User = (await import('@/models/user')).default;
+      const dbUser = await User.findOne({ clerkId: userId });
+      
+      if (dbUser) {
+        userRole = dbUser.role;
+      } else {
+        // Create user in database if they don't exist
+        const newUser = new User({
+          clerkId: userId,
+          email: user.emailAddresses[0]?.emailAddress || '',
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          role: USER_ROLES.SUPER_ADMIN, // Default to super admin for now
+        });
+        await newUser.save();
+        userRole = USER_ROLES.SUPER_ADMIN;
+      }
+    }
+
+    // Check if user has permission to create lab results
+    if (userRole !== USER_ROLES.NURSE && userRole !== USER_ROLES.SUPER_ADMIN) {
+      return NextResponse.json({ error: 'Forbidden - Insufficient permissions' }, { status: 403 });
     }
 
     const body: CreateLabResultRequest = await request.json();

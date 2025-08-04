@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/config/database';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { LabResult } from '@/models/lab-result';
 import { UpdateLabResultRequest } from '@/types/lab-result';
 import { USER_ROLES } from '@/constants/user-roles';
@@ -8,7 +8,7 @@ import { USER_ROLES } from '@/constants/user-roles';
 // GET /api/lab-results/[id] - Get specific lab result
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -16,8 +16,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     await connectToDatabase();
-    const labResult = await LabResult.findById(params.id);
+    const labResult = await LabResult.findById(id);
 
     if (!labResult) {
       return NextResponse.json({ error: 'Lab result not found' }, { status: 404 });
@@ -33,7 +34,7 @@ export async function GET(
 // PUT /api/lab-results/[id] - Update lab result (full update)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -41,6 +42,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     await connectToDatabase();
     const body = await request.json();
     const { patientId, patientName, testType, testName, notes } = body;
@@ -60,7 +62,7 @@ export async function PUT(
     };
 
     const labResult = await LabResult.findByIdAndUpdate(
-      params.id,
+      id,
       { $set: updateData },
       { new: true }
     );
@@ -79,7 +81,7 @@ export async function PUT(
 // PATCH /api/lab-results/[id] - Update lab result (partial update)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -87,15 +89,43 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is Laboratorist or Super Admin
-    await connectToDatabase();
-    const User = (await import('@/models/user')).default;
-    const user = await User.findOne({ clerkId: userId });
-    
-    if (!user || (user.role !== USER_ROLES.LABORATORIST && user.role !== USER_ROLES.SUPER_ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Get current user from Clerk
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Check user role from Clerk's public metadata or database
+    let userRole = user.publicMetadata?.role as string;
+    
+    // If role is not in metadata, check database
+    if (!userRole) {
+      await connectToDatabase();
+      const User = (await import('@/models/user')).default;
+      const dbUser = await User.findOne({ clerkId: userId });
+      
+      if (dbUser) {
+        userRole = dbUser.role;
+      } else {
+        // Create user in database if they don't exist
+        const newUser = new User({
+          clerkId: userId,
+          email: user.emailAddresses[0]?.emailAddress || '',
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          role: USER_ROLES.SUPER_ADMIN, // Default to super admin for now
+        });
+        await newUser.save();
+        userRole = USER_ROLES.SUPER_ADMIN;
+      }
+    }
+
+    // Check if user has permission to update lab results
+    if (userRole !== USER_ROLES.LABORATORIST && userRole !== USER_ROLES.SUPER_ADMIN) {
+      return NextResponse.json({ error: 'Forbidden - Insufficient permissions' }, { status: 403 });
+    }
+
+    const { id } = await params;
     const body: UpdateLabResultRequest = await request.json();
     const { status, results, notes } = body;
 
@@ -120,7 +150,7 @@ export async function PATCH(
     }
 
     const labResult = await LabResult.findByIdAndUpdate(
-      params.id,
+      id,
       { $set: updateData },
       { new: true }
     );
@@ -139,7 +169,7 @@ export async function PATCH(
 // DELETE /api/lab-results/[id] - Delete lab result
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -147,16 +177,44 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is Super Admin
-    await connectToDatabase();
-    const User = (await import('@/models/user')).default;
-    const user = await User.findOne({ clerkId: userId });
-    
-    if (!user || user.role !== USER_ROLES.SUPER_ADMIN) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Get current user from Clerk
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const labResult = await LabResult.findByIdAndDelete(params.id);
+    // Check user role from Clerk's public metadata or database
+    let userRole = user.publicMetadata?.role as string;
+    
+    // If role is not in metadata, check database
+    if (!userRole) {
+      await connectToDatabase();
+      const User = (await import('@/models/user')).default;
+      const dbUser = await User.findOne({ clerkId: userId });
+      
+      if (dbUser) {
+        userRole = dbUser.role;
+      } else {
+        // Create user in database if they don't exist
+        const newUser = new User({
+          clerkId: userId,
+          email: user.emailAddresses[0]?.emailAddress || '',
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          role: USER_ROLES.SUPER_ADMIN, // Default to super admin for now
+        });
+        await newUser.save();
+        userRole = USER_ROLES.SUPER_ADMIN;
+      }
+    }
+
+    // Check if user has permission to delete lab results
+    if (userRole !== USER_ROLES.SUPER_ADMIN) {
+      return NextResponse.json({ error: 'Forbidden - Insufficient permissions' }, { status: 403 });
+    }
+
+    const { id } = await params;
+    const labResult = await LabResult.findByIdAndDelete(id);
 
     if (!labResult) {
       return NextResponse.json({ error: 'Lab result not found' }, { status: 404 });

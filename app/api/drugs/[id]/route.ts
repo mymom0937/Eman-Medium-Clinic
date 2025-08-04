@@ -4,12 +4,13 @@ import Drug from '@/models/drug';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await connectToDatabase();
     
-    const drug = await Drug.findById(params.id);
+    const drug = await Drug.findById(id);
     
     if (!drug) {
       return NextResponse.json(
@@ -33,9 +34,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await connectToDatabase();
     
     const body = await request.json();
@@ -68,7 +70,7 @@ export async function PUT(
     }
 
     const updatedDrug = await Drug.findByIdAndUpdate(
-      params.id,
+      id,
       {
         name: body.name,
         genericName: body.genericName || '',
@@ -112,16 +114,17 @@ export async function PUT(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await connectToDatabase();
     
     const body = await request.json();
     
     const updatedDrug = await Drug.findByIdAndUpdate(
-      params.id,
-      { ...body, updatedAt: new Date() },
+      id,
+      { $set: body },
       { new: true }
     );
 
@@ -147,13 +150,14 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await connectToDatabase();
-    
-    const deletedDrug = await Drug.findByIdAndDelete(params.id);
-    
+
+    const deletedDrug = await Drug.findByIdAndDelete(id);
+
     if (!deletedDrug) {
       return NextResponse.json(
         { success: false, error: 'Drug not found' },

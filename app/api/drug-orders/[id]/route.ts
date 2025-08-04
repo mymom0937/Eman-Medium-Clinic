@@ -4,11 +4,12 @@ import { auth } from '@clerk/nextjs/server';
 import { DrugOrder } from '@/models/drug-order';
 import { UpdateDrugOrderRequest } from '@/types/drug-order';
 import { USER_ROLES } from '@/constants/user-roles';
+import { DRUG_ORDER_STATUS } from '@/types/drug-order';
 
 // GET /api/drug-orders/[id] - Get specific drug order
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -16,8 +17,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     await connectToDatabase();
-    const drugOrder = await DrugOrder.findById(params.id);
+    const drugOrder = await DrugOrder.findById(id);
 
     if (!drugOrder) {
       return NextResponse.json({ error: 'Drug order not found' }, { status: 404 });
@@ -33,7 +35,7 @@ export async function GET(
 // PUT /api/drug-orders/[id] - Update drug order (full update)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -41,6 +43,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     await connectToDatabase();
     const body = await request.json();
     const { patientId, patientName, labResultId, items, notes } = body;
@@ -67,7 +70,7 @@ export async function PUT(
     };
 
     const drugOrder = await DrugOrder.findByIdAndUpdate(
-      params.id,
+      id,
       { $set: updateData },
       { new: true }
     );
@@ -86,7 +89,7 @@ export async function PUT(
 // PATCH /api/drug-orders/[id] - Update drug order (partial update)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -103,30 +106,21 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const { id } = await params;
     const body: UpdateDrugOrderRequest = await request.json();
-    const { status, items, notes } = body;
+    const { status, notes } = body;
 
     const updateData: any = {};
 
     if (status) {
       updateData.status = status;
-      if (status === 'APPROVED') {
+      if (status === DRUG_ORDER_STATUS.APPROVED) {
         updateData.approvedBy = userId;
         updateData.approvedAt = new Date();
-      } else if (status === 'DISPENSED') {
+      } else if (status === DRUG_ORDER_STATUS.DISPENSED) {
         updateData.dispensedBy = userId;
         updateData.dispensedAt = new Date();
       }
-    }
-
-    if (items) {
-      // Recalculate total amount
-      const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-      updateData.items = items.map(item => ({
-        ...item,
-        totalPrice: item.quantity * item.unitPrice,
-      }));
-      updateData.totalAmount = totalAmount;
     }
 
     if (notes !== undefined) {
@@ -134,7 +128,7 @@ export async function PATCH(
     }
 
     const drugOrder = await DrugOrder.findByIdAndUpdate(
-      params.id,
+      id,
       { $set: updateData },
       { new: true }
     );
@@ -153,7 +147,7 @@ export async function PATCH(
 // DELETE /api/drug-orders/[id] - Delete drug order
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -170,7 +164,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const drugOrder = await DrugOrder.findByIdAndDelete(params.id);
+    const { id } = await params;
+    const drugOrder = await DrugOrder.findByIdAndDelete(id);
 
     if (!drugOrder) {
       return NextResponse.json({ error: 'Drug order not found' }, { status: 404 });
