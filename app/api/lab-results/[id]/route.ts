@@ -159,7 +159,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Lab result not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ message: 'Lab result updated successfully' });
+    return NextResponse.json({ message: 'Lab result updated successfully', labResult });
   } catch (error) {
     console.error('Error updating lab result:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

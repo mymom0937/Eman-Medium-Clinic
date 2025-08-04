@@ -14,6 +14,7 @@ import { LAB_TEST_TYPES, LAB_TEST_LABELS, LAB_TEST_STATUS_LABELS } from '@/const
 import { USER_ROLES } from '@/constants/user-roles';
 import { useUserRole } from '@/hooks/useUserRole';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
+import { toastManager } from '@/lib/utils/toast';
 
 const TEST_STATUS_OPTIONS = [
   { value: 'all', label: 'All Status' },
@@ -61,6 +62,7 @@ export default function LabResultsPage() {
     notes: '',
   });
   const [errors, setErrors] = useState<Partial<LabResultFormData>>({});
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
 
   // Load lab results data on component mount
   useEffect(() => {
@@ -166,8 +168,10 @@ export default function LabResultsPage() {
 
       setIsAddModalOpen(false);
       resetForm();
+      toastManager.success('Lab test request created successfully!');
     } catch (error) {
       console.error('Error creating lab result:', error);
+      toastManager.error('Failed to create lab test request. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -221,8 +225,10 @@ export default function LabResultsPage() {
       setIsEditModalOpen(false);
       setEditingLabResult(null);
       resetForm();
+      toastManager.success('Lab result updated successfully!');
     } catch (error) {
       console.error('Error updating lab result:', error);
+      toastManager.error('Failed to update lab result. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -247,8 +253,10 @@ export default function LabResultsPage() {
       if (resultsResponse.ok) {
         setLabResults(resultsResult);
       }
+      toastManager.success('Lab result deleted successfully!');
     } catch (error) {
       console.error('Error deleting lab result:', error);
+      toastManager.error('Failed to delete lab result. Please try again.');
     }
   };
 
@@ -279,6 +287,40 @@ export default function LabResultsPage() {
     if (userRole === USER_ROLES.SUPER_ADMIN) return true;
     if (userRole === USER_ROLES.LABORATORIST) return true;
     return false;
+  };
+
+  const handleStatusUpdate = async (labResultId: string, newStatus: string) => {
+    if (!canUpdateStatus({} as LabResult)) return;
+
+    setStatusUpdating(labResultId);
+    try {
+      const response = await fetch(`/api/lab-results/${labResultId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+
+      // Reload lab results data
+      const labResultsResponse = await fetch('/api/lab-results');
+      const labResultsResult = await labResultsResponse.json();
+      
+      if (labResultsResponse.ok) {
+        setLabResults(labResultsResult);
+      }
+
+      toastManager.success('Status updated successfully');
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toastManager.error('Failed to update status');
+    } finally {
+      setStatusUpdating(null);
+    }
   };
 
   if (!isLoaded || initialLoading) {
@@ -416,9 +458,31 @@ export default function LabResultsPage() {
                     <TableCell className="text-text-primary">{LAB_TEST_LABELS[result.testType]}</TableCell>
                     <TableCell className="text-text-primary">{result.testName}</TableCell>
                     <TableCell>
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(result.status)}`}>
-                        {LAB_TEST_STATUS_LABELS[result.status]}
-                      </span>
+                      {canUpdateStatus(result) ? (
+                        <div className="relative">
+                          <Select
+                            value={result.status}
+                            onChange={(e) => handleStatusUpdate(result._id, e.target.value)}
+                            disabled={statusUpdating === result._id}
+                            options={[
+                              { value: 'PENDING', label: 'Pending' },
+                              { value: 'IN_PROGRESS', label: 'In Progress' },
+                              { value: 'COMPLETED', label: 'Completed' },
+                              { value: 'CANCELLED', label: 'Cancelled' },
+                            ]}
+                            className="w-32 text-sm"
+                          />
+                          {statusUpdating === result._id && (
+                            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(result.status)}`}>
+                          {LAB_TEST_STATUS_LABELS[result.status]}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-text-secondary">
                       {new Date(result.requestedAt).toLocaleDateString()}
@@ -582,6 +646,37 @@ export default function LabResultsPage() {
                 placeholder="Enter test name"
               />
             </FormField>
+
+            {editingLabResult && canUpdateStatus(editingLabResult) && (
+              <FormField label="Status">
+                <Select
+                  value={editingLabResult.status}
+                  onChange={(e) => handleStatusUpdate(editingLabResult._id, e.target.value)}
+                  disabled={statusUpdating === editingLabResult._id}
+                  options={[
+                    { value: 'PENDING', label: 'Pending' },
+                    { value: 'IN_PROGRESS', label: 'In Progress' },
+                    { value: 'COMPLETED', label: 'Completed' },
+                    { value: 'CANCELLED', label: 'Cancelled' },
+                  ]}
+                  className="w-full"
+                />
+                {statusUpdating === editingLabResult._id && (
+                  <div className="mt-1 text-sm text-blue-600">Updating status...</div>
+                )}
+              </FormField>
+            )}
+
+            {editingLabResult && !canUpdateStatus(editingLabResult) && (
+              <FormField label="Status">
+                <div className="flex items-center space-x-2">
+                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(editingLabResult.status)}`}>
+                    {LAB_TEST_STATUS_LABELS[editingLabResult.status]}
+                  </span>
+                  <span className="text-xs text-gray-500">(Only Laboratorists and Super Admins can update status)</span>
+                </div>
+              </FormField>
+            )}
           </div>
 
           <FormField label="Notes">
@@ -649,9 +744,29 @@ export default function LabResultsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-primary">Status</label>
-                <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingLabResult.status)}`}>
-                  {LAB_TEST_STATUS_LABELS[viewingLabResult.status]}
-                </span>
+                {canUpdateStatus(viewingLabResult) ? (
+                  <div className="mt-1">
+                    <Select
+                      value={viewingLabResult.status}
+                      onChange={(e) => handleStatusUpdate(viewingLabResult._id, e.target.value)}
+                      disabled={statusUpdating === viewingLabResult._id}
+                      options={[
+                        { value: 'PENDING', label: 'Pending' },
+                        { value: 'IN_PROGRESS', label: 'In Progress' },
+                        { value: 'COMPLETED', label: 'Completed' },
+                        { value: 'CANCELLED', label: 'Cancelled' },
+                      ]}
+                      className="w-full"
+                    />
+                    {statusUpdating === viewingLabResult._id && (
+                      <div className="mt-2 text-sm text-blue-600">Updating status...</div>
+                    )}
+                  </div>
+                ) : (
+                  <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingLabResult.status)}`}>
+                    {LAB_TEST_STATUS_LABELS[viewingLabResult.status]}
+                  </span>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-primary">Requested At</label>
