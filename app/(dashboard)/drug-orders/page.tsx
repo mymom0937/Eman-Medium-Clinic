@@ -63,7 +63,7 @@ export default function DrugOrdersPage() {
     items: [],
     notes: '',
   });
-  const [errors, setErrors] = useState<Partial<DrugOrderFormData>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Load drug orders and drugs data on component mount
   useEffect(() => {
@@ -100,8 +100,10 @@ export default function DrugOrdersPage() {
 
   // Filter drug orders based on search and filters
   const filteredDrugOrders = drugOrders.filter(order => {
-    const matchesSearch = order.patientId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.patientName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (order.drugOrderId?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                          order.patientId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          order.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          order.items.some(item => item.drugName.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = selectedStatus === 'all' || order.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
@@ -122,7 +124,7 @@ export default function DrugOrdersPage() {
   };
 
   const validateForm = (): boolean => {
-    const newErrors: any = {};
+    const newErrors: Record<string, string> = {};
 
     if (!formData.patientId.trim()) {
       newErrors.patientId = 'Patient ID is required';
@@ -132,6 +134,22 @@ export default function DrugOrdersPage() {
     }
     if (formData.items.length === 0) {
       newErrors.items = 'At least one drug item is required';
+    } else {
+      // Check each drug item for required fields
+      formData.items.forEach((item, index) => {
+        if (!item.drugId?.trim()) {
+          newErrors[`items.${index}.drugId`] = 'Drug ID is required';
+        }
+        if (!item.drugName?.trim()) {
+          newErrors[`items.${index}.drugName`] = 'Drug name is required';
+        }
+        if (!item.quantity || item.quantity <= 0) {
+          newErrors[`items.${index}.quantity`] = 'Quantity must be greater than 0';
+        }
+        if (!item.unitPrice || item.unitPrice <= 0) {
+          newErrors[`items.${index}.unitPrice`] = 'Unit price must be greater than 0';
+        }
+      });
     }
 
     setErrors(newErrors);
@@ -273,7 +291,11 @@ export default function DrugOrdersPage() {
   const handleInputChange = (field: keyof DrugOrderFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
   };
 
@@ -404,10 +426,10 @@ export default function DrugOrdersPage() {
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
               <input
                 type="text"
-                placeholder="Search by patient ID or name..."
+                placeholder="Search by drug order ID, patient ID, name, or drug name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 bg-white text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <select
                 value={selectedStatus}
@@ -426,6 +448,7 @@ export default function DrugOrdersPage() {
               <TableHeader>
                 <TableRow className="bg-gray-50">
                   <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Patient</TableHead>
+                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Drug Order ID</TableHead>
                   <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Items</TableHead>
                   <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Total Amount</TableHead>
                   <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Status</TableHead>
@@ -440,6 +463,11 @@ export default function DrugOrdersPage() {
                       <div>
                         <div className="font-medium text-gray-900">{order.patientName}</div>
                         <div className="text-sm text-gray-500">{order.patientId}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3 px-4">
+                      <div className="font-medium text-text-primary">
+                        {order.drugOrderId || 'N/A'}
                       </div>
                     </TableCell>
                     <TableCell className="py-3 px-4">
@@ -538,7 +566,7 @@ export default function DrugOrdersPage() {
             {formData.items.map((item, index) => (
               <div key={index} className="border border-gray-300 p-4 rounded-lg mb-4 bg-gray-50">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField label="Drug">
+                  <FormField label="Drug" error={errors[`items.${index}.drugId`]}>
                     <Select
                       value={item.drugId}
                       onChange={(e) => {
@@ -547,15 +575,18 @@ export default function DrugOrdersPage() {
                         updateDrugItem(index, 'drugName', drug?.name || '');
                         updateDrugItem(index, 'unitPrice', drug?.sellingPrice || 0);
                       }}
-                      options={drugs.map(drug => ({
-                        value: drug._id,
-                        label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
-                      }))}
+                      options={[
+                        { value: '', label: 'Select a drug...' },
+                        ...drugs.map(drug => ({
+                          value: drug._id,
+                          label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
+                        }))
+                      ]}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </FormField>
 
-                  <FormField label="Quantity">
+                  <FormField label="Quantity" error={errors[`items.${index}.quantity`]}>
                     <Input
                       type="number"
                       value={item.quantity}
@@ -565,7 +596,7 @@ export default function DrugOrdersPage() {
                     />
                   </FormField>
 
-                  <FormField label="Unit Price">
+                  <FormField label="Unit Price" error={errors[`items.${index}.unitPrice`]}>
                     <Input
                       type="number"
                       step="0.01"
@@ -699,7 +730,7 @@ export default function DrugOrdersPage() {
             {formData.items.map((item, index) => (
               <div key={index} className="border border-gray-300 p-4 rounded-lg mb-4 bg-gray-50">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField label="Drug">
+                  <FormField label="Drug" error={errors[`items.${index}.drugId`]}>
                     <Select
                       value={item.drugId}
                       onChange={(e) => {
@@ -708,15 +739,18 @@ export default function DrugOrdersPage() {
                         updateDrugItem(index, 'drugName', drug?.name || '');
                         updateDrugItem(index, 'unitPrice', drug?.sellingPrice || 0);
                       }}
-                      options={drugs.map(drug => ({
-                        value: drug._id,
-                        label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
-                      }))}
+                      options={[
+                        { value: '', label: 'Select a drug...' },
+                        ...drugs.map(drug => ({
+                          value: drug._id,
+                          label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
+                        }))
+                      ]}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </FormField>
 
-                  <FormField label="Quantity">
+                  <FormField label="Quantity" error={errors[`items.${index}.quantity`]}>
                     <Input
                       type="number"
                       value={item.quantity}
@@ -726,7 +760,7 @@ export default function DrugOrdersPage() {
                     />
                   </FormField>
 
-                  <FormField label="Unit Price">
+                  <FormField label="Unit Price" error={errors[`items.${index}.unitPrice`]}>
                     <Input
                       type="number"
                       step="0.01"
@@ -828,6 +862,10 @@ export default function DrugOrdersPage() {
         {viewingDrugOrder && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900">Drug Order ID</label>
+                <p className="mt-1 text-sm text-gray-600">{viewingDrugOrder.drugOrderId || 'N/A'}</p>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900">Patient ID</label>
                 <p className="mt-1 text-sm text-gray-600">{viewingDrugOrder.patientId}</p>

@@ -14,6 +14,7 @@ export const DRUG_ORDER_STATUS_LABELS = {
 
 export interface DrugOrder {
   _id: string;
+  drugOrderId?: string; // Unique drug order ID like DRG000001 (optional for now)
   patientId: string;
   patientName: string;
   labResultId?: string; // Reference to lab result

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/config/database';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { DrugOrder } from '@/models/drug-order';
 import { CreateDrugOrderRequest } from '@/types/drug-order';
 import { USER_ROLES } from '@/constants/user-roles';
+import { generateDrugOrderId } from '@/utils/utils';
 
 // GET /api/drug-orders - Get all drug orders
 export async function GET(request: NextRequest) {
@@ -45,13 +46,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is Nurse or Super Admin
-    await connectToDatabase();
-    const User = (await import('@/models/user')).default;
-    const user = await User.findOne({ clerkId: userId });
+    // Get current user from Clerk
+    const user = await currentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check user role from Clerk's public metadata or database
+    let userRole = user.publicMetadata?.role as string;
     
-    if (!user || (user.role !== USER_ROLES.NURSE && user.role !== USER_ROLES.SUPER_ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // If role is not in metadata, check database
+    if (!userRole) {
+      await connectToDatabase();
+      const User = (await import('@/models/user')).default;
+      const dbUser = await User.findOne({ clerkId: userId });
+      
+      if (dbUser) {
+        userRole = dbUser.role;
+      } else {
+        // Create user in database if they don't exist
+        const newUser = new User({
+          clerkId: userId,
+          email: user.emailAddresses[0]?.emailAddress || '',
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          role: USER_ROLES.SUPER_ADMIN, // Default to super admin for now
+        });
+        await newUser.save();
+        userRole = USER_ROLES.SUPER_ADMIN;
+      }
+    }
+
+    // Check if user has permission to create drug orders
+    if (userRole !== USER_ROLES.NURSE && userRole !== USER_ROLES.SUPER_ADMIN) {
+      return NextResponse.json({ error: 'Forbidden - Insufficient permissions' }, { status: 403 });
     }
 
     const body: CreateDrugOrderRequest = await request.json();
@@ -61,10 +89,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Validate each drug item
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item.drugId?.trim()) {
+        return NextResponse.json({ 
+          error: `Drug item ${i + 1} is missing drug ID` 
+        }, { status: 400 });
+      }
+      if (!item.drugName?.trim()) {
+        return NextResponse.json({ 
+          error: `Drug item ${i + 1} is missing drug name` 
+        }, { status: 400 });
+      }
+      if (!item.quantity || item.quantity <= 0) {
+        return NextResponse.json({ 
+          error: `Drug item ${i + 1} must have a quantity greater than 0` 
+        }, { status: 400 });
+      }
+      if (!item.unitPrice || item.unitPrice <= 0) {
+        return NextResponse.json({ 
+          error: `Drug item ${i + 1} must have a unit price greater than 0` 
+        }, { status: 400 });
+      }
+    }
+
     // Calculate total amount
     const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
-    const drugOrder = new DrugOrder({
+    // Generate drug order ID
+    const drugOrderId = await generateDrugOrderId();
+    console.log('Generated drug order ID:', drugOrderId);
+
+    const drugOrderData = {
+      drugOrderId,
       patientId,
       patientName,
       labResultId,
@@ -77,9 +135,11 @@ export async function POST(request: NextRequest) {
       })),
       totalAmount,
       notes,
-    });
+    };
 
-    const savedDrugOrder = await drugOrder.save();
+    console.log('Drug order data to save:', drugOrderData);
+    const savedDrugOrder = await DrugOrder.create(drugOrderData);
+    console.log('Saved drug order:', savedDrugOrder);
 
     return NextResponse.json(savedDrugOrder, { status: 201 });
   } catch (error) {

@@ -52,7 +52,6 @@ export async function generateLabResultId(): Promise<string> {
     
     await connectToDatabase();
     
-    // Get the latest lab result to determine the next ID
     const latestLabResult = await LabResult.findOne().sort({ labResultId: -1 });
     
     let nextNumber = 1;
@@ -63,14 +62,38 @@ export async function generateLabResultId(): Promise<string> {
       }
     }
     
-    // Format the ID with leading zeros (6 digits)
     const formattedNumber = nextNumber.toString().padStart(6, '0');
     return `LAB${formattedNumber}`;
   } catch (error) {
     console.error('Error generating lab result ID:', error);
-    // Fallback: generate based on timestamp
     const timestamp = Date.now().toString().slice(-6);
     return `LAB${timestamp}`;
+  }
+}
+
+export async function generateDrugOrderId(): Promise<string> {
+  try {
+    const { connectToDatabase } = await import('@/config/database');
+    const { DrugOrder } = await import('@/models/drug-order');
+    
+    await connectToDatabase();
+    
+    const latestDrugOrder = await DrugOrder.findOne().sort({ drugOrderId: -1 });
+    
+    let nextNumber = 1;
+    if (latestDrugOrder && latestDrugOrder.drugOrderId) {
+      const lastNumber = parseInt(latestDrugOrder.drugOrderId.replace('DRG', ''));
+      if (!isNaN(lastNumber)) {
+        nextNumber = lastNumber + 1;
+      }
+    }
+    
+    const formattedNumber = nextNumber.toString().padStart(6, '0');
+    return `DRG${formattedNumber}`;
+  } catch (error) {
+    console.error('Error generating drug order ID:', error);
+    const timestamp = Date.now().toString().slice(-6);
+    return `DRG${timestamp}`;
   }
 }
 
