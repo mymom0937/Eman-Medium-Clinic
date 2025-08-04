@@ -2,6 +2,7 @@ import { LAB_TEST_STATUS, LAB_TEST_TYPES } from '@/constants/lab-test-types';
 
 export interface LabResult {
   _id: string;
+  labResultId?: string; // Unique lab result ID like LAB000001 (optional for now)
   patientId: string;
   patientName: string;
   testType: keyof typeof LAB_TEST_TYPES;

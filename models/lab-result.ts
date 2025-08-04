@@ -11,6 +11,7 @@ export interface ILabTestResult {
 }
 
 export interface ILabResult extends Document {
+  labResultId?: string; // Unique lab result ID like LAB000001 (optional for now)
   patientId: string;
   patientName: string;
   testType: keyof typeof LAB_TEST_TYPES;
@@ -36,6 +37,7 @@ const LabTestResultSchema = new Schema<ILabTestResult>({
 });
 
 const LabResultSchema = new Schema<ILabResult>({
+  labResultId: { type: String, unique: true, index: true }, // Temporarily not required
   patientId: { type: String, required: true, index: true },
   patientName: { type: String, required: true },
   testType: { type: String, required: true, enum: Object.values(LAB_TEST_TYPES) },
@@ -57,10 +59,16 @@ const LabResultSchema = new Schema<ILabResult>({
 });
 
 // Indexes for better query performance
+LabResultSchema.index({ labResultId: 1 });
 LabResultSchema.index({ patientId: 1, createdAt: -1 });
 LabResultSchema.index({ status: 1 });
 LabResultSchema.index({ requestedBy: 1 });
 LabResultSchema.index({ completedBy: 1 });
 LabResultSchema.index({ testType: 1 });
 
-export const LabResult = mongoose.models.LabResult || mongoose.model<ILabResult>('LabResult', LabResultSchema); 
+// Force delete existing model and recreate it
+if (mongoose.models.LabResult) {
+  delete mongoose.models.LabResult;
+}
+
+export const LabResult = mongoose.model<ILabResult>('LabResult', LabResultSchema); 

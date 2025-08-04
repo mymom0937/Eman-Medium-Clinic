@@ -42,6 +42,39 @@ export async function generateBookingId(): Promise<string> {
 }
 
 /**
+ * Generate a unique lab result ID
+ * @returns A unique lab result ID in format LAB000001
+ */
+export async function generateLabResultId(): Promise<string> {
+  try {
+    const { connectToDatabase } = await import('@/config/database');
+    const { LabResult } = await import('@/models/lab-result');
+    
+    await connectToDatabase();
+    
+    // Get the latest lab result to determine the next ID
+    const latestLabResult = await LabResult.findOne().sort({ labResultId: -1 });
+    
+    let nextNumber = 1;
+    if (latestLabResult && latestLabResult.labResultId) {
+      const lastNumber = parseInt(latestLabResult.labResultId.replace('LAB', ''));
+      if (!isNaN(lastNumber)) {
+        nextNumber = lastNumber + 1;
+      }
+    }
+    
+    // Format the ID with leading zeros (6 digits)
+    const formattedNumber = nextNumber.toString().padStart(6, '0');
+    return `LAB${formattedNumber}`;
+  } catch (error) {
+    console.error('Error generating lab result ID:', error);
+    // Fallback: generate based on timestamp
+    const timestamp = Date.now().toString().slice(-6);
+    return `LAB${timestamp}`;
+  }
+}
+
+/**
  * Convert string to ObjectId
  */
 export function toObjectId(id: string): Types.ObjectId {

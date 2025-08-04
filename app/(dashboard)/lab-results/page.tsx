@@ -87,7 +87,8 @@ export default function LabResultsPage() {
 
   // Filter lab results based on search and filters
   const filteredLabResults = labResults.filter(result => {
-    const matchesSearch = result.patientId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = (result.labResultId?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         result.patientId.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          result.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          result.testName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedStatus === 'all' || result.status === selectedStatus;
@@ -357,7 +358,7 @@ export default function LabResultsPage() {
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
               <input
                 type="text"
-                placeholder="Search by patient ID, name, or test name..."
+                placeholder="Search by lab result ID, patient ID, name, or test name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1 border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary placeholder-text-muted bg-background text-sm"
@@ -389,6 +390,7 @@ export default function LabResultsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Lab Result ID</TableHead>
                   <TableHead>Patient</TableHead>
                   <TableHead>Test Type</TableHead>
                   <TableHead>Test Name</TableHead>
@@ -400,6 +402,11 @@ export default function LabResultsPage() {
               <TableBody>
                 {filteredLabResults.map((result) => (
                   <TableRow key={result._id}>
+                    <TableCell>
+                      <div className="font-medium text-text-primary">
+                        {result.labResultId || 'N/A'}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium text-text-primary">{result.patientName}</div>
@@ -620,6 +627,10 @@ export default function LabResultsPage() {
         {viewingLabResult && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-primary">Lab Result ID</label>
+                <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.labResultId || 'N/A'}</p>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-text-primary">Patient ID</label>
                 <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.patientId}</p>

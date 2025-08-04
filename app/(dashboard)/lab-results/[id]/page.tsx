@@ -196,6 +196,10 @@ export default function LabResultDetailPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
+                  <label className="block text-sm font-medium text-gray-700">Lab Result ID</label>
+                  <p className="text-sm text-gray-600">{labResult.labResultId || 'N/A'}</p>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700">Patient Name</label>
                   <p className="text-sm text-gray-600">{labResult.patientName}</p>
                 </div>

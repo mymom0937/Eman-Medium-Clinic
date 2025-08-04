@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/config/database';
 import { auth, currentUser } from '@clerk/nextjs/server';
-import { LabResult } from '@/models/lab-result';
 import { CreateLabResultRequest } from '@/types/lab-result';
 import { USER_ROLES } from '@/constants/user-roles';
+import { generateLabResultId } from '@/utils/utils';
 
 // GET /api/lab-results - Get all lab results
 export async function GET(request: NextRequest) {
@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
     const testType = searchParams.get('testType');
 
     await connectToDatabase();
+    
+    // Force reload the LabResult model to ensure schema changes are applied
+    const { LabResult } = await import('@/models/lab-result');
 
     let query: any = {};
 
@@ -92,7 +95,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const labResult = new LabResult({
+    // Generate unique lab result ID
+    const labResultId = await generateLabResultId();
+    console.log('Generated lab result ID:', labResultId);
+
+    // Force reload the LabResult model to ensure schema changes are applied
+    await connectToDatabase();
+    const { LabResult } = await import('@/models/lab-result');
+
+    const labResultData = {
+      labResultId,
       patientId,
       patientName,
       testType,
@@ -101,9 +113,13 @@ export async function POST(request: NextRequest) {
       requestedBy: userId,
       requestedAt: new Date(),
       notes,
-    });
+    };
 
-    const savedLabResult = await labResult.save();
+    console.log('Lab result data to save:', labResultData);
+
+    // Use create method instead of new + save
+    const savedLabResult = await LabResult.create(labResultData);
+    console.log('Saved lab result:', savedLabResult);
 
     return NextResponse.json(savedLabResult, { status: 201 });
   } catch (error) {
