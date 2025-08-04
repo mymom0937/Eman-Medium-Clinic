@@ -278,14 +278,20 @@ export default function InventoryPage() {
     setLoading(true);
     try {
       const drugData = {
-              name: formData.name,
+        name: formData.name,
         description: formData.description,
-              category: formData.category.replace('_', ' '),
+        category: formData.category.replace('_', ' '),
         price: parseFloat(formData.unitPrice),
-              quantity: parseInt(formData.quantity),
+        quantity: parseInt(formData.quantity),
         manufacturer: formData.supplier.replace('_', ' '),
-              expiryDate: formData.expiryDate,
+        expiryDate: formData.expiryDate,
       };
+
+      console.log('Debug - formData:', formData);
+      console.log('Debug - drugData being sent:', drugData);
+      console.log('Debug - formData.quantity:', formData.quantity);
+      console.log('Debug - typeof formData.quantity:', typeof formData.quantity);
+      console.log('Debug - parseInt(formData.quantity):', parseInt(formData.quantity));
 
       const response = await fetch(`/api/drugs/${editingDrug._id}`, {
         method: 'PUT',
@@ -388,6 +394,34 @@ export default function InventoryPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // If status is changed, update quantity accordingly
+    if (field === 'status') {
+      let newQuantity = 0;
+      let statusMessage = '';
+      switch (value) {
+        case 'out_of_stock':
+          newQuantity = 0;
+          statusMessage = 'Quantity set to 0 (Out of Stock)';
+          break;
+        case 'low_stock':
+          newQuantity = 5; // Set to low stock level
+          statusMessage = 'Quantity set to 5 (Low Stock)';
+          break;
+        case 'in_stock':
+          newQuantity = 50; // Set to a reasonable in-stock level
+          statusMessage = 'Quantity set to 50 (In Stock)';
+          break;
+        default:
+          newQuantity = parseInt(formData.quantity) || 0;
+      }
+      setFormData(prev => ({ ...prev, quantity: newQuantity.toString() }));
+      
+      // Show a brief toast notification
+      toastManager.info(statusMessage);
+    }
+    
+    // Clear error for this field
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }

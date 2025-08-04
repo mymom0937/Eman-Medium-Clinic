@@ -62,9 +62,27 @@ export async function PUT(
     }
     
     // Check for quantity or stockQuantity
-    if (!body.quantity && !body.stockQuantity) {
+    if (body.quantity === undefined && body.stockQuantity === undefined) {
       return NextResponse.json(
         { success: false, error: 'Missing required field: quantity or stockQuantity' },
+        { status: 400 }
+      );
+    }
+
+    // Validate quantity is a valid number
+    const quantityValue = body.quantity !== undefined ? body.quantity : body.stockQuantity;
+    console.log('Debug - body:', body);
+    console.log('Debug - quantityValue:', quantityValue);
+    console.log('Debug - typeof quantityValue:', typeof quantityValue);
+    
+    // Convert to number and validate
+    const parsedQuantity = Number(quantityValue);
+    console.log('Debug - parsedQuantity:', parsedQuantity);
+    console.log('Debug - isNaN(parsedQuantity):', isNaN(parsedQuantity));
+    
+    if (isNaN(parsedQuantity)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid quantity value. Must be a valid number.' },
         { status: 400 }
       );
     }
@@ -83,7 +101,7 @@ export async function PUT(
         expiryDate: body.expiryDate ? new Date(body.expiryDate) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
         purchasePrice: parseFloat(body.purchasePrice) || parseFloat(body.price || body.unitPrice || body.sellingPrice),
         sellingPrice: parseFloat(body.price || body.unitPrice || body.sellingPrice),
-        stockQuantity: parseInt(body.quantity || body.stockQuantity),
+        stockQuantity: parsedQuantity,
         minimumStockLevel: parseInt(body.minimumStockLevel) || 10,
         imageUrl: body.imageUrl || '',
         isActive: true,
