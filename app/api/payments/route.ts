@@ -96,19 +96,15 @@ export async function POST(request: NextRequest) {
     const newId = lastId + 1;
     const paymentId = `PAY${newId.toString().padStart(6, '0')}`;
 
-    const payment: Omit<Payment, '_id'> = {
+    const payment = {
       paymentId,
       amount: parseFloat(body.amount),
-      method: body.method as PaymentMethod,
-      status: body.status || 'PENDING' as PaymentStatus,
-      description: body.description || '',
+      paymentMethod: body.method as PaymentMethod,
+      paymentStatus: body.status || 'PENDING' as PaymentStatus,
+      notes: body.description || '',
       patientId: body.patientId,
-      patientName: body.patientName,
-      reference: body.reference || `INV-${Date.now()}`,
-      processedBy: body.processedBy || 'System',
-      processedAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      transactionReference: body.reference || `INV-${Date.now()}`,
+      recordedBy: body.processedBy || 'System',
     };
 
     const result = await db.collection('payments').insertOne(payment);
@@ -146,16 +142,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const updateData: any = {
-      status: status as PaymentStatus,
+      paymentStatus: status as PaymentStatus,
       updatedAt: new Date(),
     };
 
     if (processedBy) {
-      updateData.processedBy = processedBy;
-    }
-
-    if (status === 'COMPLETED') {
-      updateData.processedAt = new Date();
+      updateData.recordedBy = processedBy;
     }
 
     const result = await db.collection('payments').updateOne(

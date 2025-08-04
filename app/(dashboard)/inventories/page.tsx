@@ -170,6 +170,26 @@ export default function InventoryPage() {
     }
   };
 
+  const formatDate = (dateString: string | Date) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Partial<any> = {};
 
@@ -619,7 +639,7 @@ export default function InventoryPage() {
                             {drug.manufacturer.charAt(0).toUpperCase() + drug.manufacturer.slice(1)}
                           </td>
                           <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-text-secondary">
-                            {drug.expiryDate ? new Date(drug.expiryDate).toLocaleDateString() : 'N/A'}
+                            {formatDate(drug.expiryDate)}
                           </td>
                           <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(getDrugStatus(drug.stockQuantity))}`}>
@@ -903,7 +923,7 @@ export default function InventoryPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Expiry Date</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingDrug.expiryDate ? new Date(viewingDrug.expiryDate).toLocaleDateString() : 'N/A'}</p>
+                                  <p className="mt-1 text-sm text-gray-900">{formatDate(viewingDrug.expiryDate)}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Manufacturer</label>

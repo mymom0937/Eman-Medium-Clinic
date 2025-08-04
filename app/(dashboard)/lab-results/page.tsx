@@ -113,6 +113,26 @@ export default function LabResultsPage() {
     }
   };
 
+  const formatDate = (dateString: string | Date) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Partial<LabResultFormData> = {};
 
@@ -485,7 +505,7 @@ export default function LabResultsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-text-secondary">
-                      {new Date(result.requestedAt).toLocaleDateString()}
+                      {formatDate(result.requestedAt)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-xs sm:text-sm font-medium">
                       <button 
@@ -771,7 +791,7 @@ export default function LabResultsPage() {
               <div>
                 <label className="block text-sm font-medium text-text-primary">Requested At</label>
                 <p className="mt-1 text-sm text-text-secondary">
-                  {new Date(viewingLabResult.requestedAt).toLocaleString()}
+                  {formatDate(viewingLabResult.requestedAt)}
                 </p>
               </div>
             </div>

@@ -11,13 +11,14 @@ import { toastManager } from '@/lib/utils/toast';
 
 interface Payment {
   _id: string;
+  paymentId: string;
   patientId: string;
-  patientName: string;
   amount: number;
   paymentMethod: string;
-  status: string;
-  reference?: string;
-  date: string;
+  paymentStatus: string;
+  transactionReference?: string;
+  notes?: string;
+  recordedBy: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,11 +30,7 @@ interface PaymentStats {
   totalTransactions: number;
 }
 
-const PATIENTS = [
-  { value: 'john_doe', label: 'John Doe' },
-  { value: 'jane_smith', label: 'Jane Smith' },
-  { value: 'michael_johnson', label: 'Michael Johnson' },
-];
+// This will be replaced with dynamic data from the database
 
 const PAYMENT_STATUS_OPTIONS = [
   { value: 'all', label: 'All Status' },
@@ -60,6 +57,7 @@ export default function PaymentsPage() {
   const [viewingPayment, setViewingPayment] = useState<Payment | null>(null);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
   const [stats, setStats] = useState<PaymentStats>({
     totalRevenue: 0,
     pendingAmount: 0,
@@ -69,6 +67,7 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
+    patientId: '',
     patientName: '',
     amount: '',
     paymentMethod: 'cash',
@@ -77,26 +76,33 @@ export default function PaymentsPage() {
   });
   const [errors, setErrors] = useState<any>({});
 
-  // Load payments data on component mount
+  // Load payments and patients data on component mount
   useEffect(() => {
-    const loadPayments = async () => {
+    const loadData = async () => {
       if (!isLoaded) return;
 
       try {
         setInitialLoading(true);
-        const response = await fetch('/api/payments');
-        const result = await response.json();
         
-        if (response.ok) {
-          setPayments(result);
+        // Fetch payments and patients in parallel
+        const [paymentsResponse, patientsResponse] = await Promise.all([
+          fetch('/api/payments'),
+          fetch('/api/patients')
+        ]);
+        
+        const paymentsResult = await paymentsResponse.json();
+        const patientsResult = await patientsResponse.json();
+        
+        if (paymentsResponse.ok && paymentsResult.success) {
+          setPayments(paymentsResult.data);
           
           // Calculate stats
-          const totalRevenue = result.reduce((sum: number, payment: Payment) => 
-            payment.status === 'completed' ? sum + payment.amount : sum, 0);
-          const pendingAmount = result.reduce((sum: number, payment: Payment) => 
-            payment.status === 'pending' ? sum + payment.amount : sum, 0);
-          const completedPayments = result.filter((payment: Payment) => payment.status === 'completed').length;
-          const totalTransactions = result.length;
+          const totalRevenue = paymentsResult.data.reduce((sum: number, payment: Payment) => 
+            payment.paymentStatus === 'COMPLETED' ? sum + payment.amount : sum, 0);
+          const pendingAmount = paymentsResult.data.reduce((sum: number, payment: Payment) => 
+            payment.paymentStatus === 'PENDING' ? sum + payment.amount : sum, 0);
+          const completedPayments = paymentsResult.data.filter((payment: Payment) => payment.paymentStatus === 'COMPLETED').length;
+          const totalTransactions = paymentsResult.data.length;
 
           setStats({
             totalRevenue,
@@ -105,14 +111,18 @@ export default function PaymentsPage() {
             totalTransactions,
           });
         }
+
+        if (patientsResponse.ok && patientsResult.success) {
+          setPatients(patientsResult.data);
+        }
       } catch (error) {
-        console.error('Error loading payments:', error);
+        console.error('Error loading data:', error);
       } finally {
         setInitialLoading(false);
       }
     };
 
-    loadPayments();
+    loadData();
   }, [isLoaded]);
 
   if (!isLoaded || initialLoading) {
@@ -123,22 +133,28 @@ export default function PaymentsPage() {
     );
   }
 
+  // Prepare dynamic options for patients
+  const PATIENT_OPTIONS = patients.map(patient => ({
+    value: patient.patientId,
+    label: `${patient.firstName} ${patient.lastName} (${patient.patientId})`
+  }));
+
   // Filter payments based on search, status, and method
   const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.patientName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || payment.status.toLowerCase() === selectedStatus;
+    const matchesSearch = payment.paymentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.patientId.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === 'all' || payment.paymentStatus.toLowerCase() === selectedStatus;
     const matchesMethod = selectedMethod === 'all' || payment.paymentMethod.toLowerCase().replace('_', '') === selectedMethod;
     return matchesSearch && matchesStatus && matchesMethod;
   });
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
         return 'bg-green-100 text-green-800';
-      case 'pending':
+      case 'PENDING':
         return 'bg-yellow-100 text-yellow-800';
-      case 'failed':
+      case 'FAILED':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -158,11 +174,31 @@ export default function PaymentsPage() {
     }
   };
 
+  const formatDate = (dateString: string | Date) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: any = {};
 
-    if (!formData.patientName) {
-      newErrors.patientName = 'Patient is required';
+    if (!formData.patientId) {
+      newErrors.patientId = 'Patient ID is required';
     }
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
       newErrors.amount = 'Valid amount is required';
@@ -184,11 +220,13 @@ export default function PaymentsPage() {
     setLoading(true);
     try {
       const paymentData = {
+        patientId: formData.patientId,
         patientName: formData.patientName,
         amount: parseFloat(formData.amount),
-        paymentMethod: formData.paymentMethod,
+        method: formData.paymentMethod,
         status: formData.status,
         reference: formData.reference,
+        processedBy: userName || 'System',
       };
 
       const response = await fetch('/api/payments', {
@@ -207,16 +245,16 @@ export default function PaymentsPage() {
       const paymentsResponse = await fetch('/api/payments');
       const paymentsResult = await paymentsResponse.json();
       
-      if (paymentsResponse.ok) {
-        setPayments(paymentsResult);
+      if (paymentsResponse.ok && paymentsResult.success) {
+        setPayments(paymentsResult.data);
         
         // Recalculate stats
-        const totalRevenue = paymentsResult.reduce((sum: number, payment: Payment) => 
-          payment.status === 'completed' ? sum + payment.amount : sum, 0);
-        const pendingAmount = paymentsResult.reduce((sum: number, payment: Payment) => 
-          payment.status === 'pending' ? sum + payment.amount : sum, 0);
-        const completedPayments = paymentsResult.filter((payment: Payment) => payment.status === 'completed').length;
-        const totalTransactions = paymentsResult.length;
+        const totalRevenue = paymentsResult.data.reduce((sum: number, payment: Payment) => 
+          payment.paymentStatus === 'COMPLETED' ? sum + payment.amount : sum, 0);
+        const pendingAmount = paymentsResult.data.reduce((sum: number, payment: Payment) => 
+          payment.paymentStatus === 'PENDING' ? sum + payment.amount : sum, 0);
+        const completedPayments = paymentsResult.data.filter((payment: Payment) => payment.paymentStatus === 'COMPLETED').length;
+        const totalTransactions = paymentsResult.data.length;
 
         setStats({
           totalRevenue,
@@ -252,11 +290,12 @@ export default function PaymentsPage() {
   const handleEditPayment = (payment: Payment) => {
     setEditingPayment(payment);
     setFormData({
-      patientName: payment.patientName,
+      patientId: payment.patientId,
+      patientName: payment.patientId, // This will be updated with actual patient name
       amount: payment.amount.toString(),
       paymentMethod: payment.paymentMethod.toLowerCase(),
-      status: payment.status.toLowerCase(),
-      reference: payment.reference || '',
+      status: payment.paymentStatus.toLowerCase(),
+      reference: payment.transactionReference || '',
     });
     setIsEditPaymentModalOpen(true);
   };
@@ -277,16 +316,16 @@ export default function PaymentsPage() {
       const paymentsResponse = await fetch('/api/payments');
       const paymentsResult = await paymentsResponse.json();
       
-      if (paymentsResponse.ok) {
-        setPayments(paymentsResult);
+      if (paymentsResponse.ok && paymentsResult.success) {
+        setPayments(paymentsResult.data);
         
         // Recalculate stats
-        const totalRevenue = paymentsResult.reduce((sum: number, payment: Payment) => 
-          payment.status === 'completed' ? sum + payment.amount : sum, 0);
-        const pendingAmount = paymentsResult.reduce((sum: number, payment: Payment) => 
-          payment.status === 'pending' ? sum + payment.amount : sum, 0);
-        const completedPayments = paymentsResult.filter((payment: Payment) => payment.status === 'completed').length;
-        const totalTransactions = paymentsResult.length;
+        const totalRevenue = paymentsResult.data.reduce((sum: number, payment: Payment) => 
+          payment.paymentStatus === 'COMPLETED' ? sum + payment.amount : sum, 0);
+        const pendingAmount = paymentsResult.data.reduce((sum: number, payment: Payment) => 
+          payment.paymentStatus === 'PENDING' ? sum + payment.amount : sum, 0);
+        const completedPayments = paymentsResult.data.filter((payment: Payment) => payment.paymentStatus === 'COMPLETED').length;
+        const totalTransactions = paymentsResult.data.length;
 
         setStats({
           totalRevenue,
@@ -305,6 +344,7 @@ export default function PaymentsPage() {
 
   const resetForm = () => {
     setFormData({
+      patientId: '',
       patientName: '',
       amount: '',
       paymentMethod: 'cash',
@@ -320,14 +360,17 @@ export default function PaymentsPage() {
     setLoading(true);
     try {
       const paymentData = {
-              patientName: formData.patientName,
-              amount: parseFloat(formData.amount),
-        paymentMethod: formData.paymentMethod,
-        status: formData.status,
-              reference: formData.reference,
+        paymentId: editingPayment.paymentId,
+        patientId: formData.patientId,
+        patientName: formData.patientName,
+        amount: parseFloat(formData.amount),
+        method: formData.paymentMethod,
+        status: formData.status.toUpperCase(),
+        reference: formData.reference,
+        processedBy: userName || 'System',
       };
 
-      const response = await fetch(`/api/payments/${editingPayment._id}`, {
+      const response = await fetch('/api/payments', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -336,23 +379,24 @@ export default function PaymentsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update payment');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update payment');
       }
 
       // Reload payments data
       const paymentsResponse = await fetch('/api/payments');
       const paymentsResult = await paymentsResponse.json();
       
-      if (paymentsResponse.ok) {
-        setPayments(paymentsResult);
+      if (paymentsResponse.ok && paymentsResult.success) {
+        setPayments(paymentsResult.data);
         
         // Recalculate stats
-        const totalRevenue = paymentsResult.reduce((sum: number, payment: Payment) => 
-          payment.status === 'completed' ? sum + payment.amount : sum, 0);
-        const pendingAmount = paymentsResult.reduce((sum: number, payment: Payment) => 
-          payment.status === 'pending' ? sum + payment.amount : sum, 0);
-        const completedPayments = paymentsResult.filter((payment: Payment) => payment.status === 'completed').length;
-        const totalTransactions = paymentsResult.length;
+        const totalRevenue = paymentsResult.data.reduce((sum: number, payment: Payment) => 
+          payment.paymentStatus === 'COMPLETED' ? sum + payment.amount : sum, 0);
+        const pendingAmount = paymentsResult.data.reduce((sum: number, payment: Payment) => 
+          payment.paymentStatus === 'PENDING' ? sum + payment.amount : sum, 0);
+        const completedPayments = paymentsResult.data.filter((payment: Payment) => payment.paymentStatus === 'COMPLETED').length;
+        const totalTransactions = paymentsResult.data.length;
 
         setStats({
           totalRevenue,
@@ -371,6 +415,60 @@ export default function PaymentsPage() {
       toastManager.error('Failed to update payment. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (paymentId: string, newStatus: string) => {
+    if (!userRole || userRole !== 'SUPER_ADMIN') {
+      toastManager.error('Only super admins can update payment status');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/payments', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentId: paymentId,
+          status: newStatus.toUpperCase(),
+          processedBy: userName || 'System',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update payment status');
+      }
+
+      // Reload payments data
+      const paymentsResponse = await fetch('/api/payments');
+      const paymentsResult = await paymentsResponse.json();
+      
+      if (paymentsResponse.ok && paymentsResult.success) {
+        setPayments(paymentsResult.data);
+        
+        // Recalculate stats
+        const totalRevenue = paymentsResult.data.reduce((sum: number, payment: Payment) => 
+          payment.paymentStatus === 'COMPLETED' ? sum + payment.amount : sum, 0);
+        const pendingAmount = paymentsResult.data.reduce((sum: number, payment: Payment) => 
+          payment.paymentStatus === 'PENDING' ? sum + payment.amount : sum, 0);
+        const completedPayments = paymentsResult.data.filter((payment: Payment) => payment.paymentStatus === 'COMPLETED').length;
+        const totalTransactions = paymentsResult.data.length;
+
+        setStats({
+          totalRevenue,
+          pendingAmount,
+          completedPayments,
+          totalTransactions,
+        });
+      }
+
+      toastManager.success('Payment status updated successfully!');
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      toastManager.error('Failed to update payment status. Please try again.');
     }
   };
 
@@ -501,10 +599,10 @@ export default function PaymentsPage() {
                 {filteredPayments.map((payment) => (
                   <tr key={payment._id} className="hover:bg-card-bg">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                      {payment._id}
+                      {payment.paymentId}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
-                      {payment.patientName}
+                      {payment.patientId}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
                       ETB {payment.amount.toFixed(2)}
@@ -516,12 +614,25 @@ export default function PaymentsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(payment.status)}`}>
-                        {payment.status.toUpperCase()}
-                      </span>
+                      {userRole === 'SUPER_ADMIN' ? (
+                        <select
+                          value={payment.paymentStatus.toLowerCase()}
+                          onChange={(e) => handleStatusUpdate(payment.paymentId, e.target.value)}
+                          className={`px-2 py-1 text-xs font-medium rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-accent-color ${getStatusColor(payment.paymentStatus)}`}
+                        >
+                          <option value="completed" className="bg-green-100 text-green-800">COMPLETED</option>
+                          <option value="pending" className="bg-yellow-100 text-yellow-800">PENDING</option>
+                          <option value="failed" className="bg-red-100 text-red-800">FAILED</option>
+                          <option value="refunded" className="bg-blue-100 text-blue-800">REFUNDED</option>
+                        </select>
+                      ) : (
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(payment.paymentStatus)}`}>
+                          {payment.paymentStatus.toUpperCase()}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                      {new Date(payment.date).toLocaleDateString()}
+                      {formatDate(payment.updatedAt || payment.createdAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button 
@@ -560,6 +671,7 @@ export default function PaymentsPage() {
         onClose={() => {
           setIsNewPaymentModalOpen(false);
           setFormData({
+            patientId: '',
             patientName: '',
             amount: '',
             paymentMethod: 'cash',
@@ -575,9 +687,21 @@ export default function PaymentsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Patient" required error={errors.patientName}>
               <Select
-                value={formData.patientName}
-                onChange={(e) => handleInputChange('patientName', e.target.value)}
-                options={PATIENTS}
+                value={formData.patientId}
+                onChange={(e) => {
+                  const selectedPatient = patients.find(p => p.patientId === e.target.value);
+                  handleInputChange('patientId', e.target.value);
+                  handleInputChange('patientName', selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : '');
+                }}
+                options={PATIENT_OPTIONS}
+              />
+            </FormField>
+
+            <FormField label="Patient ID" required error={errors.patientId}>
+              <Input
+                value={formData.patientId}
+                onChange={(e) => handleInputChange('patientId', e.target.value)}
+                placeholder="Enter patient ID"
               />
             </FormField>
 
@@ -615,7 +739,6 @@ export default function PaymentsPage() {
                 ]}
               />
             </FormField>
-
             <FormField label="Reference Number">
               <Input
                 value={formData.reference}
@@ -630,13 +753,14 @@ export default function PaymentsPage() {
               variant="secondary"
               onClick={() => {
                 setIsNewPaymentModalOpen(false);
-                setFormData({
-                  patientName: '',
-                  amount: '',
-                  paymentMethod: 'cash',
-                  status: 'completed',
-                  reference: '',
-                });
+                          setFormData({
+            patientId: '',
+            patientName: '',
+            amount: '',
+            paymentMethod: 'cash',
+            status: 'completed',
+            reference: '',
+          });
                 setErrors({});
               }}
             >
@@ -671,7 +795,7 @@ export default function PaymentsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Patient</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPayment.patientName}</p>
+                <p className="mt-1 text-sm text-gray-900">{viewingPayment.patientId}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Amount</label>
@@ -683,13 +807,13 @@ export default function PaymentsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Status</label>
-                <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingPayment.status)}`}>
-                  {viewingPayment.status.toUpperCase()}
+                <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingPayment.paymentStatus)}`}>
+                  {viewingPayment.paymentStatus.toUpperCase()}
                 </span>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Date</label>
-                <p className="mt-1 text-sm text-gray-900">{new Date(viewingPayment.date).toLocaleDateString()}</p>
+                <p className="mt-1 text-sm text-gray-900">{new Date(viewingPayment.createdAt).toLocaleDateString()}</p>
               </div>
             </div>
             <div className="flex justify-end pt-4">
@@ -722,9 +846,21 @@ export default function PaymentsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Patient" required error={errors.patientName}>
               <Select
-                value={formData.patientName}
-                onChange={(e) => handleInputChange('patientName', e.target.value)}
-                options={PATIENTS}
+                value={formData.patientId}
+                onChange={(e) => {
+                  const selectedPatient = patients.find(p => p.patientId === e.target.value);
+                  handleInputChange('patientId', e.target.value);
+                  handleInputChange('patientName', selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : '');
+                }}
+                options={PATIENT_OPTIONS}
+              />
+            </FormField>
+
+            <FormField label="Patient ID" required error={errors.patientId}>
+              <Input
+                value={formData.patientId}
+                onChange={(e) => handleInputChange('patientId', e.target.value)}
+                placeholder="Enter patient ID"
               />
             </FormField>
 

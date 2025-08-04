@@ -175,6 +175,26 @@ export default function PatientsPage() {
     }
   };
 
+  const formatDate = (dateString: string | Date) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   const generatePatientId = () => {
     const lastPatient = patients[patients.length - 1];
     const lastNumber = lastPatient ? parseInt(lastPatient.patientId.replace('PAT', '')) : 0;
@@ -544,7 +564,7 @@ export default function PatientsPage() {
                       {patient.bloodType || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                      {new Date(patient.lastVisit).toLocaleDateString()}
+                      {formatDate(patient.lastVisit)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(patient.isActive ? 'active' : 'inactive')}`}>
@@ -857,7 +877,7 @@ export default function PatientsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Last Visit</label>
-                <p className="mt-1 text-sm text-gray-900">{new Date(viewingPatient.lastVisit).toLocaleDateString()}</p>
+                                    <p className="mt-1 text-sm text-gray-900">{formatDate(viewingPatient.lastVisit)}</p>
               </div>
             </div>
             {viewingPatient.address && (

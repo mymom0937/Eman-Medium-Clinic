@@ -125,6 +125,26 @@ export default function DrugOrdersPage() {
     }
   };
 
+  const formatDate = (dateString: string | Date) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -550,7 +570,7 @@ export default function DrugOrdersPage() {
                       )}
                     </TableCell>
                     <TableCell className="py-3 px-4 text-gray-500">
-                      {new Date(order.orderedAt).toLocaleDateString()}
+                      {formatDate(order.orderedAt)}
                     </TableCell>
                     <TableCell className="py-3 px-4 whitespace-nowrap text-xs sm:text-sm font-medium">
                       <button 
@@ -1006,7 +1026,7 @@ export default function DrugOrdersPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-900">Ordered At</label>
                 <p className="mt-1 text-sm text-gray-600">
-                  {new Date(viewingDrugOrder.orderedAt).toLocaleString()}
+                  {formatDate(viewingDrugOrder.orderedAt)}
                 </p>
               </div>
               <div>

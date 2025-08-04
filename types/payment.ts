@@ -1,21 +1,21 @@
 export interface Payment {
-  id: string;
+  _id?: string;
+  paymentId: string;
   saleId?: string;
   serviceId?: string;
   patientId: string;
   amount: number;
   paymentMethod: PaymentMethod;
-  status: PaymentStatus;
-  transactionId?: string;
-  processedBy: string; // User ID
-  processedAt: Date;
+  paymentStatus: PaymentStatus;
+  transactionReference?: string;
   notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  recordedBy: string; // User ID
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-export type PaymentMethod = 'cash' | 'card' | 'mobile_money' | 'insurance' | 'bank_transfer';
-export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded' | 'cancelled';
+export type PaymentMethod = 'CASH' | 'CARD' | 'MOBILE_MONEY' | 'BANK_TRANSFER';
+export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
 
 export interface PaymentFormData {
   saleId?: string;
@@ -29,8 +29,8 @@ export interface PaymentFormData {
 export interface PaymentSearchParams {
   patientId?: string;
   paymentMethod?: PaymentMethod;
-  status?: PaymentStatus;
-  processedBy?: string;
+  paymentStatus?: PaymentStatus;
+  recordedBy?: string;
   startDate?: string;
   endDate?: string;
 } 
