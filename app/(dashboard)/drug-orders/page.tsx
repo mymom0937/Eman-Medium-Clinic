@@ -14,6 +14,7 @@ import { DRUG_ORDER_STATUS_LABELS } from '@/types/drug-order';
 import { USER_ROLES } from '@/constants/user-roles';
 import { useUserRole } from '@/hooks/useUserRole';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
+import { toastManager } from '@/lib/utils/toast';
 
 const ORDER_STATUS_OPTIONS = [
   { value: 'all', label: 'All Status' },
@@ -64,6 +65,7 @@ export default function DrugOrdersPage() {
     notes: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
 
   // Load drug orders and drugs data on component mount
   useEffect(() => {
@@ -191,8 +193,10 @@ export default function DrugOrdersPage() {
 
       setIsAddModalOpen(false);
       resetForm();
+      toastManager.success('Drug order created successfully!');
     } catch (error) {
       console.error('Error creating drug order:', error);
+      toastManager.error('Failed to create drug order. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -246,8 +250,10 @@ export default function DrugOrdersPage() {
       setIsEditModalOpen(false);
       setEditingDrugOrder(null);
       resetForm();
+      toastManager.success('Drug order updated successfully!');
     } catch (error) {
       console.error('Error updating drug order:', error);
+      toastManager.error('Failed to update drug order. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -272,8 +278,10 @@ export default function DrugOrdersPage() {
       if (ordersResponse.ok) {
         setDrugOrders(ordersResult);
       }
+      toastManager.success('Drug order deleted successfully!');
     } catch (error) {
       console.error('Error deleting drug order:', error);
+      toastManager.error('Failed to delete drug order. Please try again.');
     }
   };
 
@@ -344,6 +352,42 @@ export default function DrugOrdersPage() {
     if (userRole === USER_ROLES.SUPER_ADMIN) return true;
     if (userRole === USER_ROLES.PHARMACIST) return true;
     return false;
+  };
+
+  const handleStatusUpdate = async (drugOrderId: string, newStatus: string) => {
+    if (!canUpdateStatus({} as DrugOrder)) return;
+
+    setStatusUpdating(drugOrderId);
+    try {
+      const response = await fetch(`/api/drug-orders/${drugOrderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+
+      // Reload drug orders data
+      const ordersResponse = await fetch('/api/drug-orders');
+      const ordersResult = await ordersResponse.json();
+      
+      if (ordersResponse.ok) {
+        setDrugOrders(ordersResult);
+      }
+
+      // Show success message (you can add a toast notification here)
+      toastManager.success('Status updated successfully');
+    } catch (error) {
+      console.error('Error updating status:', error);
+      // Show error message (you can add a toast notification here)
+      toastManager.error('Failed to update status');
+    } finally {
+      setStatusUpdating(null);
+    }
   };
 
   if (!isLoaded || initialLoading) {
@@ -479,9 +523,31 @@ export default function DrugOrdersPage() {
                       ${order.totalAmount.toFixed(2)}
                     </TableCell>
                     <TableCell className="py-3 px-4">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}>
-                        {DRUG_ORDER_STATUS_LABELS[order.status]}
-                      </span>
+                      {canUpdateStatus(order) ? (
+                        <div className="relative">
+                          <Select
+                            value={order.status}
+                            onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
+                            disabled={statusUpdating === order._id}
+                            options={[
+                              { value: 'PENDING', label: 'Pending' },
+                              { value: 'APPROVED', label: 'Approved' },
+                              { value: 'DISPENSED', label: 'Dispensed' },
+                              { value: 'CANCELLED', label: 'Cancelled' },
+                            ]}
+                            className="w-32 text-sm"
+                          />
+                          {statusUpdating === order._id && (
+                            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}>
+                          {DRUG_ORDER_STATUS_LABELS[order.status]}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="py-3 px-4 text-gray-500">
                       {new Date(order.orderedAt).toLocaleDateString()}
@@ -723,6 +789,37 @@ export default function DrugOrdersPage() {
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </FormField>
+
+            {editingDrugOrder && canUpdateStatus(editingDrugOrder) && (
+              <FormField label="Status">
+                <Select
+                  value={editingDrugOrder.status}
+                  onChange={(e) => handleStatusUpdate(editingDrugOrder._id, e.target.value)}
+                  disabled={statusUpdating === editingDrugOrder._id}
+                  options={[
+                    { value: 'PENDING', label: 'Pending' },
+                    { value: 'APPROVED', label: 'Approved' },
+                    { value: 'DISPENSED', label: 'Dispensed' },
+                    { value: 'CANCELLED', label: 'Cancelled' },
+                  ]}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {statusUpdating === editingDrugOrder._id && (
+                  <div className="mt-1 text-sm text-blue-600">Updating status...</div>
+                )}
+              </FormField>
+            )}
+
+            {editingDrugOrder && !canUpdateStatus(editingDrugOrder) && (
+              <FormField label="Status">
+                <div className="flex items-center space-x-2">
+                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(editingDrugOrder.status)}`}>
+                    {DRUG_ORDER_STATUS_LABELS[editingDrugOrder.status]}
+                  </span>
+                  <span className="text-xs text-gray-500">(Only Pharmacists and Super Admins can update status)</span>
+                </div>
+              </FormField>
+            )}
           </div>
 
           <div>
@@ -882,9 +979,29 @@ export default function DrugOrdersPage() {
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-900">Status</label>
-                <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingDrugOrder.status)}`}>
-                  {DRUG_ORDER_STATUS_LABELS[viewingDrugOrder.status]}
-                </span>
+                {canUpdateStatus(viewingDrugOrder) ? (
+                  <div className="mt-1">
+                    <Select
+                      value={viewingDrugOrder.status}
+                      onChange={(e) => handleStatusUpdate(viewingDrugOrder._id, e.target.value)}
+                      disabled={statusUpdating === viewingDrugOrder._id}
+                      options={[
+                        { value: 'PENDING', label: 'Pending' },
+                        { value: 'APPROVED', label: 'Approved' },
+                        { value: 'DISPENSED', label: 'Dispensed' },
+                        { value: 'CANCELLED', label: 'Cancelled' },
+                      ]}
+                      className="w-full"
+                    />
+                    {statusUpdating === viewingDrugOrder._id && (
+                      <div className="mt-2 text-sm text-blue-600">Updating status...</div>
+                    )}
+                  </div>
+                ) : (
+                  <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingDrugOrder.status)}`}>
+                    {DRUG_ORDER_STATUS_LABELS[viewingDrugOrder.status]}
+                  </span>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900">Ordered At</label>
