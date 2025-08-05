@@ -22,13 +22,13 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
   };
 
   return (
-    <div className="fixed top-0 left-24 lg:left-54 right-0 bottom-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed top-20 left-24 lg:left-54 right-0 bottom-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop - Only covers main content area, not sidebar/navbar */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
       
       {/* Modal Content */}
       <div className={cn(
-        'relative bg-card-bg rounded-lg shadow-2xl transform transition-all mx-4 border border-border-color max-h-[calc(100vh-4rem)] overflow-y-auto',
+        'relative bg-card-bg rounded-lg shadow-2xl transform transition-all mx-4 border border-border-color max-h-[calc(100vh-6rem)] overflow-y-auto',
         sizeClasses[size]
       )}>
         <div className="px-6 py-6">
