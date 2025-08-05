@@ -10,6 +10,7 @@ import { FormField, Input, Select, TextArea, Button } from '@/components/ui/form
 import { toastManager } from '@/lib/utils/toast';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import Image from 'next/image';
+import { assets } from '@/assets/assets';
 
 interface Drug {
   _id: string;
@@ -767,9 +768,13 @@ export default function InventoryPage() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-text-muted">
-                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
+                        <Image
+                          src={assets.upload_area}
+                          alt="Upload area"
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                     )}
                   </div>
@@ -914,9 +919,13 @@ export default function InventoryPage() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-text-muted">
-                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
+                        <Image
+                          src={assets.upload_area}
+                          alt="Upload area"
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                     )}
                   </div>
