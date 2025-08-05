@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/config/connection';
-import { Drug } from '@/types/drug';
+import { connectToDatabase } from '@/config/database';
+import { uploadMultipleImagesToCloudinary } from '@/utils/cloudinary';
 
 export async function GET(request: NextRequest) {
   try {
-    await dbConnect();
+    await connectToDatabase();
     const db = (await import('mongoose')).connection.db;
     
     if (!db) {
@@ -16,19 +16,33 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const category = searchParams.get('category') || '';
+    const status = searchParams.get('status') || '';
     
     const skip = (page - 1) * limit;
     
     // Build query
     const query: any = {};
+    
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
+        { manufacturer: { $regex: search, $options: 'i' } },
       ];
     }
-    if (category) {
-      query.category = category;
+    
+    if (category && category !== 'all') {
+      query.category = { $regex: category, $options: 'i' };
+    }
+    
+    if (status && status !== 'all') {
+      if (status === 'out_of_stock') {
+        query.stockQuantity = 0;
+      } else if (status === 'low_stock') {
+        query.stockQuantity = { $lte: 10, $gt: 0 };
+      } else if (status === 'in_stock') {
+        query.stockQuantity = { $gt: 10 };
+      }
     }
     
     const drugs = await db
@@ -61,14 +75,56 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await dbConnect();
+    await connectToDatabase();
     const db = (await import('mongoose')).connection.db;
     
     if (!db) {
       throw new Error('Database connection not available');
     }
     
-    const body = await request.json();
+    const contentType = request.headers.get('content-type') || '';
+    let body: any = {};
+    let imageUrl = '';
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData (for image uploads)
+      const formData = await request.formData();
+      
+      // Extract text fields
+      body = {
+        name: formData.get('name') as string,
+        category: formData.get('category') as string,
+        description: formData.get('description') as string || '',
+        manufacturer: formData.get('manufacturer') as string || '',
+        expiryDate: formData.get('expiryDate') as string,
+        price: formData.get('price') as string,
+        unitPrice: formData.get('price') as string, // Map price to unitPrice
+        sellingPrice: formData.get('price') as string, // Map price to sellingPrice
+        quantity: formData.get('quantity') as string,
+        stockQuantity: formData.get('quantity') as string, // Map quantity to stockQuantity
+      };
+      
+      // Handle image uploads to Cloudinary
+      const images = formData.getAll('images') as File[];
+      const validImages = images.filter(img => img instanceof File && img.size > 0);
+      
+      if (validImages.length > 0) {
+        try {
+          const uploadResults = await uploadMultipleImagesToCloudinary(validImages);
+          // Use the first image URL as the main image
+          imageUrl = uploadResults[0].secure_url;
+        } catch (uploadError) {
+          console.error('Error uploading images to Cloudinary:', uploadError);
+          return NextResponse.json(
+            { success: false, error: 'Failed to upload images' },
+            { status: 500 }
+          );
+        }
+      }
+    } else {
+      // Handle JSON request
+      body = await request.json();
+    }
     
     // Validate required fields - accept price, unitPrice, or sellingPrice
     const requiredFields = ['name', 'category'];
@@ -111,7 +167,7 @@ export async function POST(request: NextRequest) {
       sellingPrice: parseFloat(body.price || body.unitPrice || body.sellingPrice),
       stockQuantity: parseInt(body.quantity || body.stockQuantity),
       minimumStockLevel: parseInt(body.minimumStockLevel) || 10,
-      imageUrl: body.imageUrl || '',
+      imageUrl: imageUrl || body.imageUrl || '',
       isActive: true,
       createdBy: body.createdBy || 'system', // This should be the actual user ID in a real app
       createdAt: new Date(),

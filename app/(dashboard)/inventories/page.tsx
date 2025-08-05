@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, TextArea, Button } from '@/components/ui/form';
 import { toastManager } from '@/lib/utils/toast';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
+import Image from 'next/image';
 
 interface Drug {
   _id: string;
@@ -62,6 +63,10 @@ export default function InventoryPage() {
     description: '',
   });
   const [errors, setErrors] = useState<Partial<any>>({});
+  
+  // Image upload state
+  const [drugImages, setDrugImages] = useState<File[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
 
   // Load drugs data on component mount
   useEffect(() => {
@@ -128,6 +133,28 @@ export default function InventoryPage() {
     );
   }
 
+  // Image upload handlers
+  const handleImageUpload = (index: number, file: File | null) => {
+    const updatedImages = [...drugImages];
+    const updatedPreviewUrls = [...imagePreviewUrls];
+    
+    if (file) {
+      updatedImages[index] = file;
+      updatedPreviewUrls[index] = URL.createObjectURL(file);
+    } else {
+      updatedImages[index] = null as any;
+      updatedPreviewUrls[index] = '';
+    }
+    
+    setDrugImages(updatedImages);
+    setImagePreviewUrls(updatedPreviewUrls);
+  };
+
+  const resetImageState = () => {
+    setDrugImages([]);
+    setImagePreviewUrls([]);
+  };
+
   // Filter drugs based on search, category, and status
   const filteredDrugs = drugs.filter(drug => {
     const matchesSearch = searchTerm === '' || 
@@ -143,8 +170,6 @@ export default function InventoryPage() {
     
     return matchesSearch && matchesCategory && matchesStatus;
   });
-
-
 
   const getDrugStatus = (quantity: number): string => {
     if (quantity === 0) return 'out_of_stock';
@@ -229,22 +254,25 @@ export default function InventoryPage() {
 
     setLoading(true);
     try {
-      const drugData = {
-        name: formData.name,
-        description: formData.description,
-        category: formData.category.replace('_', ' '),
-        price: parseFloat(formData.unitPrice),
-        quantity: parseInt(formData.quantity),
-        manufacturer: formData.supplier.replace('_', ' '),
-        expiryDate: formData.expiryDate,
-      };
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('category', formData.category.replace('_', ' '));
+      formDataToSend.append('price', formData.unitPrice);
+      formDataToSend.append('quantity', formData.quantity);
+      formDataToSend.append('manufacturer', formData.supplier.replace('_', ' '));
+      formDataToSend.append('expiryDate', formData.expiryDate);
+
+      // Add images to form data
+      drugImages.forEach((image, index) => {
+        if (image) {
+          formDataToSend.append('images', image);
+        }
+      });
 
       const response = await fetch('/api/drugs', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(drugData),
+        body: formDataToSend,
       });
 
       const result = await response.json();
@@ -276,6 +304,7 @@ export default function InventoryPage() {
 
       setIsAddModalOpen(false);
       resetForm();
+      resetImageState();
       toastManager.success('Drug added successfully!');
     } catch (error) {
       console.error('Error adding drug:', error);
@@ -297,6 +326,15 @@ export default function InventoryPage() {
       status: getDrugStatus(drug.stockQuantity).toLowerCase(),
       description: drug.description || '',
     });
+    
+    // Set existing image if available
+    if (drug.imageUrl) {
+      setImagePreviewUrls([drug.imageUrl]);
+    } else {
+      setImagePreviewUrls([]);
+    }
+    setDrugImages([]);
+    
     setIsEditModalOpen(true);
   };
 
@@ -305,28 +343,25 @@ export default function InventoryPage() {
 
     setLoading(true);
     try {
-      const drugData = {
-        name: formData.name,
-        description: formData.description,
-        category: formData.category.replace('_', ' '),
-        price: parseFloat(formData.unitPrice),
-        quantity: parseInt(formData.quantity),
-        manufacturer: formData.supplier.replace('_', ' '),
-        expiryDate: formData.expiryDate,
-      };
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('category', formData.category.replace('_', ' '));
+      formDataToSend.append('price', formData.unitPrice);
+      formDataToSend.append('quantity', formData.quantity);
+      formDataToSend.append('manufacturer', formData.supplier.replace('_', ' '));
+      formDataToSend.append('expiryDate', formData.expiryDate);
 
-      console.log('Debug - formData:', formData);
-      console.log('Debug - drugData being sent:', drugData);
-      console.log('Debug - formData.quantity:', formData.quantity);
-      console.log('Debug - typeof formData.quantity:', typeof formData.quantity);
-      console.log('Debug - parseInt(formData.quantity):', parseInt(formData.quantity));
+      // Add new images to form data
+      drugImages.forEach((image, index) => {
+        if (image) {
+          formDataToSend.append('images', image);
+        }
+      });
 
       const response = await fetch(`/api/drugs/${editingDrug._id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(drugData),
+        body: formDataToSend,
       });
 
       if (!response.ok) {
@@ -357,6 +392,7 @@ export default function InventoryPage() {
       setIsEditModalOpen(false);
       setEditingDrug(null);
       resetForm();
+      resetImageState();
       toastManager.success('Drug updated successfully!');
     } catch (error) {
       console.error('Error updating drug:', error);
@@ -597,10 +633,7 @@ export default function InventoryPage() {
                     <thead className="bg-card-bg">
                       <tr>
                         <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                          DRUG ID
-                        </th>
-                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                          NAME
+                          DRUG
                         </th>
                         <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
                           CATEGORY
@@ -628,11 +661,15 @@ export default function InventoryPage() {
                     <tbody className="bg-background divide-y divide-border-color">
                       {filteredDrugs.map((drug) => (
                         <tr key={drug._id} className="hover:bg-card-bg">
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-text-primary">
-                            {drug._id.slice(-6).toUpperCase()}
-                          </td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-text-primary">
-                            {drug.name}
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-col">
+                              <div className="text-xs sm:text-sm font-medium text-text-primary">
+                                {drug.name}
+                              </div>
+                              <div className="text-xs text-text-muted">
+                                {drug._id.slice(-6).toUpperCase()}
+                              </div>
+                            </div>
                           </td>
                           <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-text-secondary">
                             {drug.category.charAt(0).toUpperCase() + drug.category.slice(1)}
@@ -694,11 +731,53 @@ export default function InventoryPage() {
         onClose={() => {
           setIsAddModalOpen(false);
           resetForm();
+          resetImageState();
         }}
         title="Add New Drug"
         size="lg"
       >
         <div className="space-y-4">
+          {/* Image Upload Section */}
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Drug Images
+            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              {[...Array(4)].map((_, index) => (
+                <label key={index} htmlFor={`image${index}`} className="cursor-pointer">
+                  <input 
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleImageUpload(index, e.target.files[0]);
+                      }
+                    }} 
+                    type="file" 
+                    id={`image${index}`}
+                    accept="image/*"
+                    hidden 
+                  />
+                  <div className="w-24 h-24 border border-border-color rounded-md overflow-hidden bg-background">
+                    {imagePreviewUrls[index] ? (
+                      <Image
+                        src={imagePreviewUrls[index]}
+                        alt="Drug image preview"
+                        width={96}
+                        height={96}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-text-muted">
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Drug Name" required error={errors.name}>
               <Input
@@ -777,6 +856,7 @@ export default function InventoryPage() {
               onClick={() => {
                 setIsAddModalOpen(false);
                 resetForm();
+                resetImageState();
               }}
             >
               Cancel
@@ -798,11 +878,53 @@ export default function InventoryPage() {
           setIsEditModalOpen(false);
           setEditingDrug(null);
           resetForm();
+          resetImageState();
         }}
         title="Edit Drug"
         size="lg"
       >
         <div className="space-y-4">
+          {/* Image Upload Section */}
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Drug Images
+            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              {[...Array(4)].map((_, index) => (
+                <label key={index} htmlFor={`editImage${index}`} className="cursor-pointer">
+                  <input 
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleImageUpload(index, e.target.files[0]);
+                      }
+                    }} 
+                    type="file" 
+                    id={`editImage${index}`}
+                    accept="image/*"
+                    hidden 
+                  />
+                  <div className="w-24 h-24 border border-border-color rounded-md overflow-hidden bg-background">
+                    {imagePreviewUrls[index] ? (
+                      <Image
+                        src={imagePreviewUrls[index]}
+                        alt="Drug image preview"
+                        width={96}
+                        height={96}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-text-muted">
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Drug Name" required error={errors.name}>
               <Input
@@ -882,6 +1004,7 @@ export default function InventoryPage() {
                 setIsEditModalOpen(false);
                 setEditingDrug(null);
                 resetForm();
+                resetImageState();
               }}
             >
               Cancel
@@ -908,6 +1031,22 @@ export default function InventoryPage() {
       >
         {viewingDrug && (
           <div className="space-y-4">
+            {/* Drug Image Display */}
+            {viewingDrug.imageUrl && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-text-muted mb-2">Drug Image</label>
+                <div className="w-32 h-32 border border-border-color rounded-md overflow-hidden bg-background">
+                  <Image
+                    src={viewingDrug.imageUrl}
+                    alt="Drug image"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-muted">Drug ID</label>
