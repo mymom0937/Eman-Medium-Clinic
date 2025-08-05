@@ -127,7 +127,7 @@ export default function NewLabResultPage() {
           testType: formData.testType,
           testName: formData.testName,
           notes: formData.notes,
-          requestedBy: userId || '',
+          requestedBy: 'system',
         }),
       });
 
@@ -148,14 +148,12 @@ export default function NewLabResultPage() {
 
   // Filter patients based on search term
   useEffect(() => {
-    if (patients.length > 0) {
-      const filtered = patients.filter(patient => {
-        const fullName = `${patient.firstName} ${patient.lastName}`;
-        return fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-               patient.patientId.toLowerCase().includes(searchTerm.toLowerCase());
-      });
-      setFilteredPatients(filtered);
-    }
+    const filtered = patients.filter(patient => {
+      const fullName = `${patient.firstName} ${patient.lastName}`;
+      return fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+             patient.patientId.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+    setFilteredPatients(filtered);
   }, [searchTerm, patients]);
 
   const selectPatient = (patient: Patient) => {
