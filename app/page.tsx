@@ -109,6 +109,9 @@ export default function HomePage() {
                 <Link href="/dashboard">
                   <Button size="lg" className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
                     Access Dashboard
+                    <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
                   </Button>
                 </Link>
               ) : (
@@ -243,6 +246,9 @@ export default function HomePage() {
               <Link href="/dashboard">
                 <Button size="lg" className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg  hover:bg-gray-700 cursor-pointer bg-[#1447E6]">
                   Access Dashboard
+                  <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
                 </Button>
               </Link>
             ) : (

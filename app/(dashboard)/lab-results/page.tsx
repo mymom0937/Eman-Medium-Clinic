@@ -13,6 +13,7 @@ import { LabResult, LabTestResult } from '@/types/lab-result';
 import { LAB_TEST_TYPES, LAB_TEST_LABELS, LAB_TEST_STATUS_LABELS } from '@/constants/lab-test-types';
 import { USER_ROLES } from '@/constants/user-roles';
 import { useUserRole } from '@/hooks/useUserRole';
+import { PageLoader } from '@/components/common/loading-spinner';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import { toastManager } from '@/lib/utils/toast';
 
@@ -344,28 +345,11 @@ export default function LabResultsPage() {
   };
 
   if (!isLoaded || initialLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg text-text-primary">Loading...</div>
-      </div>
-    );
+    return <PageLoader text="Loading lab results..." />;
   }
 
   if (loading) {
-    return (
-      <DashboardLayout
-        title="Lab Results"
-        userRole={userRole}
-        userName={userName}
-      >
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-accent-color"></div>
-            <p className="mt-4 text-text-primary">Loading lab results...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+    return <PageLoader text="Loading lab results..." />;
   }
 
   return (

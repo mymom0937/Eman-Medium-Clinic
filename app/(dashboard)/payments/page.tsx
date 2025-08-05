@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { useUserRole } from '@/hooks/useUserRole';
+import { PageLoader } from '@/components/common/loading-spinner';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, Button } from '@/components/ui/form';
@@ -126,11 +127,7 @@ export default function PaymentsPage() {
   }, [isLoaded]);
 
   if (!isLoaded || initialLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
+    return <PageLoader text="Loading payments..." />;
   }
 
   // Prepare dynamic options for patients

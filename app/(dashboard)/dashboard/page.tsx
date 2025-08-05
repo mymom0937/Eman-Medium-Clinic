@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { useUserRole } from '@/hooks/useUserRole';
+import { PageLoader } from '@/components/common/loading-spinner';
 import Link from 'next/link';
 import { USER_ROLES } from '@/constants/user-roles';
 
@@ -344,11 +345,7 @@ const getActivityIcon = (type: string) => {
 };
 
   if (!isLoaded || loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
+    return <PageLoader text="Loading Dashboard..." />;
   }
 
   const quickActions = getRoleBasedQuickActions(userRole);

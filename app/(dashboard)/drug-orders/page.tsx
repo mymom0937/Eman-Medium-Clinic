@@ -13,8 +13,10 @@ import { DrugOrder, DrugOrderItem } from '@/types/drug-order';
 import { DRUG_ORDER_STATUS_LABELS } from '@/types/drug-order';
 import { USER_ROLES } from '@/constants/user-roles';
 import { useUserRole } from '@/hooks/useUserRole';
+import { PageLoader } from '@/components/common/loading-spinner';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import { toastManager } from '@/lib/utils/toast';
+
 
 const ORDER_STATUS_OPTIONS = [
   { value: 'all', label: 'All Status' },
@@ -411,28 +413,11 @@ export default function DrugOrdersPage() {
   };
 
   if (!isLoaded || initialLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg text-gray-900">Loading...</div>
-      </div>
-    );
+    return <PageLoader text="Loading drug orders..." />;
   }
 
   if (loading) {
-    return (
-      <DashboardLayout
-        title="Drug Orders"
-        userRole={userRole}
-        userName={userName}
-      >
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-900">Loading drug orders...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+    return <PageLoader text="Loading drug orders..." />;
   }
 
   return (

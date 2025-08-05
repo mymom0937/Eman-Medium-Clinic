@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { useUserRole } from '@/hooks/useUserRole';
+import { PageLoader } from '@/components/common/loading-spinner';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, TextArea, Button } from '@/components/ui/form';
 import { toastManager } from '@/lib/utils/toast';
@@ -114,11 +115,7 @@ export default function InventoryPage() {
   }, [isLoaded]);
 
   if (!isLoaded || initialLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
+    return <PageLoader text="Loading inventory..." />;
   }
 
   // Filter drugs based on search, category, and status

@@ -1,30 +1,52 @@
 import React from 'react';
-import { cn } from '@/utils/cn';
+import { RingLoader } from 'react-spinners';
 
 interface LoadingSpinnerProps {
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   text?: string;
+  className?: string;
 }
 
-export function LoadingSpinner({ size = 'md', className, text }: LoadingSpinnerProps) {
-  const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-6 h-6',
-    lg: 'w-8 h-8',
+export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
+  size = 'md',
+  text = 'Loading...',
+  className = '',
+}) => {
+  const sizeMap = {
+    sm: 40,
+    md: 60,
+    lg: 80,
+    xl: 100,
   };
 
   return (
-    <div className={cn('flex flex-col items-center justify-center', className)}>
-      <div
-        className={cn(
-          'animate-spin rounded-full border-2 border-gray-300 border-t-blue-600',
-          sizeClasses[size]
-        )}
+    <div className={`flex flex-col items-center justify-center space-y-4 ${className}`}>
+      <RingLoader
+        color="#e15b64"
+        size={sizeMap[size]}
+        aria-label="ring-loading"
       />
       {text && (
-        <p className="mt-2 text-sm text-gray-600">{text}</p>
+        <p className="text-text-secondary font-medium animate-pulse">{text}</p>
       )}
     </div>
   );
-} 
+};
+
+// Full screen loading component
+export const FullScreenLoader: React.FC<{ text?: string }> = ({ text = 'Loading...' }) => {
+  return (
+    <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
+      <LoadingSpinner size="lg" text={text} />
+    </div>
+  );
+};
+
+// Page loading component
+export const PageLoader: React.FC<{ text?: string }> = ({ text = 'Loading...' }) => {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <LoadingSpinner size="lg" text={text} />
+    </div>
+  );
+}; 

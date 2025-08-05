@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { useUserRole } from '@/hooks/useUserRole';
+import { PageLoader } from '@/components/common/loading-spinner';
 import { Button } from '@/components/ui/form';
 import { toastManager } from '@/lib/utils/toast';
 import { FaDownload, FaCalendar, FaChartBar, FaFileAlt, FaUsers, FaFlask, FaPills, FaBoxes, FaShoppingCart, FaCreditCard, FaChartLine } from 'react-icons/fa';
@@ -493,7 +494,7 @@ export default function ReportsPage() {
         {loading && (
           <div className="bg-card-bg rounded-lg border border-border-color p-6">
             <div className="flex items-center justify-center">
-              <div className="text-lg text-text-primary">Generating report...</div>
+              <PageLoader text="Generating report..." />
             </div>
           </div>
         )}

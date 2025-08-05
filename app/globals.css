@@ -1,5 +1,39 @@
 @import "tailwindcss";
 
+/* Loading Spinner Animations */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes wave {
+  0%, 40%, 100% {
+    transform: scaleY(0.4);
+  }
+  20% {
+    transform: scaleY(1);
+  }
+}
+
+.spinner-spin {
+  animation: spin 1s linear infinite;
+}
+
+.spinner-ping {
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.spinner-wave {
+  animation: wave 1s ease-in-out infinite;
+}
+
 /* Light Theme (Default) */
 :root {
   /* Base colors */
