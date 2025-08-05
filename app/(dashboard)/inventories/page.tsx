@@ -765,6 +765,15 @@ export default function InventoryPage() {
                         width={96}
                         height={96}
                         className="w-full h-full object-cover"
+                        unoptimized
+                        onError={(e) => {
+                          console.error('Error loading image preview:', imagePreviewUrls[index]);
+                          // Hide the image container on error
+                          const target = e.target as HTMLImageElement;
+                          if (target.parentElement) {
+                            target.parentElement.style.display = 'none';
+                          }
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-text-muted">
@@ -916,6 +925,15 @@ export default function InventoryPage() {
                         width={96}
                         height={96}
                         className="w-full h-full object-cover"
+                        unoptimized
+                        onError={(e) => {
+                          console.error('Error loading image preview:', imagePreviewUrls[index]);
+                          // Hide the image container on error
+                          const target = e.target as HTMLImageElement;
+                          if (target.parentElement) {
+                            target.parentElement.style.display = 'none';
+                          }
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-text-muted">
@@ -1051,6 +1069,15 @@ export default function InventoryPage() {
                     width={128}
                     height={128}
                     className="w-full h-full object-cover"
+                    unoptimized
+                    onError={(e) => {
+                      console.error('Error loading drug image:', viewingDrug.imageUrl);
+                      // Hide the image container on error
+                      const target = e.target as HTMLImageElement;
+                      if (target.parentElement) {
+                        target.parentElement.style.display = 'none';
+                      }
+                    }}
                   />
                 </div>
               </div>
