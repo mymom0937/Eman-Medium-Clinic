@@ -13,24 +13,16 @@ const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {
-      // Temporarily disable strict rules for deployment
+      // Convert all strict rules to warnings for development
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-empty-object-type": "warn",
       "react/no-unescaped-entities": "warn",
       "react-hooks/rules-of-hooks": "warn",
       "react-hooks/exhaustive-deps": "warn",
       "prefer-const": "warn",
-      "@typescript-eslint/no-empty-object-type": "warn",
       "import/no-anonymous-default-export": "warn",
     },
-    ignores: [
-      // Temporarily ignore files with many linting errors for deployment
-      "app/api/reports/export/route.ts",
-      "app/api/reports/route.ts",
-      "app/api/webhooks/route.ts",
-      "lib/toast.ts",
-      "lib/swr.tsx",
-    ],
   },
 ];
 
