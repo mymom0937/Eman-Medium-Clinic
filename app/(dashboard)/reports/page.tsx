@@ -395,258 +395,199 @@ export default function ReportsPage() {
       userRole={userRole}
       userName={userName}
     >
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">Reports & Analytics</h1>
-            <p className="text-text-secondary mt-1">Generate comprehensive reports and insights</p>
+      <div className="space-y-6 bg-background min-h-screen">
+        {loading ? (
+          <div className="flex items-center justify-center h-[60vh]">
+            <PageLoader text="Generating report..." />
           </div>
-          <div className="mt-4 md:mt-0 flex space-x-3">
-            <Button
-              onClick={() => setShowScheduleModal(true)}
-              className=" hover:bg-gray-700 cursor-pointer bg-[#1447E6]"
-            >
-              <FaCalendar className="mr-2" />
-              Schedule Report
-            </Button>
-            <Button
-              onClick={generateReport}
-              loading={loading}
-              className="bg-success hover:bg-success/90"
-            >
-              <FaChartBar className="mr-2" />
-              Generate Report
-            </Button>
-          </div>
-        </div>
-
-        {/* Report Controls */}
-        <div className="bg-card-bg rounded-lg border border-border-color p-6">
-          <h2 className="text-xl font-semibold text-text-primary mb-6">Report Configuration</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">
-                Report Type
-              </label>
-              <select
-                value={selectedReport}
-                onChange={(e) => setSelectedReport(e.target.value)}
-                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
-              >
-                {REPORT_TYPES_WITH_ICONS.map(option => (
-                  <option key={option.value} value={option.value} className="text-text-primary">
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-text-primary">Reports & Analytics</h1>
+                <p className="text-text-secondary mt-1">Generate comprehensive reports and insights</p>
+              </div>
+              <div className="mt-4 md:mt-0 flex space-x-3">
+                <Button
+                  onClick={() => setShowScheduleModal(true)}
+                  className=" hover:bg-gray-700 cursor-pointer bg-[#1447E6]"
+                >
+                  <FaCalendar className="mr-2" />
+                  Schedule Report
+                </Button>
+                <Button
+                  onClick={generateReport}
+                  loading={loading}
+                  className="bg-success hover:bg-success/90"
+                >
+                  <FaChartBar className="mr-2" />
+                  Generate Report
+                </Button>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">
-                Date Range
-              </label>
-              <select
-                value={selectedDateRange}
-                onChange={(e) => handleDateRangeChange(e.target.value)}
-                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
-              >
-                {DATE_RANGES.map(option => (
-                  <option key={option.value} value={option.value} className="text-text-primary">
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {showCustomDate && (
-              <>
+            {/* Report Controls */}
+            <div className="bg-card-bg rounded-lg border border-border-color p-6">
+              <h2 className="text-xl font-semibold text-text-primary mb-6">Report Configuration</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-2">
-                    Start Date
+                    Report Type
                   </label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                  <select
+                    value={selectedReport}
+                    onChange={(e) => setSelectedReport(e.target.value)}
                     className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
-                  />
+                  >
+                    {REPORT_TYPES_WITH_ICONS.map(option => (
+                      <option key={option.value} value={option.value} className="text-text-primary">
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-text-secondary mb-2">
-                    End Date
+                    Date Range
                   </label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                  <select
+                    value={selectedDateRange}
+                    onChange={(e) => handleDateRangeChange(e.target.value)}
                     className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
-                  />
+                  >
+                    {DATE_RANGES.map(option => (
+                      <option key={option.value} value={option.value} className="text-text-primary">
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Loading State */}
-        {loading && (
-          <div className="bg-card-bg rounded-lg border border-border-color p-6">
-            <div className="flex items-center justify-center">
-              <PageLoader text="Generating report..." />
-            </div>
-          </div>
-        )}
-
-        {/* Stats Cards */}
-        {reportData && !loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {getReportStats().map((stat, index) => (
-              <StatsCard
-                key={index}
-                title={stat.title}
-                value={stat.value}
-                change={stat.change}
-                changeType={stat.changeType}
-                icon={stat.icon}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Report Content */}
-        {reportData && !loading && renderReportContent()}
-
-        {/* No Data State */}
-        {!reportData && !loading && (
-          <div className="bg-card-bg rounded-lg border border-border-color p-6">
-            <div className="text-center py-8">
-              <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">No Report Data</h3>
-              <p className="text-text-secondary mb-4">Click "Generate Report" to create your first report</p>
-              <Button
-                onClick={generateReport}
-                className="bg-accent-color hover:bg-accent-hover"
-              >
-                <FaChartBar className="mr-2" />
-                Generate Report
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Export Options */}
-        {reportData && !loading && (
-          <div className="bg-card-bg rounded-lg border border-border-color p-6">
-            <h2 className="text-xl font-semibold text-text-primary mb-6">Export Options</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button 
-                onClick={() => handleExportReport('PDF')}
-                className="w-full bg-error hover:bg-error/90"
-              >
-                <FaDownload className="mr-2" />
-                Export to PDF
-              </Button>
-              <Button 
-                onClick={() => handleExportReport('Excel')}
-                className="w-full bg-success hover:bg-success/90"
-              >
-                <FaDownload className="mr-2" />
-                Export to Excel
-              </Button>
-              <Button 
-                onClick={() => handleExportReport('CSV')}
-                className="w-full hover:bg-gray-700 cursor-pointer bg-[#1447E6]"
-              >
-                <FaDownload className="mr-2 " />
-                Export to CSV
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Scheduled Reports */}
-        <div className="bg-card-bg rounded-lg border border-border-color p-6">
-          <h2 className="text-xl font-semibold text-text-primary mb-6">Scheduled Reports</h2>
-          {scheduledReports.length > 0 ? (
-            <div className="space-y-4">
-              {scheduledReports.map((schedule) => (
-                <div key={schedule.id} className="flex items-center justify-between p-4 bg-background rounded-lg">
-                  <div>
-                    <div className="font-medium text-text-primary">
-                      {REPORT_TYPES_WITH_ICONS.find(r => r.value === schedule.reportType)?.label} - {schedule.frequency}
+                {showCustomDate && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-2">
+                        Start Date
+                      </label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+                      />
                     </div>
-                    <div className="text-sm text-text-secondary">{schedule.email}</div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      schedule.status === 'active' ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
-                    }`}>
-                      {schedule.status}
-                    </span>
-                    <Button
-                      onClick={() => setScheduledReports(prev => prev.filter(s => s.id !== schedule.id))}
-                      className="text-error hover:bg-error/10"
-                    >
-                      Remove
-                    </Button>
-                  </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-2">
+                        End Date
+                      </label>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            {/* Stats Cards */}
+            {reportData && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {getReportStats().map((stat, index) => (
+                  <StatsCard
+                    key={index}
+                    title={stat.title}
+                    value={stat.value}
+                    change={stat.change}
+                    changeType={stat.changeType}
+                    icon={stat.icon}
+                  />
+                ))}
+              </div>
+            )}
+            {/* Report Content */}
+            {reportData && renderReportContent()}
+            {/* No Data State */}
+            {!reportData && (
+              <div className="bg-card-bg rounded-lg border border-border-color p-6">
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">📊</div>
+                  <h3 className="text-lg font-semibold text-text-primary mb-2">No Report Data</h3>
+                  <p className="text-text-secondary mb-4">Click "Generate Report" to create your first report</p>
+                  <Button
+                    onClick={generateReport}
+                    className="bg-accent-color hover:bg-accent-hover"
+                  >
+                    <FaChartBar className="mr-2" />
+                    Generate Report
+                  </Button>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-4">📅</div>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">No Scheduled Reports</h3>
-              <p className="text-text-secondary mb-4">Schedule reports to receive them automatically via email</p>
-              <Button
-                onClick={() => setShowScheduleModal(true)}
-                className="bg-accent-color hover:bg-accent-hover"
-              >
-                <FaCalendar className="mr-2" />
-                Schedule Report
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Report Meta Information */}
-        <div className="bg-card-bg rounded-lg border border-border-color p-6">
-          <h2 className="text-xl font-semibold text-text-primary mb-6">Report Information</h2>
-          {reportMeta ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-text-secondary">Report Type:</span>
-                <span className="ml-2 text-text-primary">
-                  {REPORT_TYPES_WITH_ICONS.find(r => r.value === reportMeta.reportType)?.label}
-                </span>
               </div>
-              <div>
-                <span className="text-text-secondary">Date Range:</span>
-                <span className="ml-2 text-text-primary">
-                  {DATE_RANGES.find(d => d.value === reportMeta.dateRange)?.label}
-                </span>
+            )}
+            {/* Export Options */}
+            {reportData && (
+              <div className="bg-card-bg rounded-lg border border-border-color p-6">
+                <h2 className="text-xl font-semibold text-text-primary mb-6">Export Options</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Button 
+                    onClick={() => handleExportReport('PDF')}
+                    className="w-full bg-error hover:bg-error/90"
+                  >
+                    <FaDownload className="mr-2" />
+                    Export to PDF
+                  </Button>
+                  <Button 
+                    onClick={() => handleExportReport('Excel')}
+                    className="w-full bg-success hover:bg-success/90"
+                  >
+                    <FaDownload className="mr-2" />
+                    Export to Excel
+                  </Button>
+                  <Button 
+                    onClick={() => handleExportReport('CSV')}
+                    className="w-full hover:bg-gray-700 cursor-pointer bg-[#1447E6]"
+                  >
+                    <FaDownload className="mr-2 " />
+                    Export to CSV
+                  </Button>
+                </div>
               </div>
-              <div>
-                <span className="text-text-secondary">Generated At:</span>
-                <span className="ml-2 text-text-primary">
-                  {new Date(reportMeta.generatedAt).toLocaleString()}
-                </span>
-              </div>
-              <div>
-                <span className="text-text-secondary">Period:</span>
-                <span className="ml-2 text-text-primary">
-                  {new Date(reportMeta.startDate).toLocaleDateString()} - {new Date(reportMeta.endDate).toLocaleDateString()}
-                </span>
-              </div>
+            )}
+            {/* Scheduled Reports */}
+            <div className="bg-card-bg rounded-lg border border-border-color p-6">
+              <h2 className="text-xl font-semibold text-text-primary mb-6">Scheduled Reports</h2>
+              {scheduledReports.length > 0 ? (
+                <div className="space-y-4">
+                  {scheduledReports.map((schedule) => (
+                    <div key={schedule.id} className="flex items-center justify-between p-4 bg-background rounded-lg">
+                      <div>
+                        <div className="font-medium text-text-primary">
+                          {REPORT_TYPES_WITH_ICONS.find(r => r.value === schedule.reportType)?.label} - {schedule.frequency}
+                        </div>
+                        <div className="text-sm text-text-secondary">{schedule.email}</div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          schedule.status === 'active' ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
+                        }`}>
+                          {schedule.status}
+                        </span>
+                        <Button
+                          onClick={() => setScheduledReports(prev => prev.filter(s => s.id !== schedule.id))}
+                          className="bg-error hover:bg-error/90"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-text-secondary">No scheduled reports</div>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-text-secondary">No report has been generated yet</p>
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       {/* Schedule Report Modal */}

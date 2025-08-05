@@ -19,7 +19,7 @@ export function DashboardLayout({
   userName 
 }: DashboardLayoutProps) {
   return (
-    <div className="flex h-screen w-full bg-gray-100">
+    <div className="flex h-screen w-full bg-background">
       {/* Sidebar */}
       <div className="sticky top-0 h-screen">
         <Sidebar userRole={userRole} title={title} userName={userName} />

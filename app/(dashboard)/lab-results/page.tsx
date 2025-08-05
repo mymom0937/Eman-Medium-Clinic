@@ -345,11 +345,31 @@ export default function LabResultsPage() {
   };
 
   if (!isLoaded || initialLoading) {
-    return <PageLoader text="Loading lab results..." />;
+    return (
+      <DashboardLayout
+        title="Lab Results"
+        userRole={userRole}
+        userName={userName}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <PageLoader text="Loading lab results..." />
+        </div>
+      </DashboardLayout>
+    );
   }
 
   if (loading) {
-    return <PageLoader text="Loading lab results..." />;
+    return (
+      <DashboardLayout
+        title="Lab Results"
+        userRole={userRole}
+        userName={userName}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <PageLoader text="Loading lab results..." />
+        </div>
+      </DashboardLayout>
+    );
   }
 
   return (

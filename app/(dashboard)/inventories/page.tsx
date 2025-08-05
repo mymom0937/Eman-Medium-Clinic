@@ -115,7 +115,17 @@ export default function InventoryPage() {
   }, [isLoaded]);
 
   if (!isLoaded || initialLoading) {
-    return <PageLoader text="Loading inventory..." />;
+    return (
+      <DashboardLayout
+        title="Inventories"
+        userRole={userRole}
+        userName={userName}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <PageLoader text="Loading inventory..." />
+        </div>
+      </DashboardLayout>
+    );
   }
 
   // Filter drugs based on search, category, and status
@@ -900,35 +910,35 @@ export default function InventoryPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Drug ID</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingDrug._id}</p>
+                <label className="block text-sm font-medium text-text-muted">Drug ID</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingDrug._id}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Drug Name</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingDrug.name}</p>
+                <label className="block text-sm font-medium text-text-muted">Drug Name</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingDrug.name}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Category</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingDrug.category}</p>
+                <label className="block text-sm font-medium text-text-muted">Category</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingDrug.category}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Quantity</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingDrug.stockQuantity}</p>
+                <label className="block text-sm font-medium text-text-muted">Quantity</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingDrug.stockQuantity}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Unit Price</label>
-                <p className="mt-1 text-sm text-gray-900">ETB {viewingDrug.sellingPrice.toFixed(2)}</p>
+                <label className="block text-sm font-medium text-text-muted">Unit Price</label>
+                <p className="mt-1 text-sm text-text-primary">ETB {viewingDrug.sellingPrice.toFixed(2)}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Expiry Date</label>
-                                  <p className="mt-1 text-sm text-gray-900">{formatDate(viewingDrug.expiryDate)}</p>
+                <label className="block text-sm font-medium text-text-muted">Expiry Date</label>
+                <p className="mt-1 text-sm text-text-primary">{formatDate(viewingDrug.expiryDate)}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Manufacturer</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingDrug.manufacturer}</p>
+                <label className="block text-sm font-medium text-text-muted">Manufacturer</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingDrug.manufacturer}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <label className="block text-sm font-medium text-text-muted">Status</label>
                 <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(getDrugStatus(viewingDrug.stockQuantity))}`}>
                   {getStatusText(getDrugStatus(viewingDrug.stockQuantity))}
                 </span>
@@ -936,8 +946,8 @@ export default function InventoryPage() {
             </div>
             {viewingDrug.description && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingDrug.description}</p>
+                <label className="block text-sm font-medium text-text-muted">Description</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingDrug.description}</p>
               </div>
             )}
             <div className="flex justify-end pt-4">

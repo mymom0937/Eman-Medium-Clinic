@@ -167,19 +167,33 @@ export default function SalesPage() {
   }, [isLoaded]);
 
   if (!isLoaded || initialLoading) {
-    return <PageLoader text="Loading sales..." />;
+    return (
+      <DashboardLayout
+        title="Sales"
+        userRole={userRole}
+        userName={userName}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <PageLoader text="Loading sales..." />
+        </div>
+      </DashboardLayout>
+    );
   }
 
   // Filter sales based on search, status, and method
   const filteredSales = sales.filter(sale => {
     const matchesSearch = sale.saleId.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          sale.patientName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || sale.paymentStatus.toUpperCase() === selectedStatus;
+    const matchesStatus = selectedStatus === 'all' || (sale.paymentStatus ? sale.paymentStatus.toUpperCase() : '') === selectedStatus;
     const matchesMethod = selectedMethod === 'all' || sale.paymentMethod.toLowerCase().replace('_', '') === selectedMethod;
     return matchesSearch && matchesStatus && matchesMethod;
   });
 
   const getStatusColor = (status: string) => {
+    if (!status) {
+      return 'bg-gray-100 text-gray-800';
+    }
+    
     switch (status.toUpperCase()) {
       case 'COMPLETED':
         return 'bg-green-100 text-green-800';
@@ -262,7 +276,7 @@ export default function SalesPage() {
           }
         ],
         totalAmount: totalPrice,
-        paymentMethod: formData.paymentMethod.toUpperCase(),
+        paymentMethod: formData.paymentMethod ? formData.paymentMethod.toUpperCase() : '',
         paymentStatus: 'COMPLETED',
       };
 
@@ -789,7 +803,7 @@ export default function SalesPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                       <div className="flex items-center">
                         <span className="mr-2">{getMethodIcon(sale.paymentMethod)}</span>
-                        {sale.paymentMethod.replace('_', ' ').toUpperCase()}
+                        {sale.paymentMethod ? sale.paymentMethod.replace('_', ' ').toUpperCase() : 'UNKNOWN'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -810,7 +824,7 @@ export default function SalesPage() {
                         </div>
                       ) : (
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(sale.paymentStatus)}`}>
-                          {sale.paymentStatus.toUpperCase()}
+                          {sale.paymentStatus ? sale.paymentStatus.toUpperCase() : 'UNKNOWN'}
                         </span>
                       )}
                     </td>
@@ -974,46 +988,46 @@ export default function SalesPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Sale ID</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingSale.saleId}</p>
+                <label className="block text-sm font-medium text-text-muted">Sale ID</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingSale.saleId}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Patient</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingSale.patientName}</p>
+                <label className="block text-sm font-medium text-text-muted">Patient</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingSale.patientName}</p>
               </div>
               <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Items</label>
+                <label className="block text-sm font-medium text-text-muted">Items</label>
                 <div className="mt-1 space-y-1">
                   {viewingSale.items.map((item, index) => (
-                    <div key={index} className="text-sm text-gray-900">
+                    <div key={index} className="text-sm text-text-primary">
                       {item.drugName} x{item.quantity} = ETB {item.totalPrice.toFixed(2)}
                     </div>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Total Amount</label>
-                <p className="mt-1 text-sm text-gray-900">ETB {viewingSale.totalAmount.toFixed(2)}</p>
+                <label className="block text-sm font-medium text-text-muted">Total Amount</label>
+                <p className="mt-1 text-sm text-text-primary">ETB {viewingSale.totalAmount.toFixed(2)}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Payment Method</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingSale.paymentMethod.replace('_', ' ')}</p>
+                <label className="block text-sm font-medium text-text-muted">Payment Method</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingSale.paymentMethod.replace('_', ' ')}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Payment Status</label>
+                <label className="block text-sm font-medium text-text-muted">Payment Status</label>
                 <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingSale.paymentStatus)}`}>
-                  {SALE_PAYMENT_STATUS_LABELS[viewingSale.paymentStatus as keyof typeof SALE_PAYMENT_STATUS_LABELS] || viewingSale.paymentStatus.toUpperCase()}
+                  {SALE_PAYMENT_STATUS_LABELS[viewingSale.paymentStatus as keyof typeof SALE_PAYMENT_STATUS_LABELS] || (viewingSale.paymentStatus ? viewingSale.paymentStatus.toUpperCase() : 'UNKNOWN')}
                 </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Sale Status</label>
+                <label className="block text-sm font-medium text-text-muted">Sale Status</label>
                 <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingSale.status)}`}>
-                  {SALE_STATUS_LABELS[viewingSale.status as keyof typeof SALE_STATUS_LABELS] || viewingSale.status.toUpperCase()}
+                  {SALE_STATUS_LABELS[viewingSale.status as keyof typeof SALE_STATUS_LABELS] || (viewingSale.status ? viewingSale.status.toUpperCase() : 'UNKNOWN')}
                 </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Date</label>
-                <p className="mt-1 text-sm text-gray-900">{new Date(viewingSale.soldAt || viewingSale.createdAt).toLocaleDateString()}</p>
+                <label className="block text-sm font-medium text-text-muted">Date</label>
+                <p className="mt-1 text-sm text-text-primary">{new Date(viewingSale.soldAt || viewingSale.createdAt).toLocaleDateString()}</p>
               </div>
             </div>
             <div className="flex justify-end pt-4">

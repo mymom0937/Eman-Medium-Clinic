@@ -127,7 +127,17 @@ export default function PaymentsPage() {
   }, [isLoaded]);
 
   if (!isLoaded || initialLoading) {
-    return <PageLoader text="Loading payments..." />;
+    return (
+      <DashboardLayout
+        title="Payments"
+        userRole={userRole}
+        userName={userName}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <PageLoader text="Loading payments..." />
+        </div>
+      </DashboardLayout>
+    );
   }
 
   // Prepare dynamic options for patients
@@ -787,30 +797,30 @@ export default function PaymentsPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Payment ID</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPayment._id}</p>
+                <label className="block text-sm font-medium text-text-muted">Payment ID</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingPayment._id}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Patient</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPayment.patientId}</p>
+                <label className="block text-sm font-medium text-text-muted">Patient</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingPayment.patientId}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Amount</label>
-                <p className="mt-1 text-sm text-gray-900">ETB {viewingPayment.amount.toFixed(2)}</p>
+                <label className="block text-sm font-medium text-text-muted">Amount</label>
+                <p className="mt-1 text-sm text-text-primary">ETB {viewingPayment.amount.toFixed(2)}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Payment Method</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPayment.paymentMethod.replace('_', ' ')}</p>
+                <label className="block text-sm font-medium text-text-muted">Payment Method</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingPayment.paymentMethod ? viewingPayment.paymentMethod.replace('_', ' ') : 'Unknown'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <label className="block text-sm font-medium text-text-muted">Status</label>
                 <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingPayment.paymentStatus)}`}>
-                  {viewingPayment.paymentStatus.toUpperCase()}
+                  {viewingPayment.paymentStatus ? viewingPayment.paymentStatus.toUpperCase() : 'UNKNOWN'}
                 </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Date</label>
-                <p className="mt-1 text-sm text-gray-900">{new Date(viewingPayment.createdAt).toLocaleDateString()}</p>
+                <label className="block text-sm font-medium text-text-muted">Date</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingPayment.createdAt ? new Date(viewingPayment.createdAt).toLocaleDateString() : 'Invalid Date'}</p>
               </div>
             </div>
             <div className="flex justify-end pt-4">

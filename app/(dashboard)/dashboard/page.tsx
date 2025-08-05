@@ -345,7 +345,17 @@ const getActivityIcon = (type: string) => {
 };
 
   if (!isLoaded || loading) {
-    return <PageLoader text="Loading Dashboard..." />;
+    return (
+      <DashboardLayout
+        title="Dashboard"
+        userRole={userRole}
+        userName={userName}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <PageLoader text="Loading Dashboard..." />
+        </div>
+      </DashboardLayout>
+    );
   }
 
   const quickActions = getRoleBasedQuickActions(userRole);

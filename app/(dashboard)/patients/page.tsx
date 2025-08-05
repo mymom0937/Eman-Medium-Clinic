@@ -146,7 +146,17 @@ export default function PatientsPage() {
   }, [isLoaded]);
 
   if (!isLoaded || initialLoading) {
-    return <PageLoader text="Loading Patients..." />;
+    return (
+      <DashboardLayout
+        title="Patients"
+        userRole={userRole}
+        userName={userName}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <PageLoader text="Loading Patients..." />
+        </div>
+      </DashboardLayout>
+    );
   }
 
   // Filter patients based on search, status, and gender
@@ -839,54 +849,54 @@ export default function PatientsPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Patient ID</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPatient.patientId}</p>
+                <label className="block text-sm font-medium text-text-muted">Patient ID</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingPatient.patientId}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Full Name</label>
-                <p className="mt-1 text-sm text-gray-900">{`${viewingPatient.firstName} ${viewingPatient.lastName}`}</p>
+                <label className="block text-sm font-medium text-text-muted">Full Name</label>
+                <p className="mt-1 text-sm text-text-primary">{`${viewingPatient.firstName} ${viewingPatient.lastName}`}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Age</label>
-                                        <p className="mt-1 text-sm text-gray-900">{viewingPatient.age ? `${viewingPatient.age} years` : 'Not specified'}</p>
+                <label className="block text-sm font-medium text-text-muted">Age</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingPatient.age ? `${viewingPatient.age} years` : 'Not specified'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Gender</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPatient.gender}</p>
+                <label className="block text-sm font-medium text-text-muted">Gender</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingPatient.gender}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Phone</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPatient.phone}</p>
+                <label className="block text-sm font-medium text-text-muted">Phone</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingPatient.phone}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPatient.email}</p>
+                <label className="block text-sm font-medium text-text-muted">Email</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingPatient.email}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Blood Type</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPatient.bloodType || 'Not specified'}</p>
+                <label className="block text-sm font-medium text-text-muted">Blood Type</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingPatient.bloodType || 'Not specified'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
+                <label className="block text-sm font-medium text-text-muted">Status</label>
                 <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingPatient.isActive ? 'active' : 'inactive')}`}>
                   {viewingPatient.isActive ? 'ACTIVE' : 'INACTIVE'}
                 </span>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Last Visit</label>
-                                    <p className="mt-1 text-sm text-gray-900">{formatDate(viewingPatient.lastVisit)}</p>
+                <label className="block text-sm font-medium text-text-muted">Last Visit</label>
+                <p className="mt-1 text-sm text-text-primary">{formatDate(viewingPatient.lastVisit)}</p>
               </div>
             </div>
             {viewingPatient.address && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Address</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPatient.address}</p>
+                <label className="block text-sm font-medium text-text-muted">Address</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingPatient.address}</p>
               </div>
             )}
             {viewingPatient.medicalHistory && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Notes</label>
-                <p className="mt-1 text-sm text-gray-900">{viewingPatient.medicalHistory}</p>
+                <label className="block text-sm font-medium text-text-muted">Notes</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingPatient.medicalHistory}</p>
               </div>
             )}
             <div className="flex justify-end pt-4">

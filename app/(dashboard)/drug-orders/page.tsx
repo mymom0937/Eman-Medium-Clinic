@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { PageLoader } from '@/components/common/loading-spinner';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import { toastManager } from '@/lib/utils/toast';
+import { StatsCard } from '@/components/dashboard/stats-card';
 
 
 const ORDER_STATUS_OPTIONS = [
@@ -412,12 +413,64 @@ export default function DrugOrdersPage() {
     }
   };
 
+  // Prepare stats for display
+  const displayStats = [
+    {
+      title: 'Pending',
+      value: drugOrders.filter(o => o.status === 'PENDING').length.toString(),
+      change: '+2 from yesterday',
+      changeType: 'negative' as const,
+      icon: '⏳',
+    },
+    {
+      title: 'Approved',
+      value: drugOrders.filter(o => o.status === 'APPROVED').length.toString(),
+      change: '+1 from yesterday',
+      changeType: 'positive' as const,
+      icon: '✅',
+    },
+    {
+      title: 'Dispensed',
+      value: drugOrders.filter(o => o.status === 'DISPENSED').length.toString(),
+      change: '+1 from yesterday',
+      changeType: 'positive' as const,
+      icon: '💊',
+    },
+    {
+      title: 'Cancelled',
+      value: drugOrders.filter(o => o.status === 'CANCELLED').length.toString(),
+      change: '0 from yesterday',
+      changeType: 'neutral' as const,
+      icon: '❌',
+    },
+  ];
+
   if (!isLoaded || initialLoading) {
-    return <PageLoader text="Loading drug orders..." />;
+    return (
+      <DashboardLayout
+        title="Drug Orders"
+        userRole={userRole}
+        userName={userName}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <PageLoader text="Loading drug orders..." />
+        </div>
+      </DashboardLayout>
+    );
   }
 
   if (loading) {
-    return <PageLoader text="Loading drug orders..." />;
+    return (
+      <DashboardLayout
+        title="Drug Orders"
+        userRole={userRole}
+        userName={userName}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <PageLoader text="Loading drug orders..." />
+        </div>
+      </DashboardLayout>
+    );
   }
 
   return (
@@ -428,168 +481,148 @@ export default function DrugOrdersPage() {
     >
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Drug Orders</h1>
+          <h1 className="text-3xl font-bold text-text-primary">Drug Orders</h1>
           {(userRole === USER_ROLES.NURSE || userRole === USER_ROLES.SUPER_ADMIN) && (
             <Button 
               onClick={() => setIsAddModalOpen(true)} 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors duration-200"
+              className="bg-[#1447E6] hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors duration-200"
             >
               Create New Order
             </Button>
           )}
         </div>
 
-        <Card className="bg-white shadow-lg rounded-lg">
-          <CardHeader className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-            <CardTitle className="text-xl font-semibold text-gray-900">Drug Orders Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div className="text-2xl font-bold text-yellow-600">
-                  {drugOrders.filter(o => o.status === 'PENDING').length}
-                </div>
-                <div className="text-sm text-yellow-700">Pending</div>
-              </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-2xl font-bold text-blue-600">
-                  {drugOrders.filter(o => o.status === 'APPROVED').length}
-                </div>
-                <div className="text-sm text-blue-700">Approved</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="text-2xl font-bold text-green-600">
-                  {drugOrders.filter(o => o.status === 'DISPENSED').length}
-                </div>
-                <div className="text-sm text-green-700">Dispensed</div>
-              </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
-                <div className="text-2xl font-bold text-red-600">
-                  {drugOrders.filter(o => o.status === 'CANCELLED').length}
-                </div>
-                <div className="text-sm text-red-700">Cancelled</div>
-              </div>
-            </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+          {displayStats.map((stat, index) => (
+            <StatsCard
+              key={index}
+              title={stat.title}
+              value={stat.value}
+              change={stat.change}
+              changeType={stat.changeType}
+              icon={stat.icon}
+            />
+          ))}
+        </div>
 
-            {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
-              <input
-                type="text"
-                placeholder="Search by drug order ID, patient ID, name, or drug name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white text-sm"
-              >
-                {ORDER_STATUS_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {/* Search and Filters */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
+          <input
+            type="text"
+            placeholder="Search by drug order ID, patient ID, name, or drug name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-3 py-2 border border-border-color rounded-md focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
+          />
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background text-sm"
+          >
+            {ORDER_STATUS_OPTIONS.map(option => (
+              <option key={option.value} value={option.value} className="text-text-primary">
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-            <Table className="w-full">
-              <TableHeader>
-                <TableRow className="bg-gray-50">
-                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Patient</TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Drug Order ID</TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Items</TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Total Amount</TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Status</TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Ordered</TableHead>
-                  <TableHead className="text-left font-semibold text-gray-900 py-3 px-4">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDrugOrders.map((order) => (
-                  <TableRow key={order._id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <TableCell className="py-3 px-4">
-                      <div>
-                        <div className="font-medium text-gray-900">{order.patientName}</div>
-                        <div className="text-sm text-gray-500">{order.patientId}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-3 px-4">
-                      <div className="font-medium text-text-primary">
-                        {order.drugOrderId || 'N/A'}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-3 px-4">
-                      <div className="text-sm text-gray-900">
-                        {order.items.length} item(s)
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-3 px-4 text-gray-900">
-                      ${order.totalAmount.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="py-3 px-4">
-                      {canUpdateStatus(order) ? (
-                        <div className="relative">
-                          <Select
-                            value={order.status}
-                            onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
-                            disabled={statusUpdating === order._id}
-                            options={[
-                              { value: 'PENDING', label: 'Pending' },
-                              { value: 'APPROVED', label: 'Approved' },
-                              { value: 'DISPENSED', label: 'Dispensed' },
-                              { value: 'CANCELLED', label: 'Cancelled' },
-                            ]}
-                            className="w-32 text-sm"
-                          />
-                          {statusUpdating === order._id && (
-                            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                            </div>
-                          )}
+        <Table className="w-full">
+          <TableHeader>
+            <TableRow className="bg-card-bg">
+              <TableHead className="text-left font-semibold text-text-primary py-3 px-4">Patient</TableHead>
+              <TableHead className="text-left font-semibold text-text-primary py-3 px-4">Drug Order ID</TableHead>
+              <TableHead className="text-left font-semibold text-text-primary py-3 px-4">Items</TableHead>
+              <TableHead className="text-left font-semibold text-text-primary py-3 px-4">Total Amount</TableHead>
+              <TableHead className="text-left font-semibold text-text-primary py-3 px-4">Status</TableHead>
+              <TableHead className="text-left font-semibold text-text-primary py-3 px-4">Ordered</TableHead>
+              <TableHead className="text-left font-semibold text-text-primary py-3 px-4">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredDrugOrders.map((order) => (
+              <TableRow key={order._id} className="border-b border-border-color hover:bg-card-bg">
+                <TableCell className="py-3 px-4">
+                  <div>
+                    <div className="font-medium text-text-primary">{order.patientName}</div>
+                    <div className="text-sm text-text-muted">{order.patientId}</div>
+                  </div>
+                </TableCell>
+                <TableCell className="py-3 px-4">
+                  <div className="font-medium text-text-primary">
+                    {order.drugOrderId || 'N/A'}
+                  </div>
+                </TableCell>
+                <TableCell className="py-3 px-4">
+                  <div className="text-sm text-text-primary">
+                    {order.items.length} item(s)
+                  </div>
+                </TableCell>
+                <TableCell className="py-3 px-4 text-text-primary">
+                  ${order.totalAmount.toFixed(2)}
+                </TableCell>
+                <TableCell className="py-3 px-4">
+                  {canUpdateStatus(order) ? (
+                    <div className="relative">
+                      <Select
+                        value={order.status}
+                        onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
+                        disabled={statusUpdating === order._id}
+                        options={[
+                          { value: 'PENDING', label: 'Pending' },
+                          { value: 'APPROVED', label: 'Approved' },
+                          { value: 'DISPENSED', label: 'Dispensed' },
+                          { value: 'CANCELLED', label: 'Cancelled' },
+                        ]}
+                        className="w-32 text-sm"
+                      />
+                      {statusUpdating === order._id && (
+                        <div className="absolute inset-0 bg-background bg-opacity-75 flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-accent-color"></div>
                         </div>
-                      ) : (
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}>
-                          {DRUG_ORDER_STATUS_LABELS[order.status]}
-                        </span>
                       )}
-                    </TableCell>
-                    <TableCell className="py-3 px-4 text-gray-500">
-                      {formatDate(order.orderedAt)}
-                    </TableCell>
-                    <TableCell className="py-3 px-4 whitespace-nowrap text-xs sm:text-sm font-medium">
-                      <button 
-                        onClick={() => handleViewDrugOrder(order)}
-                        className="text-blue-600 hover:text-blue-800 mr-3 p-1 rounded hover:bg-blue-100 transition-colors cursor-pointer"
-                        title="View Drug Order"
-                      >
-                        <FaEye size={16} />
-                      </button>
-                      {(userRole === USER_ROLES.NURSE || userRole === USER_ROLES.SUPER_ADMIN) && (
-                        <button 
-                          onClick={() => handleEditDrugOrder(order)}
-                          className="text-green-600 hover:text-green-800 mr-3 p-1 rounded hover:bg-green-100 transition-colors cursor-pointer"
-                          title="Edit Drug Order"
-                        >
-                          <FaEdit size={16} />
-                        </button>
-                      )}
-                      {userRole === USER_ROLES.SUPER_ADMIN && (
-                        <button 
-                          onClick={() => handleDeleteDrugOrder(order._id)}
-                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-100 transition-colors cursor-pointer"
-                          title="Delete Drug Order"
-                        >
-                          <FaTrash size={16} />
-                        </button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                    </div>
+                  ) : (
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}>
+                      {DRUG_ORDER_STATUS_LABELS[order.status]}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="py-3 px-4 text-text-muted">
+                  {formatDate(order.orderedAt)}
+                </TableCell>
+                <TableCell className="py-3 px-4 whitespace-nowrap text-xs sm:text-sm font-medium">
+                  <button 
+                    onClick={() => handleViewDrugOrder(order)}
+                    className="text-blue-600 hover:text-blue-400 mr-3 p-1 rounded hover:bg-blue-900/20 transition-colors cursor-pointer"
+                    title="View Drug Order"
+                  >
+                    <FaEye size={16} />
+                  </button>
+                  {(userRole === USER_ROLES.NURSE || userRole === USER_ROLES.SUPER_ADMIN) && (
+                    <button 
+                      onClick={() => handleEditDrugOrder(order)}
+                      className="text-green-600 hover:text-green-400 mr-3 p-1 rounded hover:bg-green-900/20 transition-colors cursor-pointer"
+                      title="Edit Drug Order"
+                    >
+                      <FaEdit size={16} />
+                    </button>
+                  )}
+                  {userRole === USER_ROLES.SUPER_ADMIN && (
+                    <button 
+                      onClick={() => handleDeleteDrugOrder(order._id)}
+                      className="text-red-600 hover:text-red-400 p-1 rounded hover:bg-red-900/20 transition-colors cursor-pointer"
+                      title="Delete Drug Order"
+                    >
+                      <FaTrash size={16} />
+                    </button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {/* Add Drug Order Modal */}
@@ -609,7 +642,7 @@ export default function DrugOrdersPage() {
                 value={formData.patientId}
                 onChange={(e) => handleInputChange('patientId', e.target.value)}
                 placeholder="Enter patient ID"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
               />
             </FormField>
 
@@ -618,7 +651,7 @@ export default function DrugOrdersPage() {
                 value={formData.patientName}
                 onChange={(e) => handleInputChange('patientName', e.target.value)}
                 placeholder="Enter patient name"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
               />
             </FormField>
 
@@ -627,15 +660,15 @@ export default function DrugOrdersPage() {
                 value={formData.labResultId}
                 onChange={(e) => handleInputChange('labResultId', e.target.value)}
                 placeholder="Enter lab result ID (optional)"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
               />
             </FormField>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Drug Items</label>
+            <label className="block text-sm font-medium text-text-primary mb-2">Drug Items</label>
             {formData.items.map((item, index) => (
-              <div key={index} className="border border-gray-300 p-4 rounded-lg mb-4 bg-gray-50">
+              <div key={index} className="border border-border-color p-4 rounded-lg mb-4 bg-card-bg">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField label="Drug" error={errors[`items.${index}.drugId`]}>
                     <Select
@@ -653,7 +686,7 @@ export default function DrugOrdersPage() {
                           label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
                         }))
                       ]}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"
                     />
                   </FormField>
 
@@ -663,7 +696,7 @@ export default function DrugOrdersPage() {
                       value={item.quantity}
                       onChange={(e) => updateDrugItem(index, 'quantity', parseInt(e.target.value))}
                       min="1"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"
                     />
                   </FormField>
 
@@ -674,7 +707,7 @@ export default function DrugOrdersPage() {
                       value={item.unitPrice}
                       onChange={(e) => updateDrugItem(index, 'unitPrice', parseFloat(e.target.value))}
                       min="0"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"
                     />
                   </FormField>
 
@@ -684,7 +717,7 @@ export default function DrugOrdersPage() {
                       step="0.01"
                       value={item.totalPrice}
                       disabled
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-500"
+                      className="w-full border border-border-color rounded-md px-3 py-2 bg-card-bg text-text-muted"
                     />
                   </FormField>
 
@@ -693,7 +726,7 @@ export default function DrugOrdersPage() {
                       value={item.dosage}
                       onChange={(e) => updateDrugItem(index, 'dosage', e.target.value)}
                       placeholder="e.g., 1 tablet twice daily"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
                     />
                   </FormField>
 
@@ -702,7 +735,7 @@ export default function DrugOrdersPage() {
                       value={item.instructions}
                       onChange={(e) => updateDrugItem(index, 'instructions', e.target.value)}
                       placeholder="e.g., Take with food"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
                     />
                   </FormField>
                 </div>
@@ -718,7 +751,7 @@ export default function DrugOrdersPage() {
               </div>
             ))}
 
-            <Button onClick={addDrugItem} variant="outline" className="w-full border border-gray-300 text-gray-700 hover:bg-gray-50">
+            <Button onClick={addDrugItem} variant="outline" className="w-full border border-border-color text-text-primary hover:bg-card-bg">
               Add Drug Item
             </Button>
           </div>
@@ -729,7 +762,7 @@ export default function DrugOrdersPage() {
               onChange={(e) => handleInputChange('notes', e.target.value)}
               placeholder="Add any additional notes..."
               rows={4}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
             />
           </FormField>
 
@@ -740,14 +773,13 @@ export default function DrugOrdersPage() {
                 setIsAddModalOpen(false);
                 resetForm();
               }}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAddDrugOrder}
               loading={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+              className="bg-[#1447E6] hover:bg-gray-700 text-white px-4 py-2 rounded"
             >
               Create Order
             </Button>
@@ -773,7 +805,7 @@ export default function DrugOrdersPage() {
                 value={formData.patientId}
                 onChange={(e) => handleInputChange('patientId', e.target.value)}
                 placeholder="Enter patient ID"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
               />
             </FormField>
 
@@ -782,7 +814,7 @@ export default function DrugOrdersPage() {
                 value={formData.patientName}
                 onChange={(e) => handleInputChange('patientName', e.target.value)}
                 placeholder="Enter patient name"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
               />
             </FormField>
 
@@ -791,7 +823,7 @@ export default function DrugOrdersPage() {
                 value={formData.labResultId}
                 onChange={(e) => handleInputChange('labResultId', e.target.value)}
                 placeholder="Enter lab result ID (optional)"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
               />
             </FormField>
 
@@ -807,10 +839,10 @@ export default function DrugOrdersPage() {
                     { value: 'DISPENSED', label: 'Dispensed' },
                     { value: 'CANCELLED', label: 'Cancelled' },
                   ]}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"
                 />
                 {statusUpdating === editingDrugOrder._id && (
-                  <div className="mt-1 text-sm text-blue-600">Updating status...</div>
+                  <div className="mt-1 text-sm text-blue-600 dark:text-blue-400">Updating status...</div>
                 )}
               </FormField>
             )}
@@ -821,16 +853,16 @@ export default function DrugOrdersPage() {
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(editingDrugOrder.status)}`}>
                     {DRUG_ORDER_STATUS_LABELS[editingDrugOrder.status]}
                   </span>
-                  <span className="text-xs text-gray-500">(Only Pharmacists and Super Admins can update status)</span>
+                  <span className="text-xs text-text-muted">(Only Pharmacists and Super Admins can update status)</span>
                 </div>
               </FormField>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Drug Items</label>
+            <label className="block text-sm font-medium text-text-primary mb-2">Drug Items</label>
             {formData.items.map((item, index) => (
-              <div key={index} className="border border-gray-300 p-4 rounded-lg mb-4 bg-gray-50">
+              <div key={index} className="border border-border-color p-4 rounded-lg mb-4 bg-card-bg">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField label="Drug" error={errors[`items.${index}.drugId`]}>
                     <Select
@@ -848,7 +880,7 @@ export default function DrugOrdersPage() {
                           label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
                         }))
                       ]}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"
                     />
                   </FormField>
 
@@ -858,7 +890,7 @@ export default function DrugOrdersPage() {
                       value={item.quantity}
                       onChange={(e) => updateDrugItem(index, 'quantity', parseInt(e.target.value))}
                       min="1"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"
                     />
                   </FormField>
 
@@ -869,7 +901,7 @@ export default function DrugOrdersPage() {
                       value={item.unitPrice}
                       onChange={(e) => updateDrugItem(index, 'unitPrice', parseFloat(e.target.value))}
                       min="0"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"
                     />
                   </FormField>
 
@@ -879,7 +911,7 @@ export default function DrugOrdersPage() {
                       step="0.01"
                       value={item.totalPrice}
                       disabled
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-500"
+                      className="w-full border border-border-color rounded-md px-3 py-2 bg-card-bg text-text-muted"
                     />
                   </FormField>
 
@@ -888,7 +920,7 @@ export default function DrugOrdersPage() {
                       value={item.dosage}
                       onChange={(e) => updateDrugItem(index, 'dosage', e.target.value)}
                       placeholder="e.g., 1 tablet twice daily"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
                     />
                   </FormField>
 
@@ -897,7 +929,7 @@ export default function DrugOrdersPage() {
                       value={item.instructions}
                       onChange={(e) => updateDrugItem(index, 'instructions', e.target.value)}
                       placeholder="e.g., Take with food"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
                     />
                   </FormField>
                 </div>
@@ -913,7 +945,7 @@ export default function DrugOrdersPage() {
               </div>
             ))}
 
-            <Button onClick={addDrugItem} variant="outline" className="w-full border border-gray-300 text-gray-700 hover:bg-gray-50">
+            <Button onClick={addDrugItem} variant="outline" className="w-full border border-border-color text-text-primary hover:bg-card-bg">
               Add Drug Item
             </Button>
           </div>
@@ -924,7 +956,7 @@ export default function DrugOrdersPage() {
               onChange={(e) => handleInputChange('notes', e.target.value)}
               placeholder="Add any additional notes..."
               rows={4}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
             />
           </FormField>
 
@@ -936,14 +968,13 @@ export default function DrugOrdersPage() {
                 setEditingDrugOrder(null);
                 resetForm();
               }}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded"
             >
               Cancel
             </Button>
             <Button
               onClick={handleUpdateDrugOrder}
               loading={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+              className="bg-[#1447E6] hover:bg-gray-700 text-white px-4 py-2 rounded"
             >
               Update Order
             </Button>
@@ -965,25 +996,25 @@ export default function DrugOrdersPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900">Drug Order ID</label>
-                <p className="mt-1 text-sm text-gray-600">{viewingDrugOrder.drugOrderId || 'N/A'}</p>
+                <label className="block text-sm font-medium text-text-muted">Drug Order ID</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingDrugOrder.drugOrderId || 'N/A'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900">Patient ID</label>
-                <p className="mt-1 text-sm text-gray-600">{viewingDrugOrder.patientId}</p>
+                <label className="block text-sm font-medium text-text-muted">Patient ID</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingDrugOrder.patientId}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900">Patient Name</label>
-                <p className="mt-1 text-sm text-gray-600">{viewingDrugOrder.patientName}</p>
+                <label className="block text-sm font-medium text-text-muted">Patient Name</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingDrugOrder.patientName}</p>
               </div>
               {viewingDrugOrder.labResultId && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-900">Lab Result ID</label>
-                  <p className="mt-1 text-sm text-gray-600">{viewingDrugOrder.labResultId}</p>
+                  <label className="block text-sm font-medium text-text-muted">Lab Result ID</label>
+                  <p className="mt-1 text-sm text-text-primary">{viewingDrugOrder.labResultId}</p>
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-900">Status</label>
+                <label className="block text-sm font-medium text-text-muted">Status</label>
                 {canUpdateStatus(viewingDrugOrder) ? (
                   <div className="mt-1">
                     <Select
@@ -999,7 +1030,7 @@ export default function DrugOrdersPage() {
                       className="w-full"
                     />
                     {statusUpdating === viewingDrugOrder._id && (
-                      <div className="mt-2 text-sm text-blue-600">Updating status...</div>
+                      <div className="mt-2 text-sm text-blue-600 dark:text-blue-400">Updating status...</div>
                     )}
                   </div>
                 ) : (
@@ -1009,49 +1040,49 @@ export default function DrugOrdersPage() {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900">Ordered At</label>
-                <p className="mt-1 text-sm text-gray-600">
+                <label className="block text-sm font-medium text-text-muted">Ordered At</label>
+                <p className="mt-1 text-sm text-text-primary">
                   {formatDate(viewingDrugOrder.orderedAt)}
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900">Total Amount</label>
-                <p className="mt-1 text-sm text-gray-600">${viewingDrugOrder.totalAmount.toFixed(2)}</p>
+                <label className="block text-sm font-medium text-text-muted">Total Amount</label>
+                <p className="mt-1 text-sm text-text-primary">${viewingDrugOrder.totalAmount.toFixed(2)}</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Drug Items</label>
+              <label className="block text-sm font-medium text-text-muted mb-2">Drug Items</label>
               <div className="space-y-2">
                 {viewingDrugOrder.items.map((item, index) => (
-                  <div key={index} className="border border-gray-300 p-3 rounded-lg bg-gray-50">
+                  <div key={index} className="border border-border-color p-3 rounded-lg bg-card-bg">
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <span className="text-gray-500">Drug:</span>
-                        <p className="font-medium text-gray-900">{item.drugName}</p>
+                        <span className="text-text-muted">Drug:</span>
+                        <p className="font-medium text-text-primary">{item.drugName}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Quantity:</span>
-                        <p className="font-medium text-gray-900">{item.quantity}</p>
+                        <span className="text-text-muted">Quantity:</span>
+                        <p className="font-medium text-text-primary">{item.quantity}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Unit Price:</span>
-                        <p className="font-medium text-gray-900">${item.unitPrice.toFixed(2)}</p>
+                        <span className="text-text-muted">Unit Price:</span>
+                        <p className="font-medium text-text-primary">${item.unitPrice.toFixed(2)}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Total Price:</span>
-                        <p className="font-medium text-gray-900">${item.totalPrice.toFixed(2)}</p>
+                        <span className="text-text-muted">Total Price:</span>
+                        <p className="font-medium text-text-primary">${item.totalPrice.toFixed(2)}</p>
                       </div>
                       {item.dosage && (
                         <div>
-                          <span className="text-gray-500">Dosage:</span>
-                          <p className="font-medium text-gray-900">{item.dosage}</p>
+                          <span className="text-text-muted">Dosage:</span>
+                          <p className="font-medium text-text-primary">{item.dosage}</p>
                         </div>
                       )}
                       {item.instructions && (
                         <div>
-                          <span className="text-gray-500">Instructions:</span>
-                          <p className="font-medium text-gray-900">{item.instructions}</p>
+                          <span className="text-text-muted">Instructions:</span>
+                          <p className="font-medium text-text-primary">{item.instructions}</p>
                         </div>
                       )}
                     </div>
@@ -1062,8 +1093,8 @@ export default function DrugOrdersPage() {
 
             {viewingDrugOrder.notes && (
               <div>
-                <label className="block text-sm font-medium text-gray-900">Notes</label>
-                <p className="mt-1 text-sm text-gray-600">{viewingDrugOrder.notes}</p>
+                <label className="block text-sm font-medium text-text-muted">Notes</label>
+                <p className="mt-1 text-sm text-text-primary">{viewingDrugOrder.notes}</p>
               </div>
             )}
 
@@ -1074,7 +1105,6 @@ export default function DrugOrdersPage() {
                   setIsViewModalOpen(false);
                   setViewingDrugOrder(null);
                 }}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded"
               >
                 Close
               </Button>
