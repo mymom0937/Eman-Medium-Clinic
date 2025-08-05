@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, TextArea } from '@/components/ui/form';
 import { LAB_TEST_TYPES, LAB_TEST_LABELS } from '@/constants/lab-test-types';
-import { USER_ROLES } from '@/constants/user-roles';
 import { useUserRole } from '@/hooks/useUserRole';
 import { toastManager } from '@/lib/utils/toast';
 
@@ -32,7 +31,7 @@ interface FormData {
 
 export default function NewLabResultPage() {
   const router = useRouter();
-  const { userId } = useAuth();
+
   const { userRole, userName, isLoaded } = useUserRole();
   const [loading, setLoading] = useState(false);
   const [showPatientModal, setShowPatientModal] = useState(false);
@@ -149,12 +148,14 @@ export default function NewLabResultPage() {
 
   // Filter patients based on search term
   useEffect(() => {
-    const filtered = patients.filter(patient => {
-      const fullName = `${patient.firstName} ${patient.lastName}`;
-      return fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             patient.patientId.toLowerCase().includes(searchTerm.toLowerCase());
-    });
-    setFilteredPatients(filtered);
+    if (patients.length > 0) {
+      const filtered = patients.filter(patient => {
+        const fullName = `${patient.firstName} ${patient.lastName}`;
+        return fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               patient.patientId.toLowerCase().includes(searchTerm.toLowerCase());
+      });
+      setFilteredPatients(filtered);
+    }
   }, [searchTerm, patients]);
 
   const selectPatient = (patient: Patient) => {
@@ -218,7 +219,7 @@ export default function NewLabResultPage() {
                   <Select
                     value={formData.testType}
                     onChange={(e) => handleTestTypeChange(e.target.value)}
-                    options={Object.entries(LAB_TEST_TYPES).map(([key, value]) => ({
+                    options={Object.entries(LAB_TEST_TYPES).map(([, value]) => ({
                       value,
                       label: LAB_TEST_LABELS[value],
                     }))}

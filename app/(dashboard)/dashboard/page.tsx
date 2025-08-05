@@ -27,6 +27,37 @@ interface RecentActivity {
   amount?: string;
 }
 
+// API Data Interfaces
+interface SaleData {
+  _id: string;
+  saleId?: string;
+  patientName: string;
+  totalAmount: number;
+  soldAt?: string;
+  createdAt: string;
+}
+
+interface PatientData {
+  _id: string;
+  patientId?: string;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+}
+
+interface DrugData {
+  _id: string;
+  quantity: number;
+}
+
+interface DrugOrderData {
+  _id: string;
+  patientName: string;
+  totalAmount: number;
+  status: string;
+  createdAt: string;
+}
+
 export default function DashboardPage() {
   const { userRole, userName, isLoaded } = useUserRole();
   const [stats, setStats] = useState<DashboardStats>({
@@ -66,25 +97,25 @@ export default function DashboardPage() {
         const totalPatients = patientsData.success ? patientsData.data.length : 0;
         const totalSales = salesData.success ? salesData.data.length : 0;
         const totalRevenue = salesData.success 
-          ? salesData.data.reduce((sum: number, sale: any) => sum + (sale.totalAmount || 0), 0)
+          ? salesData.data.reduce((sum: number, sale: SaleData) => sum + (sale.totalAmount || 0), 0)
           : 0;
         
         const totalDrugs = drugsData.success ? drugsData.data.length : 0;
         const lowStockItems = drugsData.success 
-          ? drugsData.data.filter((drug: any) => drug.quantity <= 10 && drug.quantity > 0).length
+          ? drugsData.data.filter((drug: DrugData) => drug.quantity <= 10 && drug.quantity > 0).length
           : 0;
         const outOfStockItems = drugsData.success
-          ? drugsData.data.filter((drug: any) => drug.quantity === 0).length
+          ? drugsData.data.filter((drug: DrugData) => drug.quantity === 0).length
           : 0;
 
         const pendingOrders = drugOrdersData.success
-          ? drugOrdersData.data.filter((order: any) => order.status === 'PENDING').length
+          ? drugOrdersData.data.filter((order: DrugOrderData) => order.status === 'PENDING').length
           : 0;
 
         // Calculate today's services (approximation)
         const today = new Date();
         const todayServices = salesData.success
-          ? salesData.data.filter((sale: any) => {
+          ? salesData.data.filter((sale: SaleData) => {
               const saleDate = new Date(sale.soldAt || sale.createdAt);
               return saleDate.toDateString() === today.toDateString();
             }).length
@@ -107,12 +138,12 @@ export default function DashboardPage() {
         // Add recent sales
         if (salesData.success && salesData.data.length > 0) {
           const recentSales = salesData.data.slice(0, 3);
-          recentSales.forEach((sale: any) => {
+          recentSales.forEach((sale: SaleData) => {
             activities.push({
               id: sale.saleId || sale._id,
               action: `Sale completed for ${sale.patientName}`,
               time: getTimeAgo(new Date(sale.soldAt || sale.createdAt)),
-    type: 'sale',
+              type: 'sale',
               amount: `$${(sale.totalAmount || 0).toFixed(2)}`,
             });
           });
@@ -121,12 +152,12 @@ export default function DashboardPage() {
         // Add recent patients
         if (patientsData.success && patientsData.data.length > 0) {
           const recentPatients = patientsData.data.slice(0, 2);
-          recentPatients.forEach((patient: any) => {
+          recentPatients.forEach((patient: PatientData) => {
             activities.push({
               id: patient.patientId || patient._id,
               action: `New patient registered: ${patient.firstName} ${patient.lastName}`,
               time: getTimeAgo(new Date(patient.createdAt)),
-    type: 'patient',
+              type: 'patient',
             });
           });
         }
@@ -134,12 +165,12 @@ export default function DashboardPage() {
         // Add recent drug orders
         if (drugOrdersData.success && drugOrdersData.data.length > 0) {
           const recentOrders = drugOrdersData.data.slice(0, 2);
-          recentOrders.forEach((order: any) => {
+          recentOrders.forEach((order: DrugOrderData) => {
             activities.push({
               id: order._id,
               action: `Drug order created for ${order.patientName}`,
               time: getTimeAgo(new Date(order.createdAt)),
-    type: 'service',
+              type: 'service',
               amount: `$${(order.totalAmount || 0).toFixed(2)}`,
             });
           });
@@ -417,7 +448,7 @@ const getActivityIcon = (type: string) => {
               return `${greeting}, ${userName || 'User'}!`;
             })()}
           </h1>
-          <p className="text-white/90">Here's what's happening in your clinic today.</p>
+          <p className="text-white/90">Here&apos;s what&apos;s happening in your clinic today.</p>
         </div>
 
         {/* Stats Cards */}
@@ -498,7 +529,7 @@ const getActivityIcon = (type: string) => {
           <div className="bg-card-bg rounded-lg border border-border-color p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-text-secondary">Today's Revenue</p>
+                <p className="text-sm font-medium text-text-secondary">Today&apos;s Revenue</p>
                 <p className="text-2xl font-bold text-text-primary">${stats.totalRevenue.toFixed(2)}</p>
               </div>
               <span className="text-2xl">💰</span>
