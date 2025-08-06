@@ -45,18 +45,23 @@ export async function PUT(
     const { id } = await params;
     await connectToDatabase();
     const body = await request.json();
-    const { patientId, patientName, testType, testName, notes } = body;
+    const { patientId, patientName, testType, testName, notes, selectedTestTypes } = body;
 
     // Validate required fields
-    if (!patientId || !patientName || !testType || !testName) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!patientId || !patientName || !testType) {
+      return NextResponse.json({ error: 'Missing required fields: patientId, patientName, testType' }, { status: 400 });
+    }
+    
+    if (!notes || !notes.trim()) {
+      return NextResponse.json({ error: 'Lab test description is required' }, { status: 400 });
     }
 
     const updateData = {
       patientId,
       patientName,
       testType,
-      testName,
+      testName: testName || '',
+      additionalTestTypes: selectedTestTypes || [],
       notes,
       updatedAt: new Date(),
     };

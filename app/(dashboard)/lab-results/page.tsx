@@ -39,6 +39,7 @@ interface LabResultFormData {
   testType: string;
   testName: string;
   notes: string;
+  selectedTestTypes: string[];
 }
 
 export default function LabResultsPage() {
@@ -61,9 +62,23 @@ export default function LabResultsPage() {
     testType: '',
     testName: '',
     notes: '',
+    selectedTestTypes: [],
   });
   const [errors, setErrors] = useState<Partial<LabResultFormData>>({});
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('[data-test-types-dropdown]')) {
+        setLabResults(prev => prev.map(r => ({ ...r, showTestTypesDropdown: false })));
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Load lab results data on component mount
   useEffect(() => {
@@ -93,7 +108,7 @@ export default function LabResultsPage() {
     const matchesSearch = (result.labResultId?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                          result.patientId.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          result.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         result.testName.toLowerCase().includes(searchTerm.toLowerCase());
+                         (result.testName?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus = selectedStatus === 'all' || result.status === selectedStatus;
     const matchesTestType = selectedTestType === 'all' || result.testType === selectedTestType;
     return matchesSearch && matchesStatus && matchesTestType;
@@ -146,8 +161,10 @@ export default function LabResultsPage() {
     if (!formData.testType) {
       newErrors.testType = 'Test type is required';
     }
-    if (!formData.testName.trim()) {
-      newErrors.testName = 'Test name is required';
+    // Test Name is now optional
+    // Notes is now required
+    if (!formData.notes.trim()) {
+      newErrors.notes = 'Lab test description is required';
     }
 
     setErrors(newErrors);
@@ -164,6 +181,7 @@ export default function LabResultsPage() {
         patientName: formData.patientName,
         testType: formData.testType,
         testName: formData.testName,
+        selectedTestTypes: formData.selectedTestTypes,
         notes: formData.notes,
       };
 
@@ -204,8 +222,9 @@ export default function LabResultsPage() {
       patientId: labResult.patientId,
       patientName: labResult.patientName,
       testType: labResult.testType,
-      testName: labResult.testName,
+      testName: labResult.testName || '',
       notes: labResult.notes || '',
+      selectedTestTypes: labResult.additionalTestTypes || [],
     });
     setIsEditModalOpen(true);
   };
@@ -220,6 +239,7 @@ export default function LabResultsPage() {
         patientName: formData.patientName,
         testType: formData.testType,
         testName: formData.testName,
+        selectedTestTypes: formData.selectedTestTypes,
         notes: formData.notes,
       };
 
@@ -288,6 +308,7 @@ export default function LabResultsPage() {
       testType: '',
       testName: '',
       notes: '',
+      selectedTestTypes: [],
     });
     setErrors({});
   };
@@ -454,17 +475,17 @@ export default function LabResultsPage() {
             </div>
 
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Lab Result ID</TableHead>
-                  <TableHead>Patient</TableHead>
-                  <TableHead>Test Type</TableHead>
-                  <TableHead>Test Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Requested</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+                              <TableHeader>
+                  <TableRow>
+                    <TableHead>Lab Result ID</TableHead>
+                    <TableHead>Patient</TableHead>
+                    <TableHead>Test Types</TableHead>
+                    <TableHead>Test Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Requested</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {filteredLabResults.map((result) => (
                   <TableRow key={result._id}>
@@ -479,8 +500,59 @@ export default function LabResultsPage() {
                         <div className="text-sm text-text-secondary">{result.patientId}</div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-text-primary">{LAB_TEST_LABELS[result.testType]}</TableCell>
-                    <TableCell className="text-text-primary">{result.testName}</TableCell>
+                                          <TableCell className="text-text-primary">
+                        <div className="relative">
+                          <button
+                            type="button"
+                            data-test-types-dropdown
+                            onClick={() => {
+                              // Toggle dropdown for this specific result
+                              setLabResults(prev => prev.map(r => 
+                                r._id === result._id 
+                                  ? { ...r, showTestTypesDropdown: !r.showTestTypesDropdown }
+                                  : { ...r, showTestTypesDropdown: false }
+                              ));
+                            }}
+                            className="flex items-center space-x-2 text-left hover:bg-accent-color/10 px-2 py-1 rounded-md transition-colors"
+                          >
+                            <span className="font-medium">{LAB_TEST_LABELS[result.testType]}</span>
+                            {result.additionalTestTypes && result.additionalTestTypes.length > 0 && (
+                              <span className="bg-accent-color text-white text-xs px-2 py-0.5 rounded-full">
+                                +{result.additionalTestTypes.length}
+                              </span>
+                            )}
+                            <svg className="w-4 h-4 ml-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          
+                          {/* Dropdown for test types */}
+                          {result.showTestTypesDropdown && (
+                            <div data-test-types-dropdown className="absolute top-full left-0 z-50 mt-1 bg-card-bg border border-border-color rounded-md shadow-lg min-w-[200px] max-w-[300px]">
+                              <div className="p-3 border-b border-border-color">
+                                <h4 className="text-sm font-medium text-text-primary mb-2">All Test Types</h4>
+                                <div className="space-y-1">
+                                  {/* Primary test type */}
+                                  <div className="flex items-center space-x-2">
+                                    <span className="w-2 h-2 bg-accent-color rounded-full"></span>
+                                    <span className="text-sm text-text-primary font-medium">{LAB_TEST_LABELS[result.testType]}</span>
+                                    <span className="text-xs text-text-muted">(Primary)</span>
+                                  </div>
+                                  
+                                                                     {/* Additional test types */}
+                                   {result.additionalTestTypes && result.additionalTestTypes.map((testType, index) => (
+                                     <div key={index} className="flex items-center space-x-2">
+                                       <span className="w-2 h-2 bg-text-muted rounded-full"></span>
+                                       <span className="text-sm text-text-primary">{LAB_TEST_LABELS[testType as keyof typeof LAB_TEST_TYPES]}</span>
+                                     </div>
+                                   ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                    <TableCell className="text-text-primary">{result.testName || 'N/A'}</TableCell>
                     <TableCell>
                       {canUpdateStatus(result) ? (
                         <div className="relative">
@@ -585,20 +657,53 @@ export default function LabResultsPage() {
               />
             </FormField>
 
-            <FormField label="Test Name" required error={errors.testName}>
+            <FormField label="Additional Test Types (Optional)">
+              <div className="space-y-2">
+                <div className="text-sm text-text-muted mb-2">
+                  Select additional tests if patient needs multiple tests
+                </div>
+                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                  {Object.entries(LAB_TEST_TYPES).map(([key, value]) => (
+                    <label key={value} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.selectedTestTypes.includes(value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData(prev => ({
+                              ...prev,
+                              selectedTestTypes: [...prev.selectedTestTypes, value]
+                            }));
+                          } else {
+                            setFormData(prev => ({
+                              ...prev,
+                              selectedTestTypes: prev.selectedTestTypes.filter(t => t !== value)
+                            }));
+                          }
+                        }}
+                        className="rounded border-border-color text-accent-color focus:ring-accent-color"
+                      />
+                      <span className="text-sm text-text-primary">{LAB_TEST_LABELS[value]}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </FormField>
+
+            <FormField label="Test Name" error={errors.testName}>
               <Input
                 value={formData.testName}
                 onChange={(e) => handleInputChange('testName', e.target.value)}
-                placeholder="Enter test name"
+                placeholder="Enter test name (optional)"
               />
             </FormField>
           </div>
 
-          <FormField label="Notes">
+          <FormField label="Lab Test Description" required error={errors.notes}>
             <TextArea
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="Add any additional notes..."
+              placeholder="Describe the lab test requirements, symptoms, or specific conditions to be tested..."
               rows={4}
             />
           </FormField>
@@ -663,11 +768,44 @@ export default function LabResultsPage() {
               />
             </FormField>
 
-            <FormField label="Test Name" required error={errors.testName}>
+            <FormField label="Additional Test Types (Optional)">
+              <div className="space-y-2">
+                <div className="text-sm text-text-muted mb-2">
+                  Select additional tests if patient needs multiple tests
+                </div>
+                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                  {Object.entries(LAB_TEST_TYPES).map(([key, value]) => (
+                    <label key={value} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.selectedTestTypes.includes(value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData(prev => ({
+                              ...prev,
+                              selectedTestTypes: [...prev.selectedTestTypes, value]
+                            }));
+                          } else {
+                            setFormData(prev => ({
+                              ...prev,
+                              selectedTestTypes: prev.selectedTestTypes.filter(t => t !== value)
+                            }));
+                          }
+                        }}
+                        className="rounded border-border-color text-accent-color focus:ring-accent-color"
+                      />
+                      <span className="text-sm text-text-primary">{LAB_TEST_LABELS[value]}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </FormField>
+
+            <FormField label="Test Name" error={errors.testName}>
               <Input
                 value={formData.testName}
                 onChange={(e) => handleInputChange('testName', e.target.value)}
-                placeholder="Enter test name"
+                placeholder="Enter test name (optional)"
               />
             </FormField>
 
@@ -703,11 +841,11 @@ export default function LabResultsPage() {
             )}
           </div>
 
-          <FormField label="Notes">
+          <FormField label="Lab Test Description" required error={errors.notes}>
             <TextArea
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="Add any additional notes..."
+              placeholder="Describe the lab test requirements, symptoms, or specific conditions to be tested..."
               rows={4}
             />
           </FormField>
@@ -759,12 +897,27 @@ export default function LabResultsPage() {
                 <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.patientName}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-primary">Test Type</label>
-                <p className="mt-1 text-sm text-text-secondary">{LAB_TEST_LABELS[viewingLabResult.testType]}</p>
+                <label className="block text-sm font-medium text-text-primary">Test Types</label>
+                <div className="mt-1 space-y-1">
+                  {/* Primary test type */}
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2 h-2 bg-accent-color rounded-full"></span>
+                    <span className="text-sm text-text-secondary font-medium">{LAB_TEST_LABELS[viewingLabResult.testType]}</span>
+                    <span className="text-xs text-text-muted">(Primary)</span>
+                  </div>
+                  
+                  {/* Additional test types */}
+                  {viewingLabResult.additionalTestTypes && viewingLabResult.additionalTestTypes.map((testType, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <span className="w-2 h-2 bg-text-muted rounded-full"></span>
+                      <span className="text-sm text-text-secondary">{LAB_TEST_LABELS[testType as keyof typeof LAB_TEST_TYPES]}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-primary">Test Name</label>
-                <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.testName}</p>
+                                    <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.testName || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-primary">Status</label>

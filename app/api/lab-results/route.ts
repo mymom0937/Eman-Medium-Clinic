@@ -89,10 +89,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body: CreateLabResultRequest = await request.json();
-    const { patientId, patientName, testType, testName, notes } = body;
+    const { patientId, patientName, testType, testName, notes, selectedTestTypes } = body;
 
-    if (!patientId || !patientName || !testType || !testName) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!patientId || !patientName || !testType) {
+      return NextResponse.json({ error: 'Missing required fields: patientId, patientName, testType' }, { status: 400 });
+    }
+    
+    if (!notes || !notes.trim()) {
+      return NextResponse.json({ error: 'Lab test description is required' }, { status: 400 });
     }
 
     // Generate unique lab result ID
@@ -108,7 +112,8 @@ export async function POST(request: NextRequest) {
       patientId,
       patientName,
       testType,
-      testName,
+      testName: testName || '',
+      additionalTestTypes: selectedTestTypes || [],
       status: 'PENDING',
       requestedBy: userId,
       requestedAt: new Date(),

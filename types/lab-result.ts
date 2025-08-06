@@ -6,7 +6,8 @@ export interface LabResult {
   patientId: string;
   patientName: string;
   testType: keyof typeof LAB_TEST_TYPES;
-  testName: string;
+  testName?: string; // Now optional
+  additionalTestTypes?: string[]; // Array of additional test types
   status: keyof typeof LAB_TEST_STATUS;
   requestedBy: string; // Nurse ID
   requestedAt: Date;
@@ -16,6 +17,7 @@ export interface LabResult {
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
+  showTestTypesDropdown?: boolean; // Frontend-only state for dropdown
 }
 
 export interface LabTestResult {
@@ -31,11 +33,17 @@ export interface CreateLabResultRequest {
   patientId: string;
   patientName: string;
   testType: keyof typeof LAB_TEST_TYPES;
-  testName: string;
+  testName?: string; // Now optional
+  selectedTestTypes?: string[]; // Array of additional test types
   notes?: string;
 }
 
 export interface UpdateLabResultRequest {
+  patientId?: string;
+  patientName?: string;
+  testType?: keyof typeof LAB_TEST_TYPES;
+  testName?: string;
+  selectedTestTypes?: string[];
   status?: keyof typeof LAB_TEST_STATUS;
   results?: LabTestResult[];
   notes?: string;

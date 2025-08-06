@@ -15,7 +15,8 @@ export interface ILabResult extends Document {
   patientId: string;
   patientName: string;
   testType: keyof typeof LAB_TEST_TYPES;
-  testName: string;
+  testName?: string; // Now optional
+  additionalTestTypes?: string[]; // Array of additional test types
   status: keyof typeof LAB_TEST_STATUS;
   requestedBy: string; // Nurse ID
   requestedAt: Date;
@@ -41,7 +42,8 @@ const LabResultSchema = new Schema<ILabResult>({
   patientId: { type: String, required: true, index: true },
   patientName: { type: String, required: true },
   testType: { type: String, required: true, enum: Object.values(LAB_TEST_TYPES) },
-  testName: { type: String, required: true },
+  testName: { type: String }, // Now optional
+  additionalTestTypes: [{ type: String, enum: Object.values(LAB_TEST_TYPES) }], // Array of additional test types
   status: { 
     type: String, 
     required: true, 
