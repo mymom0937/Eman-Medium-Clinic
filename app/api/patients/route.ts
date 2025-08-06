@@ -69,9 +69,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     // Validate required fields
-    const requiredFields = ['firstName', 'lastName', 'phone'];
+    const requiredFields = ['firstName', 'lastName', 'medicalHistory'];
     for (const field of requiredFields) {
-      if (!body[field]) {
+      if (!body[field] || (typeof body[field] === 'string' && !body[field].trim())) {
         return NextResponse.json(
           { success: false, error: `Missing required field: ${field}` },
           { status: 400 }
@@ -95,14 +95,15 @@ export async function POST(request: NextRequest) {
       lastName: body.lastName,
       age: body.age ? parseInt(body.age) : null,
       bloodType: body.bloodType || '',
-      phone: body.phone,
+      phone: body.phone || '',
       email: body.email || '',
       dateOfBirth: body.dateOfBirth || null,
       gender: body.gender || '',
       address: body.address || '',
       emergencyContact: body.emergencyContact || '',
-      medicalHistory: body.medicalHistory || '',
+      medicalHistory: body.medicalHistory,
       allergies: body.allergies || [],
+      isActive: body.isActive !== undefined ? body.isActive : true,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

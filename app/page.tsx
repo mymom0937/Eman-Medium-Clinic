@@ -254,7 +254,7 @@ export default function HomePage() {
             ) : (
               <>
                 <Link href="/sign-up">
-                  <Button size="lg" className="text-lg px-8 py-4 bg-accent-color hover:bg-accent-hover text-white shadow-lg cursor-pointer">
+                  <Button size="lg" className="text-lg px-8 py-4 bg-accent-color text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
                     Start Free Trial
                   </Button>
                 </Link>

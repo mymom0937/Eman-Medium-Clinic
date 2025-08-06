@@ -43,9 +43,9 @@ export async function PUT(
     const body = await request.json();
     
     // Validate required fields
-    const requiredFields = ['firstName', 'lastName', 'phone', 'email'];
+    const requiredFields = ['firstName', 'lastName', 'medicalHistory'];
     for (const field of requiredFields) {
-      if (!body[field]) {
+      if (!body[field] || (typeof body[field] === 'string' && !body[field].trim())) {
         return NextResponse.json(
           { success: false, error: `Missing required field: ${field}` },
           { status: 400 }
@@ -58,14 +58,14 @@ export async function PUT(
       {
         firstName: body.firstName,
         lastName: body.lastName,
-        phone: body.phone,
-        email: body.email,
+        phone: body.phone || '',
+        email: body.email || '',
         dateOfBirth: body.dateOfBirth,
         gender: body.gender,
         address: body.address,
-        bloodType: body.bloodType,
+        bloodType: body.bloodType || '',
         age: body.age ? parseInt(body.age) : null,
-        isActive: body.isActive,
+        isActive: body.isActive !== undefined ? body.isActive : true,
         medicalHistory: body.medicalHistory,
         emergencyContact: body.emergencyContact,
         allergies: body.allergies,

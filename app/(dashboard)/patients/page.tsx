@@ -9,6 +9,8 @@ import { Modal } from '@/components/ui/modal';
 import { FormField, Input, Select, TextArea, Button } from '@/components/ui/form';
 import { toastManager } from '@/lib/utils/toast';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
+import { CountryCodeSelector } from '@/components/ui/country-code-selector';
+import { COUNTRY_CODES, CountryCode } from '@/constants/country-codes';
 
 interface Patient {
   _id: string;
@@ -66,6 +68,7 @@ interface PatientFormData {
   bloodType: string;
   status: string;
   notes: string;
+  selectedCountry: CountryCode;
 }
 
 export default function PatientsPage() {
@@ -97,6 +100,7 @@ export default function PatientsPage() {
     bloodType: '',
     status: 'active',
     notes: '',
+    selectedCountry: COUNTRY_CODES.find(country => country.code === 'ET') || COUNTRY_CODES[0],
   });
   const [errors, setErrors] = useState<Partial<PatientFormData>>({});
 
@@ -252,18 +256,25 @@ export default function PatientsPage() {
     if (!formData.gender) {
       newErrors.gender = 'Gender is required';
     }
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+    // Phone is optional - only validate if provided
+    if (formData.phone.trim()) {
+      // Basic validation for phone number length (7-15 digits)
+      if (formData.phone.length < 7 || formData.phone.length > 15) {
+        newErrors.phone = 'Please enter a valid phone number (7-15 digits)';
+      }
     }
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Valid email is required';
+    // Email is optional - only validate if provided
+    if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
     }
     if (!formData.address.trim()) {
       newErrors.address = 'Address is required';
     }
     // Blood type is optional
+    // Status is optional
+    if (!formData.notes.trim()) {
+      newErrors.notes = 'Current illness/symptoms are required';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -279,12 +290,24 @@ export default function PatientsPage() {
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
 
+      // Format phone number with spaces for readability
+      const formatPhoneNumber = (phone: string) => {
+        if (!phone) return '';
+        // Add spaces every 3-4 digits for better readability
+        const cleaned = phone.replace(/\s/g, '');
+        const match = cleaned.match(/^(\d{1,4})(\d{3})(\d{3})(\d{2,4})?$/);
+        if (match) {
+          return match.slice(1).filter(Boolean).join(' ');
+        }
+        return cleaned;
+      };
+
       const patientData = {
         firstName,
         lastName,
         age: formData.age ? parseInt(formData.age) : null,
         bloodType: formData.bloodType || '',
-        phone: formData.phone,
+        phone: formData.phone ? `${formData.selectedCountry.dialCode} ${formatPhoneNumber(formData.phone)}` : '',
         email: formData.email,
         dateOfBirth: null, // You can add date picker later
         gender: formData.gender.toUpperCase(),
@@ -326,16 +349,33 @@ export default function PatientsPage() {
 
   const handleEditPatient = (patient: Patient) => {
     setEditingPatient(patient);
+    // Parse phone number to extract country code and number
+    let phoneNumber = patient.phone || '';
+    let selectedCountry = COUNTRY_CODES.find(country => country.code === 'ET') || COUNTRY_CODES[0];
+    
+    // Try to find the country code from the phone number
+    if (phoneNumber) {
+      const foundCountry = COUNTRY_CODES.find(country => 
+        phoneNumber.startsWith(country.dialCode)
+      );
+      if (foundCountry) {
+        selectedCountry = foundCountry;
+        // Remove country code and clean up spaces
+        phoneNumber = phoneNumber.replace(foundCountry.dialCode, '').replace(/\s/g, '').trim();
+      }
+    }
+
     setFormData({
       name: `${patient.firstName} ${patient.lastName}`,
       age: patient.age?.toString() || '',
       gender: patient.gender?.toLowerCase() || '',
-      phone: patient.phone || '',
+      phone: phoneNumber,
       email: patient.email || '',
       address: patient.address || '',
       bloodType: patient.bloodType || '',
       status: patient.isActive ? 'active' : 'inactive',
       notes: patient.medicalHistory || '',
+      selectedCountry,
     });
     setIsEditModalOpen(true);
   };
@@ -350,10 +390,22 @@ export default function PatientsPage() {
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
 
+      // Format phone number with spaces for readability
+      const formatPhoneNumber = (phone: string) => {
+        if (!phone) return '';
+        // Add spaces every 3-4 digits for better readability
+        const cleaned = phone.replace(/\s/g, '');
+        const match = cleaned.match(/^(\d{1,4})(\d{3})(\d{3})(\d{2,4})?$/);
+        if (match) {
+          return match.slice(1).filter(Boolean).join(' ');
+        }
+        return cleaned;
+      };
+
       const patientData = {
         firstName,
         lastName,
-        phone: formData.phone,
+        phone: formData.phone ? `${formData.selectedCountry.dialCode} ${formatPhoneNumber(formData.phone)}` : '',
         email: formData.email,
         dateOfBirth: null,
         gender: formData.gender.toUpperCase(),
@@ -431,13 +483,14 @@ export default function PatientsPage() {
       bloodType: '',
       status: 'active',
       notes: '',
+      selectedCountry: COUNTRY_CODES.find(country => country.code === 'ET') || COUNTRY_CODES[0],
     });
     setErrors({});
   };
 
-  const handleInputChange = (field: keyof PatientFormData, value: string) => {
+  const handleInputChange = (field: keyof PatientFormData, value: string | CountryCode) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
+    if (errors[field as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
   };
@@ -648,25 +701,42 @@ export default function PatientsPage() {
               />
             </FormField>
 
-            <FormField label="Phone Number" required error={errors.phone}>
-              <Input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                placeholder="Enter phone number"
-              />
+            <FormField label="Phone Number" error={errors.phone}>
+              <div className="flex">
+                <CountryCodeSelector
+                  value={formData.selectedCountry}
+                  onChange={(country) => {
+                    setFormData(prev => ({ ...prev, selectedCountry: country }));
+                    // Auto-fill country code if phone field is empty or starts with old country code
+                    const currentPhone = formData.phone || '';
+                    const oldCountryCode = formData.selectedCountry.dialCode;
+                    if (!currentPhone || currentPhone.startsWith(oldCountryCode)) {
+                      const newPhone = currentPhone.replace(oldCountryCode, '').trim();
+                      handleInputChange('phone', country.dialCode + ' ' + newPhone);
+                    }
+                  }}
+                  className="w-16"
+                />
+                <Input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  placeholder="Enter phone number (optional)"
+                  className="rounded-l-none flex-1"
+                />
+              </div>
             </FormField>
 
-            <FormField label="Email" required error={errors.email}>
+            <FormField label="Email" error={errors.email}>
               <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="Enter email address"
+                placeholder="Enter email address (optional)"
               />
             </FormField>
 
-            <FormField label="Blood Type" required error={errors.bloodType}>
+            <FormField label="Blood Type" error={errors.bloodType}>
               <Select
                 value={formData.bloodType}
                 onChange={(e) => handleInputChange('bloodType', e.target.value)}
@@ -674,7 +744,7 @@ export default function PatientsPage() {
               />
             </FormField>
 
-            <FormField label="Status" required error={errors.status}>
+            <FormField label="Status" error={errors.status}>
               <Select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
@@ -692,11 +762,11 @@ export default function PatientsPage() {
             />
           </FormField>
 
-          <FormField label="Medical Notes">
+          <FormField label="Current Illness/Symptoms" required error={errors.notes}>
             <TextArea
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="Enter any medical notes (optional)"
+              placeholder="Describe patient's current illness, symptoms, or complaints"
               rows={3}
             />
           </FormField>
@@ -761,25 +831,42 @@ export default function PatientsPage() {
               />
             </FormField>
 
-            <FormField label="Phone Number" required error={errors.phone}>
-              <Input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                placeholder="Enter phone number"
-              />
+            <FormField label="Phone Number" error={errors.phone}>
+              <div className="flex">
+                <CountryCodeSelector
+                  value={formData.selectedCountry}
+                  onChange={(country) => {
+                    setFormData(prev => ({ ...prev, selectedCountry: country }));
+                    // Auto-fill country code if phone field is empty or starts with old country code
+                    const currentPhone = formData.phone || '';
+                    const oldCountryCode = formData.selectedCountry.dialCode;
+                    if (!currentPhone || currentPhone.startsWith(oldCountryCode)) {
+                      const newPhone = currentPhone.replace(oldCountryCode, '').trim();
+                      handleInputChange('phone', country.dialCode + ' ' + newPhone);
+                    }
+                  }}
+                  className="w-16"
+                />
+                <Input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  placeholder="Enter phone number (optional)"
+                  className="rounded-l-none flex-1"
+                />
+              </div>
             </FormField>
 
-            <FormField label="Email" required error={errors.email}>
+            <FormField label="Email" error={errors.email}>
               <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="Enter email address"
+                placeholder="Enter email address (optional)"
               />
             </FormField>
 
-            <FormField label="Blood Type" required error={errors.bloodType}>
+            <FormField label="Blood Type" error={errors.bloodType}>
               <Select
                 value={formData.bloodType}
                 onChange={(e) => handleInputChange('bloodType', e.target.value)}
@@ -787,7 +874,7 @@ export default function PatientsPage() {
               />
             </FormField>
 
-            <FormField label="Status" required error={errors.status}>
+            <FormField label="Status" error={errors.status}>
               <Select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
@@ -805,11 +892,11 @@ export default function PatientsPage() {
             />
           </FormField>
 
-          <FormField label="Medical Notes">
+          <FormField label="Current Illness/Symptoms" required error={errors.notes}>
             <TextArea
               value={formData.notes}
               onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="Enter any medical notes (optional)"
+              placeholder="Describe patient's current illness, symptoms, or complaints"
               rows={3}
             />
           </FormField>
