@@ -121,7 +121,7 @@ function generateCSV(reportData: any, reportMeta: any): string {
     csvContent += 'Patients\n';
     csvContent += 'Patient ID,Name,Age,Gender,Phone,Status,Created At\n';
     reportData.patients.forEach((patient: any) => {
-      csvContent += `${patient.patientId},"${patient.name}",${patient.age},${patient.gender},${patient.phone},${patient.isActive},${patient.createdAt}\n`;
+      csvContent += `${patient.patientId || 'N/A'},"${patient.name || 'N/A'}",${patient.age || 'N/A'},${patient.gender || 'N/A'},${patient.phone || 'N/A'},${patient.isActive ? 'Active' : 'Inactive'},${patient.createdAt || 'N/A'}\n`;
     });
     csvContent += '\n';
   }
@@ -130,7 +130,7 @@ function generateCSV(reportData: any, reportMeta: any): string {
     csvContent += 'Sales\n';
     csvContent += 'Sale ID,Patient Name,Total Amount,Final Amount,Payment Method,Status,Sold At\n';
     reportData.sales.forEach((sale: any) => {
-      csvContent += `${sale.saleId},"${sale.patientName}",${sale.totalAmount},${sale.finalAmount},${sale.paymentMethod},${sale.status},${sale.soldAt}\n`;
+      csvContent += `${sale.saleId || 'N/A'},"${sale.patientName || 'N/A'}",${sale.totalAmount || 'N/A'},${sale.finalAmount || 'N/A'},${sale.paymentMethod || 'N/A'},${sale.status || 'N/A'},${sale.soldAt || 'N/A'}\n`;
     });
     csvContent += '\n';
   }
@@ -139,7 +139,7 @@ function generateCSV(reportData: any, reportMeta: any): string {
     csvContent += 'Payments\n';
     csvContent += 'Payment ID,Patient ID,Amount,Payment Method,Status,Created At\n';
     reportData.payments.forEach((payment: any) => {
-      csvContent += `${payment.paymentId},${payment.patientId},${payment.amount},${payment.paymentMethod},${payment.paymentStatus},${payment.createdAt}\n`;
+      csvContent += `${payment.paymentId || 'N/A'},${payment.patientId || 'N/A'},${payment.amount || 'N/A'},${payment.paymentMethod || 'N/A'},${payment.paymentStatus || 'N/A'},${payment.createdAt || 'N/A'}\n`;
     });
     csvContent += '\n';
   }
@@ -403,13 +403,13 @@ function generatePDF(reportData: any, reportMeta: any): Buffer {
       }
       
       xPos = margin;
-      doc.text(patient.patientId, xPos, yPosition);
+      doc.text(patient.patientId || 'N/A', xPos, yPosition);
       xPos += colWidths[0];
-      doc.text(patient.name, xPos, yPosition);
+      doc.text(patient.name || 'N/A', xPos, yPosition);
       xPos += colWidths[1];
-      doc.text(patient.age.toString(), xPos, yPosition);
+      doc.text((patient.age || 'N/A').toString(), xPos, yPosition);
       xPos += colWidths[2];
-      doc.text(patient.gender, xPos, yPosition);
+      doc.text(patient.gender || 'N/A', xPos, yPosition);
       xPos += colWidths[3];
       doc.text(patient.isActive ? 'Active' : 'Inactive', xPos, yPosition);
       
@@ -446,13 +446,13 @@ function generatePDF(reportData: any, reportMeta: any): Buffer {
       }
       
       xPos = margin;
-      doc.text(sale.saleId, xPos, yPosition);
+      doc.text(sale.saleId || 'N/A', xPos, yPosition);
       xPos += colWidths[0];
-      doc.text(sale.patientName, xPos, yPosition);
+      doc.text(sale.patientName || 'N/A', xPos, yPosition);
       xPos += colWidths[1];
-      doc.text(sale.finalAmount.toString(), xPos, yPosition);
+      doc.text((sale.finalAmount || 'N/A').toString(), xPos, yPosition);
       xPos += colWidths[2];
-      doc.text(sale.status, xPos, yPosition);
+      doc.text(sale.status || 'N/A', xPos, yPosition);
       
       yPosition += 5;
     });

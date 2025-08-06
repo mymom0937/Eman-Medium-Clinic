@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         reportData = await generateInventoryReport(db, queryStartDate, queryEndDate);
         break;
       case 'sales':
-        reportData = await generateSalesReport(db, queryStartDate, queryEndDate);
+        reportData = await generatePaymentsReport(db, queryStartDate, queryEndDate);
         break;
       case 'payments':
         reportData = await generatePaymentsReport(db, queryStartDate, queryEndDate);
@@ -154,13 +154,14 @@ async function generatePatientReport(db: any, startDate: Date, endDate: Date) {
 }
 
 async function generateLabResultsReport(db: any, startDate: Date, endDate: Date) {
-  const labResults = await db.collection('lab-results').find({
+  const labResults = await db.collection('labresults').find({
     requestedAt: { $gte: startDate, $lte: endDate }
   }).toArray();
 
   const totalTests = labResults.length;
   const completedTests = labResults.filter((lr: any) => lr.status === 'COMPLETED').length;
   const pendingTests = labResults.filter((lr: any) => lr.status === 'PENDING').length;
+  const inProgressTests = labResults.filter((lr: any) => lr.status === 'IN_PROGRESS').length;
   const cancelledTests = labResults.filter((lr: any) => lr.status === 'CANCELLED').length;
 
   const testTypeDistribution = labResults.reduce((acc: any, lr: any) => {
@@ -174,6 +175,7 @@ async function generateLabResultsReport(db: any, startDate: Date, endDate: Date)
       totalTests,
       completedTests,
       pendingTests,
+      inProgressTests,
       cancelledTests,
       completionRate: totalTests > 0 ? (completedTests / totalTests) * 100 : 0
     },
@@ -191,7 +193,7 @@ async function generateLabResultsReport(db: any, startDate: Date, endDate: Date)
 }
 
 async function generateDrugOrdersReport(db: any, startDate: Date, endDate: Date) {
-  const drugOrders = await db.collection('drug-orders').find({
+  const drugOrders = await db.collection('drugorders').find({
     orderedAt: { $gte: startDate, $lte: endDate }
   }).toArray();
 
@@ -263,71 +265,7 @@ async function generateInventoryReport(db: any, startDate: Date, endDate: Date) 
   };
 }
 
-async function generateSalesReport(db: any, startDate: Date, endDate: Date) {
-  const sales = await db.collection('sales').find({
-    soldAt: { $gte: startDate, $lte: endDate }
-  }).toArray();
 
-  const totalSales = sales.length;
-  const totalRevenue = sales.reduce((sum: number, sale: any) => sum + sale.finalAmount, 0);
-  const averageSale = totalSales > 0 ? totalRevenue / totalSales : 0;
-
-  const paymentMethodDistribution = sales.reduce((acc: any, sale: any) => {
-    const method = sale.paymentMethod || 'UNKNOWN';
-    acc[method] = (acc[method] || 0) + 1;
-    return acc;
-  }, {});
-
-  const statusDistribution = sales.reduce((acc: any, sale: any) => {
-    const status = sale.status || 'UNKNOWN';
-    acc[status] = (acc[status] || 0) + 1;
-    return acc;
-  }, {});
-
-  // Get top selling drugs
-  const drugSales = sales.reduce((acc: any, sale: any) => {
-    sale.items.forEach((item: any) => {
-      if (!acc[item.drugName]) {
-        acc[item.drugName] = { quantity: 0, revenue: 0 };
-      }
-      acc[item.drugName].quantity += item.quantity;
-      acc[item.drugName].revenue += item.totalPrice;
-    });
-    return acc;
-  }, {});
-
-  const topSellingDrugs = Object.entries(drugSales)
-    .map(([name, data]: [string, any]) => ({
-      name,
-      quantity: data.quantity,
-      revenue: data.revenue
-    }))
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 10);
-
-  return {
-    summary: {
-      totalSales,
-      totalRevenue,
-      averageSale,
-      totalItems: sales.reduce((sum: number, sale: any) => 
-        sum + sale.items.reduce((itemSum: number, item: any) => itemSum + item.quantity, 0), 0)
-    },
-    paymentMethodDistribution,
-    statusDistribution,
-    topSellingDrugs,
-    sales: sales.map((s: any) => ({
-      saleId: s.saleId,
-      patientName: s.patientName,
-      totalAmount: s.totalAmount,
-      finalAmount: s.finalAmount,
-      paymentMethod: s.paymentMethod,
-      status: s.status,
-      soldAt: s.soldAt,
-      itemsCount: s.items.length
-    }))
-  };
-}
 
 async function generatePaymentsReport(db: any, startDate: Date, endDate: Date) {
   const payments = await db.collection('payments').find({
@@ -373,26 +311,26 @@ async function generatePaymentsReport(db: any, startDate: Date, endDate: Date) {
 }
 
 async function generateComprehensiveReport(db: any, startDate: Date, endDate: Date) {
-  const [patients, labResults, drugOrders, drugs, sales, payments] = await Promise.all([
+  const [patients, labResults, drugOrders, drugs, payments] = await Promise.all([
     db.collection('patients').find({}).toArray(),
-    db.collection('lab-results').find({}).toArray(),
-    db.collection('drug-orders').find({}).toArray(),
+    db.collection('labresults').find({}).toArray(),
+    db.collection('drugorders').find({}).toArray(),
     db.collection('drugs').find({}).toArray(),
-    db.collection('sales').find({}).toArray(),
     db.collection('payments').find({}).toArray()
   ]);
 
-  return {
+  const reportData = {
     overview: {
       totalPatients: patients.length,
       totalLabTests: labResults.length,
       totalDrugOrders: drugOrders.length,
       totalDrugs: drugs.length,
-      totalSales: sales.length,
+      totalSales: payments.length, // Use payments as sales
       totalPayments: payments.length
     },
     financial: {
-      totalRevenue: sales.reduce((sum: number, s: any) => sum + s.finalAmount, 0),
+      totalRevenue: payments.reduce((sum: number, p: any) => 
+        p.paymentStatus === 'COMPLETED' ? sum + p.amount : sum, 0),
       totalPayments: payments.reduce((sum: number, p: any) => 
         p.paymentStatus === 'COMPLETED' ? sum + p.amount : sum, 0),
       inventoryValue: drugs.reduce((sum: number, d: any) => sum + (d.sellingPrice * d.stockQuantity), 0)
@@ -406,4 +344,6 @@ async function generateComprehensiveReport(db: any, startDate: Date, endDate: Da
         (payments.filter((p: any) => p.paymentStatus === 'COMPLETED').length / payments.length) * 100 : 0
     }
   };
+
+  return reportData;
 } 

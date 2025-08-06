@@ -66,11 +66,11 @@ export default function ReportsPage() {
         ...(endDate && { endDate }),
       });
 
-      console.log('Generating report with params:', params.toString());
       const response = await fetch(`/api/reports?${params}`);
       const result = await response.json();
-
-      console.log('Report API response:', result);
+      console.log('Report data structure:', result.data);
+      console.log('Overview data:', result.data?.overview);
+      console.log('Lab Tests count:', result.data?.overview?.totalLabTests);
 
       if (response.ok && result.success) {
         setReportData(result.data);
@@ -183,6 +183,8 @@ export default function ReportsPage() {
 
   const getReportStats = () => {
     if (!reportData) return [];
+
+
 
     const stats = [];
     
