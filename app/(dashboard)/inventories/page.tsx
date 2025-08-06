@@ -245,6 +245,7 @@ export default function InventoryPage() {
     if (!formData.supplier) {
       newErrors.supplier = 'Supplier is required';
     }
+    // Status is now optional - no validation needed
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -451,7 +452,7 @@ export default function InventoryPage() {
       unitPrice: '',
       expiryDate: '',
       supplier: '',
-      status: 'in_stock',
+      status: '',
       description: '',
     });
     setErrors({});
@@ -543,6 +544,13 @@ export default function InventoryPage() {
 
   const DRUG_STATUS_OPTIONS = [
     { value: 'all', label: 'All Status' },
+    { value: 'in_stock', label: 'In Stock' },
+    { value: 'low_stock', label: 'Low Stock' },
+    { value: 'out_of_stock', label: 'Out of Stock' },
+  ];
+
+  const DRUG_STATUS_OPTIONS_FORM = [
+    { value: '', label: 'Select Status (Optional)' },
     { value: 'in_stock', label: 'In Stock' },
     { value: 'low_stock', label: 'Low Stock' },
     { value: 'out_of_stock', label: 'Out of Stock' },
@@ -846,11 +854,11 @@ export default function InventoryPage() {
               />
             </FormField>
 
-            <FormField label="Status" required error={errors.status}>
+            <FormField label="Status" error={errors.status}>
               <Select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
-                options={DRUG_STATUS_OPTIONS}
+                options={DRUG_STATUS_OPTIONS_FORM}
               />
             </FormField>
           </div>
@@ -1006,11 +1014,11 @@ export default function InventoryPage() {
               />
             </FormField>
 
-            <FormField label="Status" required error={errors.status}>
+            <FormField label="Status" error={errors.status}>
               <Select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
-                options={DRUG_STATUS_OPTIONS}
+                options={DRUG_STATUS_OPTIONS_FORM}
               />
             </FormField>
           </div>
