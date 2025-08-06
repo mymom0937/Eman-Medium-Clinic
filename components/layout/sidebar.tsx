@@ -44,12 +44,7 @@ const navigationItems = [
     icon: '📦',
     roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.PHARMACIST],
   },
-  {
-    name: 'Sales',
-    href: ROUTES.SALES,
-    icon: '💰',
-    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.PHARMACIST],
-  },
+
   {
     name: 'Payments',
     href: ROUTES.PAYMENTS,

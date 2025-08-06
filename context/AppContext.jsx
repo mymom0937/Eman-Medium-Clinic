@@ -30,11 +30,8 @@ export const AppContextProvider = (props) => {
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   
-  // Sales & Payments State
-  const [sales, setSales] = useState([]);
+  // Payments State
   const [payments, setPayments] = useState([]);
-  const [todaySales, setTodaySales] = useState(0);
-  const [monthlySales, setMonthlySales] = useState(0);
   
   // Services State
   const [services, setServices] = useState([]);
@@ -44,7 +41,6 @@ export const AppContextProvider = (props) => {
   const [dashboardStats, setDashboardStats] = useState({
     totalPatients: 0,
     totalDrugs: 0,
-    totalSales: 0,
     totalServices: 0,
     lowStockCount: 0,
     pendingPayments: 0,
@@ -130,45 +126,7 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // Fetch sales data
-  const fetchSales = async () => {
-    try {
-      const token = await getToken();
-      const { data } = await axios.get("/api/sales", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (data.success) {
-        setSales(data.sales);
-        
-        // Calculate today's sales
-        const today = new Date();
-        const todaySalesData = data.sales.filter(sale => {
-          const saleDate = new Date(sale.createdAt);
-          return saleDate.toDateString() === today.toDateString();
-        });
-        const todayTotal = todaySalesData.reduce((sum, sale) => sum + sale.totalAmount, 0);
-        setTodaySales(todayTotal);
-        
-        // Calculate monthly sales
-        const thisMonth = today.getMonth();
-        const thisYear = today.getFullYear();
-        const monthlySalesData = data.sales.filter(sale => {
-          const saleDate = new Date(sale.createdAt);
-          return saleDate.getMonth() === thisMonth && saleDate.getFullYear() === thisYear;
-        });
-        const monthlyTotal = monthlySalesData.reduce((sum, sale) => sum + sale.totalAmount, 0);
-        setMonthlySales(monthlyTotal);
-      } else {
-        toast.error(data.message || "Failed to load sales data");
-      }
-    } catch (error) {
-      console.error("Error fetching sales:", error);
-      toast.error("Failed to load sales data");
-    }
-  };
+
 
   // Fetch services
   const fetchServices = async () => {
@@ -238,7 +196,6 @@ export const AppContextProvider = (props) => {
     setDashboardStats({
       totalPatients: patients.length,
       totalDrugs: drugs.length,
-      totalSales: sales.length,
       totalServices: services.length,
       lowStockCount: lowStockDrugs.length,
       pendingPayments: payments.filter(payment => payment.paymentStatus === 'PENDING').length,
@@ -295,31 +252,7 @@ export const AppContextProvider = (props) => {
     }
   };
 
-  // Record new sale
-  const recordSale = async (saleData) => {
-    try {
-      const token = await getToken();
-      const { data } = await axios.post("/api/sales", saleData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (data.success) {
-        toast.success("Sale recorded successfully");
-        await fetchSales();
-        await fetchDrugs(); // Update inventory
-        return true;
-      } else {
-        toast.error(data.message || "Failed to record sale");
-        return false;
-      }
-    } catch (error) {
-      console.error("Error recording sale:", error);
-      toast.error("Failed to record sale");
-      return false;
-    }
-  };
+
 
   // Record payment
   const recordPayment = async (paymentData) => {
@@ -377,7 +310,6 @@ export const AppContextProvider = (props) => {
     setUserRole(null);
     setDrugs([]);
     setPatients([]);
-    setSales([]);
     setPayments([]);
     setServices([]);
     setServiceBookings([]);
@@ -385,7 +317,6 @@ export const AppContextProvider = (props) => {
     setDashboardStats({
       totalPatients: 0,
       totalDrugs: 0,
-      totalSales: 0,
       totalServices: 0,
       lowStockCount: 0,
       pendingPayments: 0,
@@ -406,7 +337,6 @@ export const AppContextProvider = (props) => {
     if (userData && userRole) {
       fetchDrugs();
       fetchPatients();
-      fetchSales();
       fetchServices();
       fetchServiceBookings();
       fetchPayments();
@@ -416,7 +346,7 @@ export const AppContextProvider = (props) => {
   // Update dashboard stats when data changes
   useEffect(() => {
     updateDashboardStats();
-  }, [drugs, patients, sales, services, lowStockDrugs, payments]);
+  }, [drugs, patients, services, lowStockDrugs, payments]);
 
   const value = {
     // User data
@@ -439,14 +369,9 @@ export const AppContextProvider = (props) => {
     fetchPatients,
     addPatient,
     
-    // Sales & payments
-    sales,
+    // Payments
     payments,
-    todaySales,
-    monthlySales,
-    fetchSales,
     fetchPayments,
-    recordSale,
     recordPayment,
     
     // Services

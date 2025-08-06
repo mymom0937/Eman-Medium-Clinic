@@ -475,17 +475,17 @@ export default function LabResultsPage() {
             </div>
 
             <Table>
-                              <TableHeader>
-                  <TableRow>
-                    <TableHead>Lab Result ID</TableHead>
-                    <TableHead>Patient</TableHead>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Lab Result ID</TableHead>
+                  <TableHead>Patient</TableHead>
                     <TableHead>Test Types</TableHead>
-                    <TableHead>Test Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Requested</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
+                  <TableHead>Test Name</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Requested</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
                 {filteredLabResults.map((result) => (
                   <TableRow key={result._id}>

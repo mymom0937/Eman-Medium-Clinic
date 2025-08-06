@@ -18,16 +18,7 @@ export const API_ENDPOINTS = {
     LOW_STOCK: '/api/drugs/low-stock',
   },
 
-  // Sales
-  SALES: {
-    LIST: '/api/sales',
-    CREATE: '/api/sales',
-    UPDATE: (id: string) => `/api/sales/${id}`,
-    DELETE: (id: string) => `/api/sales/${id}`,
-    GET_BY_ID: (id: string) => `/api/sales/${id}`,
-    ANALYTICS: '/api/sales/analytics',
-    DAILY_REPORT: '/api/sales/daily-report',
-  },
+
 
   // Patients
   PATIENTS: {
@@ -85,7 +76,6 @@ export const API_ENDPOINTS = {
 
   // Reports
   REPORTS: {
-    SALES: '/api/reports/sales',
     INVENTORY: '/api/reports/inventory',
     PATIENTS: '/api/reports/patients',
     LAB_RESULTS: '/api/reports/lab-results',

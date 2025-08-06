@@ -4,7 +4,6 @@ export const ROUTES = {
   SIGN_UP: '/sign-up',
   DASHBOARD: '/dashboard',
   INVENTORIES: '/inventories',
-  SALES: '/sales',
   PATIENTS: '/patients',
   PAYMENTS: '/payments',
   LAB_RESULTS: '/lab-results',
@@ -16,7 +15,6 @@ export const ROUTES = {
 export const PROTECTED_ROUTES = [
   ROUTES.DASHBOARD,
   ROUTES.INVENTORIES,
-  ROUTES.SALES,
   ROUTES.PATIENTS,
   ROUTES.PAYMENTS,
   ROUTES.LAB_RESULTS,

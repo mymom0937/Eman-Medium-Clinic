@@ -7,28 +7,63 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { PageLoader } from '@/components/common/loading-spinner';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import { Modal } from '@/components/ui/modal';
-import { FormField, Input, Select, Button } from '@/components/ui/form';
+import { FormField, Input, Select, Button, TextArea } from '@/components/ui/form';
 import { toastManager } from '@/lib/utils/toast';
 
 interface Payment {
   _id: string;
   paymentId: string;
   patientId: string;
+  patientName: string;
+  
+  // Order Integration
+  orderId?: string;           // Reference to drug order or lab order
+  orderType?: 'DRUG_ORDER' | 'LAB_TEST' | 'CONSULTATION' | 'OTHER';
+  orderReference?: string;     // Human-readable order reference
+  drugOrderId?: string;       // Actual drug order ID (DRG000001 format)
+  
+  // Payment Details
   amount: number;
   paymentMethod: string;
   paymentStatus: string;
+  
+  // Enhanced for Drug Sales
+  paymentType: 'DRUG_SALE' | 'LAB_TEST' | 'CONSULTATION' | 'OTHER';
+  
+  // Drug Sale Specific Fields (when paymentType === 'DRUG_SALE')
+  items?: Array<{
+    drugId: string;
+    drugName: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  }>;
+  
+  // General Payment Fields
+  discount: number;
+  finalAmount: number;
   transactionReference?: string;
   notes?: string;
+  
+  // Metadata
   recordedBy: string;
   createdAt: string;
   updatedAt: string;
+  
+  // UI-specific properties
+  fullDescription?: string;    // For displaying full description in modal
 }
 
 interface PaymentStats {
   totalRevenue: number;
+  totalDrugSales: number;
+  totalLabPayments: number;
+  totalConsultations: number;
   pendingAmount: number;
   completedPayments: number;
   totalTransactions: number;
+  averageTransaction: number;
+  todayRevenue: number;
 }
 
 // This will be replaced with dynamic data from the database
@@ -59,11 +94,17 @@ export default function PaymentsPage() {
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
+  const [drugOrders, setDrugOrders] = useState<any[]>([]);
   const [stats, setStats] = useState<PaymentStats>({
     totalRevenue: 0,
+    totalDrugSales: 0,
+    totalLabPayments: 0,
+    totalConsultations: 0,
     pendingAmount: 0,
     completedPayments: 0,
     totalTransactions: 0,
+    averageTransaction: 0,
+    todayRevenue: 0,
   });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -71,11 +112,72 @@ export default function PaymentsPage() {
     patientId: '',
     patientName: '',
     amount: '',
-    paymentMethod: 'cash',
-    status: 'completed',
-    reference: '',
+    paymentMethod: '',
+    paymentStatus: '',
+    transactionReference: '',
+    orderId: '',
+    orderType: '',
+    orderReference: '',
+    drugOrderId: '',
+    paymentType: 'OTHER',
+    items: [] as Array<{
+      drugId: string;
+      drugName: string;
+      quantity: number;
+      unitPrice: number;
+      totalPrice: number;
+    }>,
+    discount: '0',
+    finalAmount: '',
+    notes: '',
   });
   const [errors, setErrors] = useState<any>({});
+
+  // Enhanced stats calculation
+  const calculateStats = (paymentsData: Payment[]) => {
+    const totalRevenue = paymentsData.reduce((sum, payment) => sum + (payment.finalAmount || payment.amount), 0);
+    const totalTransactions = paymentsData.length;
+    const averageTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+    
+    // Calculate by payment type
+    const totalDrugSales = paymentsData
+      .filter(payment => payment.paymentType === 'DRUG_SALE')
+      .reduce((sum, payment) => sum + (payment.finalAmount || payment.amount), 0);
+      
+    const totalLabPayments = paymentsData
+      .filter(payment => payment.paymentType === 'LAB_TEST')
+      .reduce((sum, payment) => sum + (payment.finalAmount || payment.amount), 0);
+      
+    const totalConsultations = paymentsData
+      .filter(payment => payment.paymentType === 'CONSULTATION')
+      .reduce((sum, payment) => sum + (payment.finalAmount || payment.amount), 0);
+    
+    const pendingAmount = paymentsData
+      .filter(payment => payment.paymentStatus === 'PENDING')
+      .reduce((sum, payment) => sum + (payment.finalAmount || payment.amount), 0);
+      
+    const completedPayments = paymentsData.filter(payment => payment.paymentStatus === 'COMPLETED').length;
+    
+    const today = new Date();
+    const todayRevenue = paymentsData
+      .filter(payment => {
+        const paymentDate = new Date(payment.createdAt);
+        return paymentDate.toDateString() === today.toDateString();
+      })
+      .reduce((sum, payment) => sum + (payment.finalAmount || payment.amount), 0);
+
+    return {
+            totalRevenue,
+      totalDrugSales,
+      totalLabPayments,
+      totalConsultations,
+            pendingAmount,
+            completedPayments,
+            totalTransactions,
+      averageTransaction,
+      todayRevenue,
+    };
+  };
 
   // Load payments and patients data on component mount
   useEffect(() => {
@@ -85,37 +187,41 @@ export default function PaymentsPage() {
       try {
         setInitialLoading(true);
         
-        // Fetch payments and patients in parallel
-        const [paymentsResponse, patientsResponse] = await Promise.all([
-          fetch('/api/payments'),
-          fetch('/api/patients')
-        ]);
-        
+        const paymentsResponse = await fetch('/api/payments');
         const paymentsResult = await paymentsResponse.json();
-        const patientsResult = await patientsResponse.json();
-        
         if (paymentsResponse.ok && paymentsResult.success) {
-          setPayments(paymentsResult.data);
-          
-          // Calculate stats
-          const totalRevenue = paymentsResult.data.reduce((sum: number, payment: Payment) => 
-            payment.paymentStatus === 'COMPLETED' ? sum + payment.amount : sum, 0);
-          const pendingAmount = paymentsResult.data.reduce((sum: number, payment: Payment) => 
-            payment.paymentStatus === 'PENDING' ? sum + payment.amount : sum, 0);
-          const completedPayments = paymentsResult.data.filter((payment: Payment) => payment.paymentStatus === 'COMPLETED').length;
-          const totalTransactions = paymentsResult.data.length;
-
-          setStats({
-            totalRevenue,
-            pendingAmount,
-            completedPayments,
-            totalTransactions,
-          });
+          setPayments(paymentsResult.data || []);
+          const stats = calculateStats(paymentsResult.data || []);
+          setStats(stats);
         }
 
+        const patientsResponse = await fetch('/api/patients');
+        const patientsResult = await patientsResponse.json();
         if (patientsResponse.ok && patientsResult.success) {
-          setPatients(patientsResult.data);
+          setPatients(patientsResult.data || []);
         }
+        
+        // TODO: Uncomment when API is ready
+        // // Fetch payments and patients in parallel
+        // const [paymentsResponse, patientsResponse] = await Promise.all([
+        //   fetch('/api/payments'),
+        //   fetch('/api/patients')
+        // ]);
+        
+        // const paymentsResult = await paymentsResponse.json();
+        // const patientsResult = await patientsResponse.json();
+        
+        // if (paymentsResponse.ok && paymentsResult.success) {
+        //   setPayments(paymentsResult.data);
+          
+        //   // Calculate enhanced stats
+        //   const calculatedStats = calculateStats(paymentsResult.data);
+        //   setStats(calculatedStats);
+        // }
+
+        // if (patientsResponse.ok && patientsResult.success) {
+        //   setPatients(patientsResult.data);
+        // }
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -141,10 +247,17 @@ export default function PaymentsPage() {
   }
 
   // Prepare dynamic options for patients
-  const PATIENT_OPTIONS = patients.map(patient => ({
+  const PATIENT_OPTIONS = [
+    { value: '', label: 'Select Patient' },
+    ...patients.map(patient => ({
     value: patient.patientId,
     label: `${patient.firstName} ${patient.lastName} (${patient.patientId})`
-  }));
+    }))
+  ];
+
+
+
+
 
   // Filter payments based on search, status, and method
   const filteredPayments = payments.filter(payment => {
@@ -154,6 +267,8 @@ export default function PaymentsPage() {
     const matchesMethod = selectedMethod === 'all' || payment.paymentMethod.toLowerCase().replace('_', '') === selectedMethod;
     return matchesSearch && matchesStatus && matchesMethod;
   });
+
+
 
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
@@ -213,8 +328,8 @@ export default function PaymentsPage() {
     if (!formData.paymentMethod) {
       newErrors.paymentMethod = 'Payment method is required';
     }
-    if (!formData.status) {
-      newErrors.status = 'Status is required';
+    if (!formData.paymentStatus) {
+      newErrors.paymentStatus = 'Payment status is required';
     }
 
     setErrors(newErrors);
@@ -226,60 +341,138 @@ export default function PaymentsPage() {
 
     setLoading(true);
     try {
-      const paymentData = {
-        patientId: formData.patientId,
-        patientName: formData.patientName,
-        amount: parseFloat(formData.amount),
-        method: formData.paymentMethod,
-        status: formData.status,
-        reference: formData.reference,
-        processedBy: userName || 'System',
-      };
-
       const response = await fetch('/api/payments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(paymentData),
+        body: JSON.stringify({
+          patientId: formData.patientId,
+          patientName: formData.patientName,
+          amount: parseFloat(formData.amount),
+          paymentMethod: formData.paymentMethod,
+          paymentStatus: formData.paymentStatus,
+          transactionReference: formData.transactionReference,
+          notes: formData.notes,
+          orderId: formData.orderId,
+          orderType: formData.orderType,
+          orderReference: formData.orderReference,
+          drugOrderId: formData.drugOrderId,
+          paymentType: formData.paymentType,
+          items: formData.items,
+          discount: parseFloat(formData.discount),
+          finalAmount: parseFloat(formData.finalAmount) || parseFloat(formData.amount),
+          recordedBy: userName || 'Unknown',
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create payment');
-      }
-
-      // Reload payments data
+      const result = await response.json();
+      if (response.ok && result.success) {
+        toastManager.success('Payment recorded successfully!');
+        setIsNewPaymentModalOpen(false);
+        resetForm();
+        // Reload data
+        const loadData = async () => {
       const paymentsResponse = await fetch('/api/payments');
       const paymentsResult = await paymentsResponse.json();
-      
       if (paymentsResponse.ok && paymentsResult.success) {
-        setPayments(paymentsResult.data);
-        
-        // Recalculate stats
-        const totalRevenue = paymentsResult.data.reduce((sum: number, payment: Payment) => 
-          payment.paymentStatus === 'COMPLETED' ? sum + payment.amount : sum, 0);
-        const pendingAmount = paymentsResult.data.reduce((sum: number, payment: Payment) => 
-          payment.paymentStatus === 'PENDING' ? sum + payment.amount : sum, 0);
-        const completedPayments = paymentsResult.data.filter((payment: Payment) => payment.paymentStatus === 'COMPLETED').length;
-        const totalTransactions = paymentsResult.data.length;
-
-        setStats({
-          totalRevenue,
-          pendingAmount,
-          completedPayments,
-          totalTransactions,
-        });
+            setPayments(paymentsResult.data || []);
+            const stats = calculateStats(paymentsResult.data || []);
+            setStats(stats);
+          }
+        };
+        loadData();
+      } else {
+        toastManager.error(result.message || 'Failed to record payment');
       }
-
-      setIsNewPaymentModalOpen(false);
-      resetForm();
-      toastManager.success('Payment recorded successfully!');
     } catch (error) {
       console.error('Error creating payment:', error);
       toastManager.error('Failed to record payment. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch drug orders for a specific patient
+  const fetchDrugOrdersForPatient = async (patientId: string) => {
+    if (!patientId) {
+      setDrugOrders([]);
+      return;
+    }
+
+    try {
+      // First, try to fetch all orders for the patient without status filter
+      const allOrdersResponse = await fetch(`/api/drug-orders?patientId=${patientId}`);
+      const allOrdersResult = await allOrdersResponse.json();
+      
+      if (allOrdersResponse.ok) {
+        // The API returns the data directly, not wrapped in success/data
+        const orders = Array.isArray(allOrdersResult) ? allOrdersResult : [];
+        
+        // Filter to show only approved and dispensed orders
+        const validOrders = orders.filter((order: any) => 
+          order.status === 'APPROVED' || order.status === 'DISPENSED'
+        ) || [];
+        setDrugOrders(validOrders);
+      } else {
+        setDrugOrders([]);
+      }
+    } catch (error) {
+      console.error('Error fetching drug orders:', error);
+      setDrugOrders([]);
+    }
+  };
+
+  // Enhanced helper functions for drug sales
+  const handlePaymentTypeChange = (paymentType: string) => {
+    setFormData(prev => ({
+      ...prev,
+      paymentType,
+      items: paymentType === 'DRUG_SALE' ? [] : prev.items,
+      amount: paymentType !== 'DRUG_SALE' ? prev.amount : '',
+    }));
+  };
+
+  const addItem = () => {
+    const newItem = {
+      drugId: '',
+      drugName: '',
+      quantity: 1,
+      unitPrice: 0,
+      totalPrice: 0,
+    };
+    setFormData(prev => ({
+      ...prev,
+      items: [...prev.items, newItem]
+    }));
+  };
+
+  const updateItem = (index: number, field: string, value: any) => {
+    const updatedItems = [...formData.items];
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    
+    // Recalculate total price
+    if (field === 'quantity' || field === 'unitPrice') {
+      updatedItems[index].totalPrice = 
+        updatedItems[index].quantity * updatedItems[index].unitPrice;
+    }
+    
+    setFormData(prev => ({ ...prev, items: updatedItems }));
+  };
+
+  const removeItem = (index: number) => {
+    const updatedItems = formData.items.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, items: updatedItems }));
+  };
+
+  const calculateSubtotal = () => {
+    return formData.items.reduce((sum, item) => sum + item.totalPrice, 0);
+  };
+
+  const calculateFinalAmount = () => {
+    const subtotal = calculateSubtotal();
+    const discount = parseFloat(formData.discount) || 0;
+    return subtotal - discount;
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -298,12 +491,31 @@ export default function PaymentsPage() {
     setEditingPayment(payment);
     setFormData({
       patientId: payment.patientId,
-      patientName: payment.patientId, // This will be updated with actual patient name
+      patientName: payment.patientName,
       amount: payment.amount.toString(),
       paymentMethod: payment.paymentMethod.toLowerCase(),
-      status: payment.paymentStatus.toLowerCase(),
-      reference: payment.transactionReference || '',
+      paymentStatus: payment.paymentStatus.toLowerCase(),
+      transactionReference: payment.transactionReference || '',
+      notes: payment.notes || '',
+      
+      // Order Integration
+      orderId: payment.orderId || '',
+      orderType: payment.orderType || 'DRUG_ORDER',
+      orderReference: payment.orderReference || '',
+      drugOrderId: payment.drugOrderId || '',
+      
+      // Enhanced Fields for Drug Sales
+      paymentType: payment.paymentType || 'DRUG_SALE',
+      items: payment.items || [],
+      discount: payment.discount?.toString() || '0',
+      finalAmount: payment.finalAmount?.toString() || '',
     });
+    
+    // Fetch drug orders for the patient if they have an orderId
+    if (payment.patientId) {
+      fetchDrugOrdersForPatient(payment.patientId);
+    }
+    
     setIsEditPaymentModalOpen(true);
   };
 
@@ -315,34 +527,20 @@ export default function PaymentsPage() {
         method: 'DELETE',
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete payment');
-      }
-
-      // Reload payments data
+      const result = await response.json();
+      if (response.ok && result.success) {
+        toastManager.success('Payment deleted successfully!');
+        // Reload data
       const paymentsResponse = await fetch('/api/payments');
       const paymentsResult = await paymentsResponse.json();
-      
       if (paymentsResponse.ok && paymentsResult.success) {
-        setPayments(paymentsResult.data);
-        
-        // Recalculate stats
-        const totalRevenue = paymentsResult.data.reduce((sum: number, payment: Payment) => 
-          payment.paymentStatus === 'COMPLETED' ? sum + payment.amount : sum, 0);
-        const pendingAmount = paymentsResult.data.reduce((sum: number, payment: Payment) => 
-          payment.paymentStatus === 'PENDING' ? sum + payment.amount : sum, 0);
-        const completedPayments = paymentsResult.data.filter((payment: Payment) => payment.paymentStatus === 'COMPLETED').length;
-        const totalTransactions = paymentsResult.data.length;
-
-        setStats({
-          totalRevenue,
-          pendingAmount,
-          completedPayments,
-          totalTransactions,
-        });
+          setPayments(paymentsResult.data || []);
+          const stats = calculateStats(paymentsResult.data || []);
+          setStats(stats);
+        }
+      } else {
+        toastManager.error(result.message || 'Failed to delete payment');
       }
-
-      toastManager.success('Payment deleted successfully!');
     } catch (error) {
       console.error('Error deleting payment:', error);
       toastManager.error('Failed to delete payment. Please try again.');
@@ -354,11 +552,27 @@ export default function PaymentsPage() {
       patientId: '',
       patientName: '',
       amount: '',
-      paymentMethod: 'cash',
-      status: 'completed',
-      reference: '',
+      paymentMethod: '',
+      paymentStatus: '',
+      transactionReference: '',
+      orderId: '',
+      orderType: '',
+      orderReference: '',
+      drugOrderId: '',
+      paymentType: 'OTHER',
+      items: [] as Array<{
+        drugId: string;
+        drugName: string;
+        quantity: number;
+        unitPrice: number;
+        totalPrice: number;
+      }>,
+      discount: '0',
+      finalAmount: '',
+      notes: '',
     });
     setErrors({});
+    setDrugOrders([]);
   };
 
   const handleUpdatePayment = async () => {
@@ -366,57 +580,48 @@ export default function PaymentsPage() {
 
     setLoading(true);
     try {
-      const paymentData = {
-        paymentId: editingPayment.paymentId,
-        patientId: formData.patientId,
-        patientName: formData.patientName,
-        amount: parseFloat(formData.amount),
-        method: formData.paymentMethod,
-        status: formData.status.toUpperCase(),
-        reference: formData.reference,
-        processedBy: userName || 'System',
-      };
-
-      const response = await fetch('/api/payments', {
+      const response = await fetch(`/api/payments/${editingPayment._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(paymentData),
+        body: JSON.stringify({
+          patientId: formData.patientId,
+          patientName: formData.patientName,
+          amount: parseFloat(formData.amount),
+          paymentMethod: formData.paymentMethod,
+          paymentStatus: formData.paymentStatus,
+          transactionReference: formData.transactionReference,
+          notes: formData.notes,
+          orderId: formData.orderId,
+          orderType: formData.orderType,
+          orderReference: formData.orderReference,
+          drugOrderId: formData.drugOrderId,
+          paymentType: formData.paymentType,
+          items: formData.items,
+          discount: parseFloat(formData.discount),
+          finalAmount: parseFloat(formData.finalAmount) || parseFloat(formData.amount),
+          recordedBy: userName || 'Unknown',
+        }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update payment');
-      }
-
-      // Reload payments data
+      const result = await response.json();
+      if (response.ok && result.success) {
+        toastManager.success('Payment updated successfully!');
+        setIsEditPaymentModalOpen(false);
+        setEditingPayment(null);
+        resetForm();
+        // Reload data
       const paymentsResponse = await fetch('/api/payments');
       const paymentsResult = await paymentsResponse.json();
-      
       if (paymentsResponse.ok && paymentsResult.success) {
-        setPayments(paymentsResult.data);
-        
-        // Recalculate stats
-        const totalRevenue = paymentsResult.data.reduce((sum: number, payment: Payment) => 
-          payment.paymentStatus === 'COMPLETED' ? sum + payment.amount : sum, 0);
-        const pendingAmount = paymentsResult.data.reduce((sum: number, payment: Payment) => 
-          payment.paymentStatus === 'PENDING' ? sum + payment.amount : sum, 0);
-        const completedPayments = paymentsResult.data.filter((payment: Payment) => payment.paymentStatus === 'COMPLETED').length;
-        const totalTransactions = paymentsResult.data.length;
-
-        setStats({
-          totalRevenue,
-          pendingAmount,
-          completedPayments,
-          totalTransactions,
-        });
+          setPayments(paymentsResult.data || []);
+          const stats = calculateStats(paymentsResult.data || []);
+          setStats(stats);
+        }
+      } else {
+        toastManager.error(result.message || 'Failed to update payment');
       }
-
-      setIsEditPaymentModalOpen(false);
-      setEditingPayment(null);
-      resetForm();
-      toastManager.success('Payment updated successfully!');
     } catch (error) {
       console.error('Error updating payment:', error);
       toastManager.error('Failed to update payment. Please try again.');
@@ -432,82 +637,65 @@ export default function PaymentsPage() {
     }
 
     try {
-      const response = await fetch('/api/payments', {
+      const response = await fetch(`/api/payments/${paymentId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          paymentId: paymentId,
-          status: newStatus.toUpperCase(),
-          processedBy: userName || 'System',
+          paymentStatus: newStatus,
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update payment status');
-      }
-
-      // Reload payments data
+      const result = await response.json();
+      if (response.ok && result.success) {
+        toastManager.success('Payment status updated successfully!');
+        // Reload data
       const paymentsResponse = await fetch('/api/payments');
       const paymentsResult = await paymentsResponse.json();
-      
       if (paymentsResponse.ok && paymentsResult.success) {
-        setPayments(paymentsResult.data);
-        
-        // Recalculate stats
-        const totalRevenue = paymentsResult.data.reduce((sum: number, payment: Payment) => 
-          payment.paymentStatus === 'COMPLETED' ? sum + payment.amount : sum, 0);
-        const pendingAmount = paymentsResult.data.reduce((sum: number, payment: Payment) => 
-          payment.paymentStatus === 'PENDING' ? sum + payment.amount : sum, 0);
-        const completedPayments = paymentsResult.data.filter((payment: Payment) => payment.paymentStatus === 'COMPLETED').length;
-        const totalTransactions = paymentsResult.data.length;
-
-        setStats({
-          totalRevenue,
-          pendingAmount,
-          completedPayments,
-          totalTransactions,
-        });
+          setPayments(paymentsResult.data || []);
+          const stats = calculateStats(paymentsResult.data || []);
+          setStats(stats);
+        }
+      } else {
+        toastManager.error(result.message || 'Failed to update payment status');
       }
-
-      toastManager.success('Payment status updated successfully!');
     } catch (error) {
       console.error('Error updating payment status:', error);
       toastManager.error('Failed to update payment status. Please try again.');
     }
   };
 
-  // Prepare stats for display
+  // Prepare enhanced stats for display
   const displayStats = [
     {
       title: 'Total Revenue',
-      value: `$${stats.totalRevenue.toFixed(2)}`,
-      change: '+8% from last month',
+      value: `ETB ${stats.totalRevenue.toFixed(2)}`,
+      change: '+12% from last month',
       changeType: 'positive' as const,
-      icon: '💵',
+      icon: '💰',
+    },
+    {
+      title: 'Drug Sales',
+      value: `ETB ${stats.totalDrugSales.toFixed(2)}`,
+      change: '+8% from last week',
+      changeType: 'positive' as const,
+      icon: '💊',
+    },
+    {
+      title: 'Lab Payments',
+      value: `ETB ${stats.totalLabPayments.toFixed(2)}`,
+      change: '+15% from last month',
+      changeType: 'positive' as const,
+      icon: '🔬',
     },
     {
       title: 'Pending Amount',
-      value: `$${stats.pendingAmount.toFixed(2)}`,
-      change: '-12% from last week',
+      value: `ETB ${stats.pendingAmount.toFixed(2)}`,
+      change: '-5% from yesterday',
       changeType: 'negative' as const,
       icon: '⏳',
-    },
-    {
-      title: 'Completed Payments',
-      value: stats.completedPayments.toString(),
-      change: '+15% from last month',
-      changeType: 'positive' as const,
-      icon: '✅',
-    },
-    {
-      title: 'Total Transactions',
-      value: stats.totalTransactions.toString(),
-      change: '+22% from last month',
-      changeType: 'positive' as const,
-      icon: '💳',
     },
   ];
 
@@ -545,7 +733,7 @@ export default function PaymentsPage() {
           <div className="flex gap-4 mb-6">
             <input
               type="text"
-              placeholder="Search payments by ID, patient, or reference..."
+              placeholder="Search payments by ID, patient, or drug order..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1 border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary placeholder-text-muted bg-background"
@@ -580,10 +768,16 @@ export default function PaymentsPage() {
               <thead className="bg-card-bg">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Payment ID
+                    <div className="block">
+                      <span className="block">Payment ID</span>
+                      <span className="block">Patient ID</span>
+                    </div>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Patient
+                    <div className="block">
+                      <span className="block">Patient Name</span>
+                      <span className="block">Drug Order ID</span>
+                    </div>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
                     Amount
@@ -606,10 +800,25 @@ export default function PaymentsPage() {
                 {filteredPayments.map((payment) => (
                   <tr key={payment._id} className="hover:bg-card-bg">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                      {payment.paymentId}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{payment.paymentId}</span>
+                        <span className="text-xs text-text-muted">{payment.patientId}</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
-                      {payment.patientId}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{payment.patientName}</span>
+                        <span className="text-xs text-text-muted">
+                          {(() => {
+                            // Priority: drugOrderId > orderReference > orderId
+                            const orderId = payment.drugOrderId || payment.orderReference || payment.orderId;
+                            return orderId ? orderId : 'N/A';
+                          })()}
+                        </span>
+                        <span className="text-xs text-text-muted">
+                          {payment.orderId ? `Order: ${payment.orderId}` : 'No Order'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
                       ETB {payment.amount.toFixed(2)}
@@ -677,28 +886,31 @@ export default function PaymentsPage() {
         isOpen={isNewPaymentModalOpen}
         onClose={() => {
           setIsNewPaymentModalOpen(false);
-          setFormData({
-            patientId: '',
-            patientName: '',
-            amount: '',
-            paymentMethod: 'cash',
-            status: 'completed',
-            reference: '',
-          });
-          setErrors({});
+          resetForm();
         }}
         title="Record New Payment"
         size="lg"
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Patient" required error={errors.patientName}>
+            <FormField label="Patient" required error={errors.patientId}>
               <Select
                 value={formData.patientId}
                 onChange={(e) => {
                   const selectedPatient = patients.find(p => p.patientId === e.target.value);
                   handleInputChange('patientId', e.target.value);
                   handleInputChange('patientName', selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : '');
+                  
+                  // Fetch drug orders for the selected patient
+                  if (e.target.value) {
+                    fetchDrugOrdersForPatient(e.target.value);
+                  } else {
+                    setDrugOrders([]);
+                  }
+                  
+                  // Reset order-related fields when patient changes
+                  handleInputChange('orderId', '');
+                  handleInputChange('orderReference', '');
                 }}
                 options={PATIENT_OPTIONS}
               />
@@ -735,10 +947,10 @@ export default function PaymentsPage() {
               />
             </FormField>
 
-            <FormField label="Status" required error={errors.status}>
+            <FormField label="Status" required error={errors.paymentStatus}>
               <Select
-                value={formData.status}
-                onChange={(e) => handleInputChange('status', e.target.value)}
+                value={formData.paymentStatus}
+                onChange={(e) => handleInputChange('paymentStatus', e.target.value)}
                 options={[
                   { value: 'completed', label: 'Completed' },
                   { value: 'pending', label: 'Pending' },
@@ -748,27 +960,51 @@ export default function PaymentsPage() {
             </FormField>
             <FormField label="Reference Number">
               <Input
-                value={formData.reference}
-                onChange={(e) => handleInputChange('reference', e.target.value)}
+                value={formData.transactionReference}
+                onChange={(e) => handleInputChange('transactionReference', e.target.value)}
                 placeholder="Enter reference number (optional)"
               />
             </FormField>
           </div>
+
+          <FormField label="Drug Order ID (Optional)" error={errors.orderId}>
+            <Select
+              value={formData.orderId}
+              onChange={(e) => {
+                const selectedOrder = drugOrders.find(order => order._id === e.target.value);
+                handleInputChange('orderId', e.target.value);
+                // Use drugOrderId if available, otherwise use _id as fallback
+                const orderReference = selectedOrder ? (selectedOrder.drugOrderId || selectedOrder._id) : '';
+                handleInputChange('orderReference', orderReference);
+                handleInputChange('drugOrderId', orderReference);
+                handleInputChange('orderType', 'DRUG_ORDER');
+              }}
+              options={[
+                { value: '', label: 'Select Drug Order (Optional)' },
+                ...drugOrders.map(order => ({
+                  value: order._id,
+                  label: `${order.drugOrderId || order._id} - ${order.patientName || 'Unknown Patient'}`
+                }))
+              ]}
+              disabled={!formData.patientId || drugOrders.length === 0}
+            />
+          </FormField>
+
+          <FormField label="Notes/Description (Optional)" error={errors.notes}>
+            <TextArea
+              value={formData.notes}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
+              placeholder="Enter payment description or notes..."
+              rows={3}
+            />
+          </FormField>
 
           <div className="flex justify-end space-x-3 pt-4">
             <Button
               variant="secondary"
               onClick={() => {
                 setIsNewPaymentModalOpen(false);
-                          setFormData({
-            patientId: '',
-            patientName: '',
-            amount: '',
-            paymentMethod: 'cash',
-            status: 'completed',
-            reference: '',
-          });
-                setErrors({});
+                resetForm();
               }}
             >
               Cancel
@@ -798,11 +1034,11 @@ export default function PaymentsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-muted">Payment ID</label>
-                <p className="mt-1 text-sm text-text-primary">{viewingPayment._id}</p>
+                <p className="mt-1 text-sm text-text-primary">{viewingPayment.paymentId || viewingPayment._id}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-muted">Patient</label>
-                <p className="mt-1 text-sm text-text-primary">{viewingPayment.patientId}</p>
+                <p className="mt-1 text-sm text-text-primary">{viewingPayment.patientName || viewingPayment.patientId}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-muted">Amount</label>
@@ -823,6 +1059,22 @@ export default function PaymentsPage() {
                 <p className="mt-1 text-sm text-text-primary">{viewingPayment.createdAt ? new Date(viewingPayment.createdAt).toLocaleDateString() : 'Invalid Date'}</p>
               </div>
             </div>
+            
+            {/* Full Description Section */}
+            {(viewingPayment.fullDescription || viewingPayment.notes || (viewingPayment.items && viewingPayment.items.length > 0)) && (
+              <div className="border-t border-border-color pt-4">
+                <label className="block text-sm font-medium text-text-muted mb-2">Full Description</label>
+                <div className="bg-card-bg rounded-md p-3 border border-border-color">
+                  <p className="text-sm text-text-primary whitespace-pre-wrap">
+                    {viewingPayment.fullDescription || 
+                     (viewingPayment.paymentType === 'DRUG_SALE' 
+                       ? viewingPayment.items?.map(item => `${item.drugName} (${item.quantity})`).join(', ')
+                       : viewingPayment.notes) || 
+                     'No description available'}
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="flex justify-end pt-4">
               <Button
                 variant="secondary"
@@ -851,13 +1103,24 @@ export default function PaymentsPage() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Patient" required error={errors.patientName}>
+            <FormField label="Patient" required error={errors.patientId}>
               <Select
                 value={formData.patientId}
                 onChange={(e) => {
                   const selectedPatient = patients.find(p => p.patientId === e.target.value);
                   handleInputChange('patientId', e.target.value);
                   handleInputChange('patientName', selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : '');
+                  
+                  // Fetch drug orders for the selected patient
+                  if (e.target.value) {
+                    fetchDrugOrdersForPatient(e.target.value);
+                  } else {
+                    setDrugOrders([]);
+                  }
+                  
+                  // Reset order-related fields when patient changes
+                  handleInputChange('orderId', '');
+                  handleInputChange('orderReference', '');
                 }}
                 options={PATIENT_OPTIONS}
               />
@@ -894,10 +1157,10 @@ export default function PaymentsPage() {
               />
             </FormField>
 
-            <FormField label="Status" required error={errors.status}>
+            <FormField label="Status" required error={errors.paymentStatus}>
               <Select
-                value={formData.status}
-                onChange={(e) => handleInputChange('status', e.target.value)}
+                value={formData.paymentStatus}
+                onChange={(e) => handleInputChange('paymentStatus', e.target.value)}
                 options={[
                   { value: 'completed', label: 'Completed' },
                   { value: 'pending', label: 'Pending' },
@@ -907,11 +1170,43 @@ export default function PaymentsPage() {
             </FormField>
           </div>
 
-          <FormField label="Reference (Optional)" error={errors.reference}>
+          <FormField label="Reference (Optional)" error={errors.transactionReference}>
             <Input
-              value={formData.reference}
-              onChange={(e) => handleInputChange('reference', e.target.value)}
+              value={formData.transactionReference}
+              onChange={(e) => handleInputChange('transactionReference', e.target.value)}
               placeholder="Enter reference number"
+            />
+          </FormField>
+
+          <FormField label="Drug Order ID (Optional)" error={errors.orderId}>
+            <Select
+              value={formData.orderId}
+              onChange={(e) => {
+                const selectedOrder = drugOrders.find(order => order._id === e.target.value);
+                handleInputChange('orderId', e.target.value);
+                // Use drugOrderId if available, otherwise use _id as fallback
+                const orderReference = selectedOrder ? (selectedOrder.drugOrderId || selectedOrder._id) : '';
+                handleInputChange('orderReference', orderReference);
+                handleInputChange('drugOrderId', orderReference);
+                handleInputChange('orderType', 'DRUG_ORDER');
+              }}
+              options={[
+                { value: '', label: 'Select Drug Order (Optional)' },
+                ...drugOrders.map(order => ({
+                  value: order._id,
+                  label: `${order.drugOrderId || order._id} - ${order.patientName || 'Unknown Patient'}`
+                }))
+              ]}
+              disabled={!formData.patientId || drugOrders.length === 0}
+            />
+          </FormField>
+
+          <FormField label="Notes/Description (Optional)" error={errors.notes}>
+            <TextArea
+              value={formData.notes}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
+              placeholder="Enter payment description or notes..."
+              rows={3}
             />
           </FormField>
 

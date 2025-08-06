@@ -4,7 +4,6 @@ export * from './common';
 export * from './drug';
 export * from './patient';
 export * from './payment';
-export * from './sale';
 export * from './service';
 export * from './user';
 export * from './api';

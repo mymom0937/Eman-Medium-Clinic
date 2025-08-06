@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Validate required fields
-    const requiredFields = ['amount', 'method', 'patientId', 'patientName'];
+    const requiredFields = ['patientId', 'patientName', 'amount', 'paymentMethod', 'paymentStatus'];
     for (const field of requiredFields) {
       if (!body[field]) {
         return NextResponse.json(
@@ -98,16 +98,40 @@ export async function POST(request: NextRequest) {
 
     const payment = {
       paymentId,
-      amount: parseFloat(body.amount),
-      paymentMethod: body.method as PaymentMethod,
-      paymentStatus: body.status || 'PENDING' as PaymentStatus,
-      notes: body.description || '',
       patientId: body.patientId,
-      transactionReference: body.reference || `INV-${Date.now()}`,
-      recordedBy: body.processedBy || 'System',
+      patientName: body.patientName,
+      
+      // Order Integration
+      orderId: body.orderId || null,
+      orderType: body.orderType || null,
+      orderReference: body.orderReference || null,
+      drugOrderId: body.drugOrderId || null, // Add drugOrderId field
+      
+      // Payment Details
+      amount: parseFloat(body.amount),
+      paymentMethod: body.paymentMethod as PaymentMethod,
+      paymentStatus: body.paymentStatus as PaymentStatus,
+      paymentType: body.paymentType || 'OTHER',
+      
+      // Drug Sale Specific
+      items: body.items || [],
+      discount: parseFloat(body.discount) || 0,
+      finalAmount: parseFloat(body.finalAmount) || parseFloat(body.amount),
+      
+      // General Fields
+      transactionReference: body.transactionReference || `INV-${Date.now()}`,
+      notes: body.notes || '',
+      recordedBy: body.recordedBy || 'System',
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     const result = await db.collection('payments').insertOne(payment);
+
+    // Update order status if linked to an order
+    if (body.orderId && body.orderType) {
+      await updateOrderPaymentStatus(body.orderId, body.orderType, paymentId, db);
+    }
 
     return NextResponse.json({
       success: true,
@@ -121,6 +145,40 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Helper function to update order payment status
+const updateOrderPaymentStatus = async (orderId: string, orderType: string, paymentId: string, db: any) => {
+  try {
+    let collection = '';
+    let updateField = '';
+    
+    switch (orderType) {
+      case 'DRUG_ORDER':
+        collection = 'drug_orders';
+        updateField = 'paymentStatus';
+        break;
+      case 'LAB_TEST':
+        collection = 'lab_results';
+        updateField = 'paymentStatus';
+        break;
+      default:
+        return;
+    }
+    
+    await db.collection(collection).updateOne(
+      { _id: orderId },
+      { 
+        $set: { 
+          [updateField]: 'PAID',
+          paymentId: paymentId,
+          paidAt: new Date()
+        } 
+      }
+    );
+  } catch (error) {
+    console.error('Error updating order payment status:', error);
+  }
+};
 
 export async function PUT(request: NextRequest) {
   try {
