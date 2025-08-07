@@ -156,10 +156,10 @@ const Navbar = () => {
         {/* Home */}
           <Link
             href="/"
-          className={`font-medium transition px-3 py-1.5 rounded-full text-white ${
+          className={`font-medium transition px-3 py-1.5 rounded-full ${
               isActive("/")
                 ? "bg-[#00D4AA] text-white"
-                : "hover:text-accent-color"
+                : theme === "dark" ? "text-white" : "text-gray-800 hover:text-accent-color"
             }`}
           >
             Home
@@ -168,10 +168,10 @@ const Navbar = () => {
         {/* About */}
           <Link
             href="/about"
-          className={`font-medium transition px-3 py-1.5 rounded-full text-white ${
+          className={`font-medium transition px-3 py-1.5 rounded-full ${
               isActive("/about")
                 ? "bg-[#00D4AA] text-white"
-                : "hover:text-accent-color"
+                : theme === "dark" ? "text-white" : "text-gray-800 hover:text-accent-color"
             }`}
           >
             About
@@ -180,10 +180,10 @@ const Navbar = () => {
         {/* Services */}
           <Link
             href="/services"
-          className={`font-medium transition px-3 py-1.5 rounded-full text-white ${
+          className={`font-medium transition px-3 py-1.5 rounded-full ${
               isActive("/services")
                 ? "bg-[#00D4AA] text-white"
-                : "hover:text-accent-color"
+                : theme === "dark" ? "text-white" : "text-gray-800 hover:text-accent-color"
             }`}
           >
             Services
@@ -192,10 +192,10 @@ const Navbar = () => {
         {/* Features */}
           <Link
             href="/features"
-          className={`font-medium transition px-3 py-1.5 rounded-full text-white ${
+          className={`font-medium transition px-3 py-1.5 rounded-full ${
               isActive("/features")
                 ? "bg-[#00D4AA] text-white"
-                : "hover:text-accent-color"
+                : theme === "dark" ? "text-white" : "text-gray-800 hover:text-accent-color"
             }`}
           >
             Features
@@ -204,10 +204,10 @@ const Navbar = () => {
         {/* Contact */}
           <Link
             href="/contact"
-          className={`font-medium transition px-3 py-1.5 rounded-full text-white ${
+          className={`font-medium transition px-3 py-1.5 rounded-full ${
               isActive("/contact")
                 ? "bg-[#00D4AA] text-white"
-                : "hover:text-accent-color"
+                : theme === "dark" ? "text-white" : "text-gray-800 hover:text-accent-color"
             }`}
           >
             Contact
