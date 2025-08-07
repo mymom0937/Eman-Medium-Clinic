@@ -393,11 +393,12 @@ export default function ReportsPage() {
   }
 
   return (
-    <DashboardLayout
-      title="Reports & Analytics"
-      userRole={userRole}
-      userName={userName}
-    >
+    <>
+      <DashboardLayout
+        title="Reports & Analytics"
+        userRole={userRole}
+        userName={userName}
+      >
       <div className="space-y-6 bg-background min-h-screen">
         {loading ? (
           <div className="flex items-center justify-center h-[60vh]">
@@ -648,7 +649,8 @@ export default function ReportsPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
-    <Footer />
+      </DashboardLayout>
+      <Footer />
+    </>
   );
 } 

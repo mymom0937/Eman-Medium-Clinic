@@ -502,11 +502,12 @@ export default function PatientsPage() {
   };
 
   return (
-    <DashboardLayout
-      title="Patient Management"
-      userRole={userRole}
-      userName={userName}
-    >
+    <>
+      <DashboardLayout
+        title="Patient Management"
+        userRole={userRole}
+        userName={userName}
+      >
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1001,7 +1002,8 @@ export default function PatientsPage() {
           </div>
         )}
       </Modal>
-    </DashboardLayout>
-    <Footer />
+      </DashboardLayout>
+      <Footer />
+    </>
   );
 } 

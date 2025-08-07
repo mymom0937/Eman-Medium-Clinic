@@ -701,11 +701,12 @@ export default function PaymentsPage() {
   ];
 
   return (
-    <DashboardLayout
-      title="Payment Records"
-      userRole={userRole}
-      userName={userName}
-    >
+    <>
+      <DashboardLayout
+        title="Payment Records"
+        userRole={userRole}
+        userName={userName}
+      >
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1231,7 +1232,8 @@ export default function PaymentsPage() {
           </div>
         </div>
       </Modal>
-    </DashboardLayout>
-    <Footer />
+      </DashboardLayout>
+      <Footer />
+    </>
   );
 } 
