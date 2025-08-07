@@ -151,7 +151,7 @@ const Navbar = () => {
         </Link>
       </div>
 
-      {/* Desktop Menu */}
+      {/* Desktop Menu - Center */}
       <div className="desktop-menu hidden lg:flex items-center space-x-6">
         {/* Home */}
           <Link
@@ -212,7 +212,10 @@ const Navbar = () => {
           >
             Contact
           </Link>
+      </div>
 
+      {/* Right Side - Theme Toggle and Sign In */}
+      <div className="hidden lg:flex items-center space-x-4" style={{ display: 'flex' }}>
         {/* Theme toggle button */}
         <button
           onClick={toggleTheme}
