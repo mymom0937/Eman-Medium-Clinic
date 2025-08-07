@@ -276,7 +276,7 @@ export default function ContactPage() {
                 </Button>
               </Link>
               <Link href="/services">
-                <Button size="lg" variant="outline" className="text-lg px-8 py-3 text-white border-white hover:bg-white hover:text-blue-600">
+                <Button size="lg" variant="outline" className="text-lg px-8 py-3 bg-white text-blue-600 hover:bg-gray-100">
                   Learn More
                 </Button>
               </Link>

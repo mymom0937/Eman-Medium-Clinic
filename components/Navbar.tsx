@@ -159,7 +159,7 @@ const Navbar = () => {
           className={`font-medium transition px-3 py-1.5 rounded-full ${
               isActive("/")
                 ? "bg-[#00D4AA] text-white"
-                : theme === "dark" ? "text-white" : "text-gray-800 hover:text-accent-color"
+                : theme === "dark" ? "text-white hover:text-gray-300" : "text-gray-800 hover:text-accent-color"
             }`}
           >
             Home
@@ -171,7 +171,7 @@ const Navbar = () => {
           className={`font-medium transition px-3 py-1.5 rounded-full ${
               isActive("/about")
                 ? "bg-[#00D4AA] text-white"
-                : theme === "dark" ? "text-white" : "text-gray-800 hover:text-accent-color"
+                : theme === "dark" ? "text-white hover:text-gray-300" : "text-gray-800 hover:text-accent-color"
             }`}
           >
             About
@@ -183,7 +183,7 @@ const Navbar = () => {
           className={`font-medium transition px-3 py-1.5 rounded-full ${
               isActive("/services")
                 ? "bg-[#00D4AA] text-white"
-                : theme === "dark" ? "text-white" : "text-gray-800 hover:text-accent-color"
+                : theme === "dark" ? "text-white hover:text-gray-300" : "text-gray-800 hover:text-accent-color"
             }`}
           >
             Services
@@ -195,7 +195,7 @@ const Navbar = () => {
           className={`font-medium transition px-3 py-1.5 rounded-full ${
               isActive("/features")
                 ? "bg-[#00D4AA] text-white"
-                : theme === "dark" ? "text-white" : "text-gray-800 hover:text-accent-color"
+                : theme === "dark" ? "text-white hover:text-gray-300" : "text-gray-800 hover:text-accent-color"
             }`}
           >
             Features
@@ -207,7 +207,7 @@ const Navbar = () => {
           className={`font-medium transition px-3 py-1.5 rounded-full ${
               isActive("/contact")
                 ? "bg-[#00D4AA] text-white"
-                : theme === "dark" ? "text-white" : "text-gray-800 hover:text-accent-color"
+                : theme === "dark" ? "text-white hover:text-gray-300" : "text-gray-800 hover:text-accent-color"
             }`}
           >
             Contact
@@ -219,7 +219,11 @@ const Navbar = () => {
         {/* Theme toggle button */}
         <button
           onClick={toggleTheme}
-          className="p-1.5 rounded-full hover:bg-card-bg transition"
+          className={`p-1.5 rounded-full transition ${
+            theme === "dark" 
+              ? "hover:bg-gray-700 text-white" 
+              : "hover:bg-gray-100 text-gray-800"
+          }`}
           aria-label="Toggle theme"
         >
           {theme === "dark" ? (
@@ -476,11 +480,15 @@ const Navbar = () => {
               <div className="flex items-center gap-2"></div>
               <div className="flex items-center gap-2">
                 {/* Theme toggle for mobile */}
-              <button
-                  onClick={toggleTheme}
-                  className="p-1.5 rounded-full hover:bg-card-bg transition"
-                  aria-label="Toggle theme"
-                >
+                             <button
+                   onClick={toggleTheme}
+                   className={`p-1.5 rounded-full transition ${
+                     theme === "dark" 
+                       ? "hover:bg-gray-700 text-white" 
+                       : "hover:bg-gray-100 text-gray-800"
+                   }`}
+                   aria-label="Toggle theme"
+                 >
                   {theme === "dark" ? (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
