@@ -51,11 +51,11 @@ export default function ServicesPage() {
   return (
     <>
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 bg-white transition-colors duration-200 pt-24">
+      <main className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 bg-background text-text-primary transition-colors duration-200 pt-24">
         {/* Hero Section */}
         <div className="text-center mb-16">
-          <h1 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">Our Services</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <h1 className="text-3xl md:text-4xl font-bold mb-6 text-text-primary">Our Services</h1>
+          <p className="text-xl text-text-secondary max-w-3xl mx-auto">
             Simple, efficient healthcare management solutions designed for medium-sized clinics 
             to improve patient care and streamline operations.
           </p>
@@ -63,21 +63,21 @@ export default function ServicesPage() {
 
         {/* Services Grid */}
         <div className="mb-20">
-          <h2 className="text-2xl md:text-3xl font-bold mb-8 text-gray-900 text-center">Core Services</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-8 text-text-primary text-center">Core Services</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {services.map((service, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow border border-gray-200">
+              <Card key={index} className="hover:shadow-lg transition-shadow border border-border-color bg-card-bg">
                 <CardHeader className="text-center">
                   <div className="flex justify-center mb-4">
                     {service.icon}
                   </div>
-                  <CardTitle className="text-xl">{service.title}</CardTitle>
-                  <p className="text-gray-600 text-sm">{service.description}</p>
+                  <CardTitle className="text-xl text-text-primary">{service.title}</CardTitle>
+                  <p className="text-text-secondary text-sm">{service.description}</p>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2 mb-4">
                     {service.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center text-sm text-gray-600">
+                      <li key={featureIndex} className="flex items-center text-sm text-text-secondary">
                         <svg className="w-4 h-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                         </svg>
@@ -92,9 +92,9 @@ export default function ServicesPage() {
         </div>
 
         {/* Call to Action */}
-        <div className="text-center bg-blue-600 text-white p-12 rounded-xl">
-          <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
-          <p className="text-xl mb-8 max-w-2xl mx-auto">
+        <div className="text-center bg-blue-600 p-12 rounded-xl">
+          <h2 className="text-3xl font-bold mb-4 text-white">Ready to Get Started?</h2>
+          <p className="text-xl mb-8 max-w-2xl mx-auto text-white/90">
             Join other clinics who trust Eman Clinic to manage their operations efficiently.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

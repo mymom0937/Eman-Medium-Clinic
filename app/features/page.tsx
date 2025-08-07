@@ -109,16 +109,16 @@ export default function FeaturesPage() {
   return (
     <>
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 to-indigo-100 transition-colors duration-200 pt-24">
+      <main className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 bg-background text-text-primary transition-colors duration-200 pt-24">
 
       {/* Hero Section */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-              Powerful <span className="text-blue-600">Features</span>
+            <h1 className="text-4xl md:text-6xl font-bold text-text-primary mb-6">
+              Powerful <span className="text-accent-color">Features</span>
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-text-secondary max-w-3xl mx-auto">
               Everything you need to run your clinic efficiently, from inventory management 
               to patient care and financial tracking.
             </p>
@@ -127,27 +127,27 @@ export default function FeaturesPage() {
       </section>
 
       {/* Features Grid */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-card-bg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow">
+              <Card key={index} className="hover:shadow-lg transition-shadow border border-border-color bg-background">
                 <CardHeader>
                   <div className="flex items-center space-x-3 mb-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <div className="w-12 h-12 bg-accent-color/10 rounded-lg flex items-center justify-center">
                       <span className="text-2xl">{feature.icon}</span>
                     </div>
-                    <CardTitle className="text-lg">{feature.title}</CardTitle>
+                    <CardTitle className="text-lg text-text-primary">{feature.title}</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600 mb-4">{feature.description}</p>
+                  <p className="text-text-secondary mb-4">{feature.description}</p>
                   <div className="space-y-2">
-                    <h4 className="font-medium text-gray-900 mb-2">Key Features:</h4>
+                    <h4 className="font-medium text-text-primary mb-2">Key Features:</h4>
                     <ul className="space-y-1">
                       {feature.details.map((detail, detailIndex) => (
-                        <li key={detailIndex} className="text-sm text-gray-600 flex items-center">
-                          <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                        <li key={detailIndex} className="text-sm text-text-secondary flex items-center">
+                          <span className="w-2 h-2 bg-accent-color rounded-full mr-2"></span>
                           {detail}
                         </li>
                       ))}
@@ -161,28 +161,28 @@ export default function FeaturesPage() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-text-primary mb-4">
               Why Choose Eman Clinic?
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-lg text-text-secondary max-w-2xl mx-auto">
               Discover the benefits that make our platform the preferred choice for healthcare facilities.
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((benefit, index) => (
-              <Card key={index} className="text-center hover:shadow-lg transition-shadow">
+              <Card key={index} className="text-center hover:shadow-lg transition-shadow border border-border-color bg-card-bg">
                 <CardHeader>
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-accent-color/10 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-2xl">{benefit.icon}</span>
                   </div>
-                  <CardTitle className="text-lg">{benefit.title}</CardTitle>
+                  <CardTitle className="text-lg text-text-primary">{benefit.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-text-secondary text-sm">
                     {benefit.description}
                   </p>
                 </CardContent>
@@ -193,13 +193,13 @@ export default function FeaturesPage() {
       </section>
 
       {/* Integration Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-card-bg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-text-primary mb-4">
               Seamless Integrations
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-lg text-text-secondary max-w-2xl mx-auto">
               Connect with your existing systems and tools for a unified workflow.
             </p>
           </div>
@@ -214,10 +214,10 @@ export default function FeaturesPage() {
               { name: 'Cloud Storage', icon: '☁️' }
             ].map((integration, index) => (
               <div key={index} className="text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-accent-color/10 rounded-lg flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">{integration.icon}</span>
                 </div>
-                <p className="text-sm font-medium text-gray-900">{integration.name}</p>
+                <p className="text-sm font-medium text-text-primary">{integration.name}</p>
               </div>
             ))}
           </div>
@@ -230,7 +230,7 @@ export default function FeaturesPage() {
           <h2 className="text-3xl font-bold text-white mb-4">
             Ready to Experience These Features?
           </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
             Start your free trial today and see how Eman Clinic can transform your healthcare facility.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -240,7 +240,7 @@ export default function FeaturesPage() {
               </Button>
             </Link>
             <Link href="/contact">
-              <Button size="lg" variant="outline" className="text-lg px-8 py-3  bg-white text-blue-600 hover:bg-gray-100">
+              <Button size="lg" variant="outline" className="text-lg px-8 py-3 bg-white text-blue-600 hover:bg-gray-100">
                 Schedule Demo
               </Button>
             </Link>
