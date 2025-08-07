@@ -154,64 +154,64 @@ const Navbar = () => {
       {/* Desktop Menu */}
       <div className="desktop-menu hidden lg:flex items-center space-x-6">
         {/* Home */}
-        <Link
-          href="/"
+          <Link
+            href="/"
           className={`font-medium transition px-3 py-1.5 rounded-full text-white ${
-            isActive("/")
-              ? "bg-[#00D4AA] text-white"
-              : "hover:text-accent-color"
-          }`}
-        >
-          Home
-        </Link>
+              isActive("/")
+                ? "bg-[#00D4AA] text-white"
+                : "hover:text-accent-color"
+            }`}
+          >
+            Home
+          </Link>
 
         {/* About */}
-        <Link
-          href="/about"
+          <Link
+            href="/about"
           className={`font-medium transition px-3 py-1.5 rounded-full text-white ${
-            isActive("/about")
-              ? "bg-[#00D4AA] text-white"
-              : "hover:text-accent-color"
-          }`}
-        >
-          About
-        </Link>
+              isActive("/about")
+                ? "bg-[#00D4AA] text-white"
+                : "hover:text-accent-color"
+            }`}
+          >
+            About
+          </Link>
 
         {/* Services */}
-        <Link
-          href="/services"
+          <Link
+            href="/services"
           className={`font-medium transition px-3 py-1.5 rounded-full text-white ${
-            isActive("/services")
-              ? "bg-[#00D4AA] text-white"
-              : "hover:text-accent-color"
-          }`}
-        >
-          Services
-        </Link>
+              isActive("/services")
+                ? "bg-[#00D4AA] text-white"
+                : "hover:text-accent-color"
+            }`}
+          >
+            Services
+          </Link>
 
         {/* Features */}
-        <Link
-          href="/features"
+          <Link
+            href="/features"
           className={`font-medium transition px-3 py-1.5 rounded-full text-white ${
-            isActive("/features")
-              ? "bg-[#00D4AA] text-white"
-              : "hover:text-accent-color"
-          }`}
-        >
-          Features
-        </Link>
+              isActive("/features")
+                ? "bg-[#00D4AA] text-white"
+                : "hover:text-accent-color"
+            }`}
+          >
+            Features
+          </Link>
 
         {/* Contact */}
-        <Link
-          href="/contact"
+          <Link
+            href="/contact"
           className={`font-medium transition px-3 py-1.5 rounded-full text-white ${
-            isActive("/contact")
-              ? "bg-[#00D4AA] text-white"
-              : "hover:text-accent-color"
-          }`}
-        >
-          Contact
-        </Link>
+              isActive("/contact")
+                ? "bg-[#00D4AA] text-white"
+                : "hover:text-accent-color"
+            }`}
+          >
+            Contact
+          </Link>
 
         {/* Theme toggle button */}
         <button
