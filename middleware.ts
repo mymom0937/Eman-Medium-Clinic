@@ -9,6 +9,7 @@ const isProtectedRoute = createRouteMatcher([
   '/profile(.*)',
   '/lab-results(.*)',
   '/drug-orders(.*)',
+  '/feedback(.*)',
 ]);
 
 const isProtectedApiRoute = createRouteMatcher([

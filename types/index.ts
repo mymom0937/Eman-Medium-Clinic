@@ -8,4 +8,5 @@ export * from './service';
 export * from './user';
 export * from './api';
 export * from './lab-result';
-export * from './drug-order'; 
+export * from './drug-order';
+export * from './feedback'; 

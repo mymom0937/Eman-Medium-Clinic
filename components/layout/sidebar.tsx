@@ -57,6 +57,12 @@ const navigationItems = [
     icon: '📈',
     roles: [USER_ROLES.SUPER_ADMIN],
   },
+  {
+    name: 'Feedback',
+    href: ROUTES.FEEDBACK,
+    icon: '💬',
+    roles: [USER_ROLES.SUPER_ADMIN],
+  },
 ];
 
 export function Sidebar({ userRole, title, userName }: SidebarProps) {

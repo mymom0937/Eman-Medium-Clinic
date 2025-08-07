@@ -4,6 +4,7 @@ import Patient from './patient';
 import Payment from './payment';
 import { LabResult } from './lab-result';
 import { DrugOrder } from './drug-order';
+import { Feedback } from './feedback';
 
 export {
   User,
@@ -11,5 +12,6 @@ export {
   Patient,
   Payment,
   LabResult,
-  DrugOrder
+  DrugOrder,
+  Feedback
 }; 

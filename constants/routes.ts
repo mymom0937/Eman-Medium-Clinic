@@ -9,6 +9,7 @@ export const ROUTES = {
   LAB_RESULTS: '/lab-results',
   DRUG_ORDERS: '/drug-orders',
   REPORTS: '/reports',
+  FEEDBACK: '/feedback',
   PROFILE: '/profile',
 } as const;
 
@@ -20,6 +21,7 @@ export const PROTECTED_ROUTES = [
   ROUTES.LAB_RESULTS,
   ROUTES.DRUG_ORDERS,
   ROUTES.REPORTS,
+  ROUTES.FEEDBACK,
 ];
 
 export const PUBLIC_ROUTES = [
