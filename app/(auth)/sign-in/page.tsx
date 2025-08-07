@@ -1,8 +1,14 @@
+'use client';
+
 import React from 'react';
 import { SignIn } from '@clerk/nextjs';
 import Navbar from '@/components/Navbar';
+import { useTheme } from '@/context/ThemeContext';
+import { getClerkConfig } from '@/lib/config/clerk';
 
 export default function SignInPage() {
+  const { theme } = useTheme();
+  const clerkConfig = getClerkConfig(theme);
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -18,7 +24,7 @@ export default function SignInPage() {
           </div>
           
           <div className="bg-card-bg rounded-lg shadow-sm border border-border-color p-6">
-            <SignIn />
+            <SignIn appearance={clerkConfig.appearance} />
           </div>
         </div>
       </div>

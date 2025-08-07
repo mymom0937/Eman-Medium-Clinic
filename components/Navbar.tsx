@@ -9,6 +9,7 @@ import { useTheme } from "@/context/ThemeContext";
 import Image from "next/image";
 import { useClerk, UserButton } from "@clerk/nextjs";
 import { showSuccess, showError } from "@/lib/toast";
+import { getClerkConfig } from "@/lib/config/clerk";
 
 interface IconWrapperProps {
   src: string;
@@ -267,7 +268,13 @@ const Navbar = () => {
           <div>
             <UserButton
               afterSignOutUrl="/"
-              appearance={{ elements: { avatarBox: "w-7 h-7 md:w-8 md:h-8" } }}
+              appearance={{
+                ...getClerkConfig(theme).appearance,
+                elements: { 
+                  ...getClerkConfig(theme).appearance.elements,
+                  avatarBox: "w-7 h-7 md:w-8 md:h-8" 
+                }
+              }}
             >
               <UserButton.MenuItems>
                 {/* Profile Settings */}
