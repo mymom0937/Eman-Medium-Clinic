@@ -34,48 +34,8 @@
   animation: wave 1s ease-in-out infinite;
 }
 
-/* Light Theme (Default) */
+/* Dark Theme (Default) */
 :root {
-  /* Base colors */
-  --background: #ffffff;
-  --foreground: #171717;
-  --card-bg: #f8fafc;
-  --card-border: #e2e8f0;
-  
-  /* Text colors */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  
-  /* Border colors */
-  --border-color: #e2e8f0;
-  --border-focus: #3b82f6;
-  
-  /* Accent colors */
-  --accent-color: #059669;
-  --accent-hover: #047857;
-  
-  /* Status colors */
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  --info: #3b82f6;
-  
-  /* Medical theme colors */
-  --medical-primary: #2563eb;
-  --medical-secondary: #059669;
-  --medical-accent: #dc2626;
-  --medical-neutral: #6b7280;
-  
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-}
-
-/* Dark Theme */
-.dark {
   /* Base colors */
   --background: #0f172a;
   --foreground: #f8fafc;
@@ -114,6 +74,46 @@
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.3);
 }
 
+/* Light Theme */
+.light {
+  /* Base colors */
+  --background: #ffffff;
+  --foreground: #171717;
+  --card-bg: #f8fafc;
+  --card-border: #e2e8f0;
+  
+  /* Text colors */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  
+  /* Border colors */
+  --border-color: #e2e8f0;
+  --border-focus: #3b82f6;
+  
+  /* Accent colors */
+  --accent-color: #059669;
+  --accent-hover: #047857;
+  
+  /* Status colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+  
+  /* Medical theme colors */
+  --medical-primary: #2563eb;
+  --medical-secondary: #059669;
+  --medical-accent: #dc2626;
+  --medical-neutral: #6b7280;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
 /* Color scheme variations */
 [data-color-scheme="medical"] {
   --accent-color: var(--medical-primary);
@@ -122,11 +122,11 @@
 
 /* Ensure theme variables are applied */
 html {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
-html.dark {
-  color-scheme: dark;
+html.light {
+  color-scheme: light;
 }
 
 [data-color-scheme="modern"] {

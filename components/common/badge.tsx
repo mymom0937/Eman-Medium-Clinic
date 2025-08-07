@@ -15,11 +15,11 @@ export function Badge({
   className,
 }: BadgeProps) {
   const variantClasses = {
-    default: 'bg-gray-100 text-gray-800',
-    success: 'bg-green-100 text-green-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    error: 'bg-red-100 text-red-800',
-    info: 'bg-blue-100 text-blue-800',
+    default: 'bg-card-bg text-text-primary border border-border-color',
+    success: 'bg-success/20 text-success border border-success/30',
+    warning: 'bg-warning/20 text-warning border border-warning/30',
+    error: 'bg-error/20 text-error border border-error/30',
+    info: 'bg-info/20 text-info border border-info/30',
   };
 
   const sizeClasses = {

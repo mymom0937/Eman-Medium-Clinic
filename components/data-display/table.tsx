@@ -25,7 +25,7 @@ export function Table<T>({
 }: TableProps<T>) {
   if (data.length === 0) {
     return (
-      <div className={cn('text-center py-8 text-gray-500', className)}>
+      <div className={cn('text-center py-8 text-text-muted', className)}>
         {emptyMessage}
       </div>
     );
@@ -35,12 +35,12 @@ export function Table<T>({
     <div className={cn('overflow-x-auto', className)}>
       <table className="w-full border-collapse">
         <thead>
-          <tr className="border-b border-gray-200">
+          <tr className="border-b border-border-color">
             {columns.map((column) => (
               <th
                 key={column.key}
                 className={cn(
-                  'text-left py-3 px-4 font-medium text-gray-700',
+                  'text-left py-3 px-4 font-medium text-text-primary',
                   column.className
                 )}
               >
@@ -54,7 +54,7 @@ export function Table<T>({
             <tr
               key={index}
               className={cn(
-                'border-b border-gray-100 hover:bg-gray-50',
+                'border-b border-border-color hover:bg-card-bg',
                 onRowClick && 'cursor-pointer'
               )}
               onClick={() => onRowClick?.(item)}

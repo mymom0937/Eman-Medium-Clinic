@@ -9,7 +9,6 @@ import { useTheme } from "@/context/ThemeContext";
 import Image from "next/image";
 import { useClerk, UserButton } from "@clerk/nextjs";
 import { showSuccess, showError } from "@/lib/toast";
-import { motion, AnimatePresence, Variants } from "framer-motion";
 
 interface IconWrapperProps {
   src: string;
@@ -77,11 +76,9 @@ const Navbar = () => {
     onClick,
     className,
   }) => (
-    <motion.div
+    <div
       className={`relative cursor-pointer ${onClick ? "" : ""}`}
       onClick={onClick}
-      whileHover={{ scale: 1.1 }}
-      whileTap={{ scale: 0.9 }}
     >
       <div className={`w-5 h-5 relative ${className || ""}`}>
         <Image
@@ -91,7 +88,7 @@ const Navbar = () => {
           style={theme === "dark" ? { filter: "brightness(0) invert(1)" } : {}}
         />
       </div>
-    </motion.div>
+    </div>
   );
 
   // Removed body overflow manipulation to prevent black screen issues
@@ -123,64 +120,11 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Animation variants
-  const navItemVariants: Variants = {
-    hidden: { opacity: 0, y: -20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 24,
-      },
-    },
-  };
-
-  const navVariants: Variants = {
-    hidden: { y: -100 },
-    visible: {
-      y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-      },
-    },
-  };
-
-  const logoVariants: Variants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 24,
-      },
-    },
-  };
-
-  const navContainerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        delayChildren: 0.1,
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
   return (
-    <motion.nav
+    <nav
       className={`fixed top-0 left-0 right-0 z-[200] flex items-center justify-between px-3 sm:px-6 md:px-8 lg:px-16 xl:px-32 py-3 md:py-4 text-text-primary transition-all duration-300 ${
         isScrolled ? "shadow-xl" : "shadow-lg"
       }`}
-      initial="hidden"
-      animate="visible"
-      variants={navVariants}
       style={{
         backgroundColor: theme === "dark" ? "#0f172a" : "#ffffff",
         borderBottom:
@@ -188,8 +132,7 @@ const Navbar = () => {
       }}
     >
       {/* Logo */}
-      <motion.div
-        variants={logoVariants}
+      <div
         className={`transition-transform duration-300 ${
           isScrolled ? "scale-95" : "scale-100"
         }`}
@@ -205,15 +148,12 @@ const Navbar = () => {
             style={{ filter: "none" }}
           />
         </Link>
-      </motion.div>
+      </div>
 
       {/* Desktop Menu */}
-      <motion.div
-        className="hidden lg:flex items-center gap-2 md:gap-4 lg:gap-4 xl:gap-8 ml-8 md:ml-12 lg:ml-8 xl:ml-16"
-        variants={navContainerVariants}
-      >
+      <div className="hidden lg:flex items-center gap-2 md:gap-4 lg:gap-4 xl:gap-8 ml-8 md:ml-12 lg:ml-8 xl:ml-16">
         {/* Home */}
-        <motion.div variants={navItemVariants}>
+        <div>
           <Link
             href="/"
             className={`font-medium transition px-3 py-1.5 rounded-full ${
@@ -224,8 +164,8 @@ const Navbar = () => {
           >
             Home
           </Link>
-        </motion.div>
-        <motion.div variants={navItemVariants}>
+        </div>
+        <div>
           <Link
             href="/about"
             className={`font-medium transition px-3 py-1.5 rounded-full ${
@@ -236,10 +176,10 @@ const Navbar = () => {
           >
             About
           </Link>
-        </motion.div>
+        </div>
 
         {/* Services */}
-        <motion.div variants={navItemVariants}>
+        <div>
           <Link
             href="/services"
             className={`font-medium transition px-3 py-1.5 rounded-full ${
@@ -250,10 +190,10 @@ const Navbar = () => {
           >
             Services
           </Link>
-        </motion.div>
+        </div>
 
         {/* Features */}
-        <motion.div variants={navItemVariants}>
+        <div>
           <Link
             href="/features"
             className={`font-medium transition px-3 py-1.5 rounded-full ${
@@ -264,10 +204,10 @@ const Navbar = () => {
           >
             Features
           </Link>
-        </motion.div>
+        </div>
 
         {/* Contact */}
-        <motion.div variants={navItemVariants}>
+        <div>
           <Link
             href="/contact"
             className={`font-medium transition px-3 py-1.5 rounded-full ${
@@ -278,22 +218,16 @@ const Navbar = () => {
           >
             Contact
           </Link>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
       {/* Desktop Menu */}
-      <motion.div
-        className="hidden lg:flex items-center gap-2 md:gap-3 lg:gap-3 xl:gap-5"
-        variants={navContainerVariants}
-      >
+      <div className="hidden lg:flex items-center gap-2 md:gap-3 lg:gap-3 xl:gap-5">
         {/* Theme toggle button */}
-        <motion.button
+        <button
           onClick={toggleTheme}
           className="p-1.5 rounded-full hover:bg-card-bg transition"
           aria-label="Toggle theme"
-          variants={navItemVariants}
-          whileHover={{ scale: 1.1, rotate: 15 }}
-          whileTap={{ scale: 0.9 }}
         >
           {theme === "dark" ? (
             <svg
@@ -326,11 +260,11 @@ const Navbar = () => {
               />
             </svg>
           )}
-        </motion.button>
+        </button>
 
         {/* User Button */}
         {user ? (
-          <motion.div variants={navItemVariants}>
+          <div>
             <UserButton
               afterSignOutUrl="/"
               appearance={{ elements: { avatarBox: "w-7 h-7 md:w-8 md:h-8" } }}
@@ -476,27 +410,23 @@ const Navbar = () => {
                 />
               </UserButton.MenuItems>
             </UserButton>
-          </motion.div>
+          </div>
         ) : (
-          <motion.button
-            variants={navItemVariants}
+          <button
             onClick={() => openSignIn()}
             className="bg-[#F8BD19] text-white px-4 py-1.5 rounded hover:bg-[#F8BD19]/90 transition"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
           >
             Sign In
-          </motion.button>
+          </button>
         )}
-      </motion.div>
+      </div>
 
       {/* Theme toggle button */}
       <div className="flex lg:hidden items-center gap-4">
         {/* Theme toggle button */}
-        <motion.button
+        <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className="flex items-center justify-center"
-          whileTap={{ scale: 0.9 }}
         >
           <Image
             className="w-5 h-5"
@@ -506,18 +436,13 @@ const Navbar = () => {
               theme === "dark" ? { filter: "brightness(0) invert(1)" } : {}
             }
           />
-        </motion.button>
+        </button>
       </div>
 
       {/* Mobile/Tablet menu */}
-      <AnimatePresence>
         {isMenuOpen && (
-          <motion.div
+        <div
             className="fixed right-0 top-0 h-full w-64 max-w-[80vw] p-5 z-[160] shadow-2xl lg:hidden"
-            initial={{ x: 300 }}
-            animate={{ x: 0 }}
-            exit={{ x: 300 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
             style={{
               backgroundColor: theme === "dark" ? "#1e293b" : "#ffffff",
               borderLeft: `1px solid ${
@@ -530,12 +455,10 @@ const Navbar = () => {
               <div className="flex items-center gap-2"></div>
               <div className="flex items-center gap-2">
                 {/* Theme toggle for mobile */}
-                <motion.button
+              <button
                   onClick={toggleTheme}
                   className="p-1.5 rounded-full hover:bg-card-bg transition"
                   aria-label="Toggle theme"
-                  whileHover={{ scale: 1.1, rotate: 15 }}
-                  whileTap={{ scale: 0.9 }}
                 >
                   {theme === "dark" ? (
                     <svg
@@ -568,12 +491,10 @@ const Navbar = () => {
                       />
                     </svg>
                   )}
-                </motion.button>
-                <motion.button
+              </button>
+              <button
                   onClick={() => setIsMenuOpen(false)}
                   className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-card-bg hover:text-red-500 transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -589,8 +510,8 @@ const Navbar = () => {
                       d="M6 18L18 6M6 6l12 12"
                     />
                   </svg>
-                </motion.button>
-              </div>
+              </button>
+            </div>
             </div>
 
             <div className="flex flex-col">
@@ -847,10 +768,9 @@ const Navbar = () => {
                 </>
               )}
             </div>
-          </motion.div>
+        </div>
         )}
-      </AnimatePresence>
-    </motion.nav>
+    </nav>
   );
 };
 

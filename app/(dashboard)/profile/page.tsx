@@ -199,26 +199,26 @@ export default function ProfilePage() {
         </div>
 
         {/* Security Settings */}
-        <div className="bg-white rounded-lg border p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Security Settings</h2>
+        <div className="bg-card-bg rounded-lg border border-border-color p-6">
+          <h2 className="text-xl font-semibold text-text-primary mb-6">Security Settings</h2>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center justify-between p-4 border border-border-color rounded-lg">
               <div>
-                <h3 className="font-medium text-gray-900">Change Password</h3>
-                <p className="text-sm text-gray-600">Update your account password</p>
+                <h3 className="font-medium text-text-primary">Change Password</h3>
+                <p className="text-sm text-text-secondary">Update your account password</p>
               </div>
               <button 
                 onClick={handleChangePassword}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                className="bg-accent-color text-white px-4 py-2 rounded-md hover:bg-accent-hover"
               >
                 Change Password
               </button>
             </div>
 
-            <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center justify-between p-4 border border-border-color rounded-lg">
               <div>
-                <h3 className="font-medium text-gray-900">Two-Factor Authentication</h3>
-                <p className="text-sm text-gray-600">Add an extra layer of security</p>
+                <h3 className="font-medium text-text-primary">Two-Factor Authentication</h3>
+                <p className="text-sm text-text-secondary">Add an extra layer of security</p>
               </div>
               <button 
                 onClick={handleEnable2FA}
@@ -231,30 +231,30 @@ export default function ProfilePage() {
         </div>
 
         {/* Account Actions */}
-        <div className="bg-white rounded-lg border p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Account Actions</h2>
+        <div className="bg-card-bg rounded-lg border border-border-color p-6">
+          <h2 className="text-xl font-semibold text-text-primary mb-6">Account Actions</h2>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center justify-between p-4 border border-border-color rounded-lg">
               <div>
-                <h3 className="font-medium text-gray-900">Download My Data</h3>
-                <p className="text-sm text-gray-600">Export all your data</p>
+                <h3 className="font-medium text-text-primary">Download My Data</h3>
+                <p className="text-sm text-text-secondary">Export all your data</p>
               </div>
               <button 
                 onClick={handleDownloadData}
-                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                className="bg-success text-white px-4 py-2 rounded-md hover:bg-success/80"
               >
                 Download
               </button>
             </div>
 
-            <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center justify-between p-4 border border-border-color rounded-lg">
               <div>
-                <h3 className="font-medium text-red-600">Delete Account</h3>
-                <p className="text-sm text-gray-600">Permanently delete your account</p>
+                <h3 className="font-medium text-error">Delete Account</h3>
+                <p className="text-sm text-text-secondary">Permanently delete your account</p>
               </div>
               <button 
                 onClick={handleDeleteAccount}
-                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                className="bg-error text-white px-4 py-2 rounded-md hover:bg-error/80"
               >
                 Delete Account
               </button>

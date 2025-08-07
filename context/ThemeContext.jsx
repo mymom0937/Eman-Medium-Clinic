@@ -5,7 +5,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState('dark');
   const [colorScheme, setColorScheme] = useState('medical'); // medical, modern, classic
   
   useEffect(() => {
@@ -15,12 +15,12 @@ export const ThemeProvider = ({ children }) => {
     
     if (savedTheme) {
       setTheme(savedTheme);
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+      document.documentElement.classList.toggle('light', savedTheme === 'light');
     } else {
-      // Default to light theme for medical applications
-      setTheme('light');
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('clinic-theme', 'light');
+      // Default to dark theme
+      setTheme('dark');
+      document.documentElement.classList.remove('light');
+      localStorage.setItem('clinic-theme', 'dark');
     }
     
     if (savedColorScheme) {
@@ -38,10 +38,10 @@ export const ThemeProvider = ({ children }) => {
   }, []);
 
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     localStorage.setItem('clinic-theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    document.documentElement.classList.toggle('light', newTheme === 'light');
   };
 
   const setColorSchemeTheme = (scheme) => {
