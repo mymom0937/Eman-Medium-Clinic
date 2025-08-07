@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import Footer from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -394,113 +395,114 @@ export default function LabResultsPage() {
   }
 
   return (
-    <DashboardLayout
-      title="Lab Results"
-      userRole={userRole}
-      userName={userName}
-    >
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-text-primary">Lab Results</h1>
-          {(userRole === USER_ROLES.NURSE || userRole === USER_ROLES.SUPER_ADMIN) && (
-            <Button onClick={() => setIsAddModalOpen(true)} className="cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
-              Request New Test
-            </Button>
-          )}
-        </div>
+    <>
+      <DashboardLayout
+        title="Lab Results"
+        userRole={userRole}
+        userName={userName}
+      >
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-3xl font-bold text-text-primary">Lab Results</h1>
+            {(userRole === USER_ROLES.NURSE || userRole === USER_ROLES.SUPER_ADMIN) && (
+              <Button onClick={() => setIsAddModalOpen(true)} className="cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
+                Request New Test
+              </Button>
+            )}
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Lab Results Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-warning">
-                  {labResults.filter(r => r.status === 'PENDING').length}
+          <Card>
+            <CardHeader>
+              <CardTitle>Lab Results Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-warning">
+                    {labResults.filter(r => r.status === 'PENDING').length}
+                  </div>
+                  <div className="text-sm text-text-secondary">Pending</div>
                 </div>
-                <div className="text-sm text-text-secondary">Pending</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-info">
-                  {labResults.filter(r => r.status === 'IN_PROGRESS').length}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-info">
+                    {labResults.filter(r => r.status === 'IN_PROGRESS').length}
+                  </div>
+                  <div className="text-sm text-text-secondary">In Progress</div>
                 </div>
-                <div className="text-sm text-text-secondary">In Progress</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-success">
-                  {labResults.filter(r => r.status === 'COMPLETED').length}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-success">
+                    {labResults.filter(r => r.status === 'COMPLETED').length}
+                  </div>
+                  <div className="text-sm text-text-secondary">Completed</div>
                 </div>
-                <div className="text-sm text-text-secondary">Completed</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-error">
-                  {labResults.filter(r => r.status === 'CANCELLED').length}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-error">
+                    {labResults.filter(r => r.status === 'CANCELLED').length}
+                  </div>
+                  <div className="text-sm text-text-secondary">Cancelled</div>
                 </div>
-                <div className="text-sm text-text-secondary">Cancelled</div>
               </div>
-            </div>
 
-            {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
-              <input
-                type="text"
-                placeholder="Search by lab result ID, patient ID, name, or test name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary placeholder-text-muted bg-background text-sm"
-              />
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background text-sm"
-              >
-                {TEST_STATUS_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={selectedTestType}
-                onChange={(e) => setSelectedTestType(e.target.value)}
-                className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background text-sm"
-              >
-                {TEST_TYPE_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+              {/* Search and Filters */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
+                <input
+                  type="text"
+                  placeholder="Search by lab result ID, patient ID, name, or test name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1 border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary placeholder-text-muted bg-background text-sm"
+                />
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background text-sm"
+                >
+                  {TEST_STATUS_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={selectedTestType}
+                  onChange={(e) => setSelectedTestType(e.target.value)}
+                  className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background text-sm"
+                >
+                  {TEST_TYPE_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Lab Result ID</TableHead>
-                  <TableHead>Patient</TableHead>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Lab Result ID</TableHead>
+                    <TableHead>Patient</TableHead>
                     <TableHead>Test Types</TableHead>
-                  <TableHead>Test Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Requested</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLabResults.map((result) => (
-                  <TableRow key={result._id}>
-                    <TableCell>
-                      <div className="font-medium text-text-primary">
-                        {result.labResultId || 'N/A'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium text-text-primary">{result.patientName}</div>
-                        <div className="text-sm text-text-secondary">{result.patientId}</div>
-                      </div>
-                    </TableCell>
-                                          <TableCell className="text-text-primary">
+                    <TableHead>Test Name</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Requested</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLabResults.map((result) => (
+                    <TableRow key={result._id}>
+                      <TableCell>
+                        <div className="font-medium text-text-primary">
+                          {result.labResultId || 'N/A'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-text-primary">{result.patientName}</div>
+                          <div className="text-sm text-text-secondary">{result.patientId}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-text-primary">
                         <div className="relative">
                           <button
                             type="button"
@@ -539,479 +541,481 @@ export default function LabResultsPage() {
                                     <span className="text-xs text-text-muted">(Primary)</span>
                                   </div>
                                   
-                                                                     {/* Additional test types */}
-                                   {result.additionalTestTypes && result.additionalTestTypes.map((testType, index) => (
-                                     <div key={index} className="flex items-center space-x-2">
-                                       <span className="w-2 h-2 bg-text-muted rounded-full"></span>
-                                       <span className="text-sm text-text-primary">{LAB_TEST_LABELS[testType as keyof typeof LAB_TEST_TYPES]}</span>
-                                     </div>
-                                   ))}
+                                  {/* Additional test types */}
+                                  {result.additionalTestTypes && result.additionalTestTypes.map((testType, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                      <span className="w-2 h-2 bg-text-muted rounded-full"></span>
+                                      <span className="text-sm text-text-primary">{LAB_TEST_LABELS[testType as keyof typeof LAB_TEST_TYPES]}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             </div>
                           )}
                         </div>
                       </TableCell>
-                    <TableCell className="text-text-primary">{result.testName || 'N/A'}</TableCell>
-                    <TableCell>
-                      {canUpdateStatus(result) ? (
-                        <div className="relative">
-                          <Select
-                            value={result.status}
-                            onChange={(e) => handleStatusUpdate(result._id, e.target.value)}
-                            disabled={statusUpdating === result._id}
-                            options={[
-                              { value: 'PENDING', label: 'Pending' },
-                              { value: 'IN_PROGRESS', label: 'In Progress' },
-                              { value: 'COMPLETED', label: 'Completed' },
-                              { value: 'CANCELLED', label: 'Cancelled' },
-                            ]}
-                            className="w-32 text-sm"
-                          />
-                          {statusUpdating === result._id && (
-                            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(result.status)}`}>
-                          {LAB_TEST_STATUS_LABELS[result.status]}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-text-secondary">
-                      {formatDate(result.requestedAt)}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap text-xs sm:text-sm font-medium">
-                      <button 
-                        onClick={() => handleViewLabResult(result)}
-                        className="text-accent-color hover:text-accent-hover mr-3 p-1 rounded hover:bg-accent-color/10 transition-colors cursor-pointer"
-                        title="View Lab Result"
-                      >
-                        <FaEye size={16} />
-                      </button>
-                      {(userRole === USER_ROLES.NURSE || userRole === USER_ROLES.SUPER_ADMIN) && (
+                      <TableCell className="text-text-primary">{result.testName || 'N/A'}</TableCell>
+                      <TableCell>
+                        {canUpdateStatus(result) ? (
+                          <div className="relative">
+                            <Select
+                              value={result.status}
+                              onChange={(e) => handleStatusUpdate(result._id, e.target.value)}
+                              disabled={statusUpdating === result._id}
+                              options={[
+                                { value: 'PENDING', label: 'Pending' },
+                                { value: 'IN_PROGRESS', label: 'In Progress' },
+                                { value: 'COMPLETED', label: 'Completed' },
+                                { value: 'CANCELLED', label: 'Cancelled' },
+                              ]}
+                              className="w-32 text-sm"
+                            />
+                            {statusUpdating === result._id && (
+                              <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(result.status)}`}>
+                            {LAB_TEST_STATUS_LABELS[result.status]}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-text-secondary">
+                        {formatDate(result.requestedAt)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs sm:text-sm font-medium">
                         <button 
-                          onClick={() => handleEditLabResult(result)}
-                          className="text-success hover:text-success/80 mr-3 p-1 rounded hover:bg-success/10 transition-colors cursor-pointer"
-                          title="Edit Lab Result"
+                          onClick={() => handleViewLabResult(result)}
+                          className="text-accent-color hover:text-accent-hover mr-3 p-1 rounded hover:bg-accent-color/10 transition-colors cursor-pointer"
+                          title="View Lab Result"
                         >
-                          <FaEdit size={16} />
+                          <FaEye size={16} />
                         </button>
-                      )}
-                      {userRole === USER_ROLES.SUPER_ADMIN && (
-                        <button 
-                          onClick={() => handleDeleteLabResult(result._id)}
-                          className="text-error hover:text-error/80 p-1 rounded hover:bg-error/10 transition-colors cursor-pointer"
-                          title="Delete Lab Result"
-                        >
-                          <FaTrash size={16} />
-                        </button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Add Lab Result Modal */}
-      <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => {
-          setIsAddModalOpen(false);
-          resetForm();
-        }}
-        title="Request New Lab Test"
-        size="lg"
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Patient ID" required error={errors.patientId}>
-              <Input
-                value={formData.patientId}
-                onChange={(e) => handleInputChange('patientId', e.target.value)}
-                placeholder="Enter patient ID"
-              />
-            </FormField>
-
-            <FormField label="Patient Name" required error={errors.patientName}>
-              <Input
-                value={formData.patientName}
-                onChange={(e) => handleInputChange('patientName', e.target.value)}
-                placeholder="Enter patient name"
-              />
-            </FormField>
-
-            <FormField label="Test Type" required error={errors.testType}>
-              <Select
-                value={formData.testType}
-                onChange={(e) => handleInputChange('testType', e.target.value)}
-                options={Object.entries(LAB_TEST_TYPES).map(([key, value]) => ({
-                  value,
-                  label: LAB_TEST_LABELS[value],
-                }))}
-              />
-            </FormField>
-
-            <FormField label="Additional Test Types (Optional)">
-              <div className="space-y-2">
-                <div className="text-sm text-text-muted mb-2">
-                  Select additional tests if patient needs multiple tests
-                </div>
-                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                  {Object.entries(LAB_TEST_TYPES).map(([key, value]) => (
-                    <label key={value} className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.selectedTestTypes.includes(value)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormData(prev => ({
-                              ...prev,
-                              selectedTestTypes: [...prev.selectedTestTypes, value]
-                            }));
-                          } else {
-                            setFormData(prev => ({
-                              ...prev,
-                              selectedTestTypes: prev.selectedTestTypes.filter(t => t !== value)
-                            }));
-                          }
-                        }}
-                        className="rounded border-border-color text-accent-color focus:ring-accent-color"
-                      />
-                      <span className="text-sm text-text-primary">{LAB_TEST_LABELS[value]}</span>
-                    </label>
+                        {(userRole === USER_ROLES.NURSE || userRole === USER_ROLES.SUPER_ADMIN) && (
+                          <button 
+                            onClick={() => handleEditLabResult(result)}
+                            className="text-success hover:text-success/80 mr-3 p-1 rounded hover:bg-success/10 transition-colors cursor-pointer"
+                            title="Edit Lab Result"
+                          >
+                            <FaEdit size={16} />
+                          </button>
+                        )}
+                        {userRole === USER_ROLES.SUPER_ADMIN && (
+                          <button 
+                            onClick={() => handleDeleteLabResult(result._id)}
+                            className="text-error hover:text-error/80 p-1 rounded hover:bg-error/10 transition-colors cursor-pointer"
+                            title="Delete Lab Result"
+                          >
+                            <FaTrash size={16} />
+                          </button>
+                        )}
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </div>
-              </div>
-            </FormField>
-
-            <FormField label="Test Name" error={errors.testName}>
-              <Input
-                value={formData.testName}
-                onChange={(e) => handleInputChange('testName', e.target.value)}
-                placeholder="Enter test name (optional)"
-              />
-            </FormField>
-          </div>
-
-          <FormField label="Lab Test Description" required error={errors.notes}>
-            <TextArea
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="Describe the lab test requirements, symptoms, or specific conditions to be tested..."
-              rows={4}
-            />
-          </FormField>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setIsAddModalOpen(false);
-                resetForm();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button  className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
-              onClick={handleAddLabResult}
-              loading={loading}
-            >
-              Request Test
-            </Button>
-          </div>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
-      </Modal>
 
-      {/* Edit Lab Result Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setEditingLabResult(null);
-          resetForm();
-        }}
-        title="Edit Lab Test Request"
-        size="lg"
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Patient ID" required error={errors.patientId}>
-              <Input
-                value={formData.patientId}
-                onChange={(e) => handleInputChange('patientId', e.target.value)}
-                placeholder="Enter patient ID"
-              />
-            </FormField>
-
-            <FormField label="Patient Name" required error={errors.patientName}>
-              <Input
-                value={formData.patientName}
-                onChange={(e) => handleInputChange('patientName', e.target.value)}
-                placeholder="Enter patient name"
-              />
-            </FormField>
-
-            <FormField label="Test Type" required error={errors.testType}>
-              <Select
-                value={formData.testType}
-                onChange={(e) => handleInputChange('testType', e.target.value)}
-                options={Object.entries(LAB_TEST_TYPES).map(([key, value]) => ({
-                  value,
-                  label: LAB_TEST_LABELS[value],
-                }))}
-              />
-            </FormField>
-
-            <FormField label="Additional Test Types (Optional)">
-              <div className="space-y-2">
-                <div className="text-sm text-text-muted mb-2">
-                  Select additional tests if patient needs multiple tests
-                </div>
-                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                  {Object.entries(LAB_TEST_TYPES).map(([key, value]) => (
-                    <label key={value} className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.selectedTestTypes.includes(value)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormData(prev => ({
-                              ...prev,
-                              selectedTestTypes: [...prev.selectedTestTypes, value]
-                            }));
-                          } else {
-                            setFormData(prev => ({
-                              ...prev,
-                              selectedTestTypes: prev.selectedTestTypes.filter(t => t !== value)
-                            }));
-                          }
-                        }}
-                        className="rounded border-border-color text-accent-color focus:ring-accent-color"
-                      />
-                      <span className="text-sm text-text-primary">{LAB_TEST_LABELS[value]}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </FormField>
-
-            <FormField label="Test Name" error={errors.testName}>
-              <Input
-                value={formData.testName}
-                onChange={(e) => handleInputChange('testName', e.target.value)}
-                placeholder="Enter test name (optional)"
-              />
-            </FormField>
-
-            {editingLabResult && canUpdateStatus(editingLabResult) && (
-              <FormField label="Status">
-                <Select
-                  value={editingLabResult.status}
-                  onChange={(e) => handleStatusUpdate(editingLabResult._id, e.target.value)}
-                  disabled={statusUpdating === editingLabResult._id}
-                  options={[
-                    { value: 'PENDING', label: 'Pending' },
-                    { value: 'IN_PROGRESS', label: 'In Progress' },
-                    { value: 'COMPLETED', label: 'Completed' },
-                    { value: 'CANCELLED', label: 'Cancelled' },
-                  ]}
-                  className="w-full"
-                />
-                {statusUpdating === editingLabResult._id && (
-                  <div className="mt-1 text-sm text-blue-600">Updating status...</div>
-                )}
-              </FormField>
-            )}
-
-            {editingLabResult && !canUpdateStatus(editingLabResult) && (
-              <FormField label="Status">
-                <div className="flex items-center space-x-2">
-                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(editingLabResult.status)}`}>
-                    {LAB_TEST_STATUS_LABELS[editingLabResult.status]}
-                  </span>
-                  <span className="text-xs text-gray-500">(Only Laboratorists and Super Admins can update status)</span>
-                </div>
-              </FormField>
-            )}
-          </div>
-
-          <FormField label="Lab Test Description" required error={errors.notes}>
-            <TextArea
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="Describe the lab test requirements, symptoms, or specific conditions to be tested..."
-              rows={4}
-            />
-          </FormField>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setIsEditModalOpen(false);
-                setEditingLabResult(null);
-                resetForm();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
-              onClick={handleUpdateLabResult}
-              loading={loading}
-            >
-              Update Request
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* View Lab Result Modal */}
-      <Modal
-        isOpen={isViewModalOpen}
-        onClose={() => {
-          setIsViewModalOpen(false);
-          setViewingLabResult(null);
-        }}
-        title="Lab Test Details"
-        size="lg"
-      >
-        {viewingLabResult && (
+        {/* Add Lab Result Modal */}
+        <Modal
+          isOpen={isAddModalOpen}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            resetForm();
+          }}
+          title="Request New Lab Test"
+          size="lg"
+        >
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-primary">Lab Result ID</label>
-                <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.labResultId || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-primary">Patient ID</label>
-                <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.patientId}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-primary">Patient Name</label>
-                <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.patientName}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-primary">Test Types</label>
-                <div className="mt-1 space-y-1">
-                  {/* Primary test type */}
-                  <div className="flex items-center space-x-2">
-                    <span className="w-2 h-2 bg-accent-color rounded-full"></span>
-                    <span className="text-sm text-text-secondary font-medium">{LAB_TEST_LABELS[viewingLabResult.testType]}</span>
-                    <span className="text-xs text-text-muted">(Primary)</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField label="Patient ID" required error={errors.patientId}>
+                <Input
+                  value={formData.patientId}
+                  onChange={(e) => handleInputChange('patientId', e.target.value)}
+                  placeholder="Enter patient ID"
+                />
+              </FormField>
+
+              <FormField label="Patient Name" required error={errors.patientName}>
+                <Input
+                  value={formData.patientName}
+                  onChange={(e) => handleInputChange('patientName', e.target.value)}
+                  placeholder="Enter patient name"
+                />
+              </FormField>
+
+              <FormField label="Test Type" required error={errors.testType}>
+                <Select
+                  value={formData.testType}
+                  onChange={(e) => handleInputChange('testType', e.target.value)}
+                  options={Object.entries(LAB_TEST_TYPES).map(([key, value]) => ({
+                    value,
+                    label: LAB_TEST_LABELS[value],
+                  }))}
+                />
+              </FormField>
+
+              <FormField label="Additional Test Types (Optional)">
+                <div className="space-y-2">
+                  <div className="text-sm text-text-muted mb-2">
+                    Select additional tests if patient needs multiple tests
                   </div>
-                  
-                  {/* Additional test types */}
-                  {viewingLabResult.additionalTestTypes && viewingLabResult.additionalTestTypes.map((testType, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <span className="w-2 h-2 bg-text-muted rounded-full"></span>
-                      <span className="text-sm text-text-secondary">{LAB_TEST_LABELS[testType as keyof typeof LAB_TEST_TYPES]}</span>
-                    </div>
-                  ))}
+                  <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                    {Object.entries(LAB_TEST_TYPES).map(([key, value]) => (
+                      <label key={value} className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.selectedTestTypes.includes(value)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData(prev => ({
+                                ...prev,
+                                selectedTestTypes: [...prev.selectedTestTypes, value]
+                              }));
+                            } else {
+                              setFormData(prev => ({
+                                ...prev,
+                                selectedTestTypes: prev.selectedTestTypes.filter(t => t !== value)
+                              }));
+                            }
+                          }}
+                          className="rounded border-border-color text-accent-color focus:ring-accent-color"
+                        />
+                        <span className="text-sm text-text-primary">{LAB_TEST_LABELS[value]}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-primary">Test Name</label>
-                                    <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.testName || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-primary">Status</label>
-                {canUpdateStatus(viewingLabResult) ? (
-                  <div className="mt-1">
-                    <Select
-                      value={viewingLabResult.status}
-                      onChange={(e) => handleStatusUpdate(viewingLabResult._id, e.target.value)}
-                      disabled={statusUpdating === viewingLabResult._id}
-                      options={[
-                        { value: 'PENDING', label: 'Pending' },
-                        { value: 'IN_PROGRESS', label: 'In Progress' },
-                        { value: 'COMPLETED', label: 'Completed' },
-                        { value: 'CANCELLED', label: 'Cancelled' },
-                      ]}
-                      className="w-full"
-                    />
-                    {statusUpdating === viewingLabResult._id && (
-                      <div className="mt-2 text-sm text-blue-600">Updating status...</div>
-                    )}
-                  </div>
-                ) : (
-                  <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingLabResult.status)}`}>
-                    {LAB_TEST_STATUS_LABELS[viewingLabResult.status]}
-                  </span>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-primary">Requested At</label>
-                <p className="mt-1 text-sm text-text-secondary">
-                  {formatDate(viewingLabResult.requestedAt)}
-                </p>
-              </div>
+              </FormField>
+
+              <FormField label="Test Name" error={errors.testName}>
+                <Input
+                  value={formData.testName}
+                  onChange={(e) => handleInputChange('testName', e.target.value)}
+                  placeholder="Enter test name (optional)"
+                />
+              </FormField>
             </div>
 
-            {viewingLabResult.results && viewingLabResult.results.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">Test Results</label>
-                <div className="space-y-2">
-                  {viewingLabResult.results.map((result, index) => (
-                    <div key={index} className="border border-border-color p-3 rounded-lg bg-card-bg">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <span className="text-text-muted">Parameter:</span>
-                          <p className="font-medium text-text-primary">{result.parameter}</p>
-                        </div>
-                        <div>
-                          <span className="text-text-muted">Value:</span>
-                          <p className="font-medium text-text-primary">{result.value} {result.unit}</p>
-                        </div>
-                        {result.referenceRange && (
-                          <div>
-                            <span className="text-text-muted">Reference Range:</span>
-                            <p className="font-medium text-text-primary">{result.referenceRange}</p>
-                          </div>
-                        )}
-                        <div>
-                          <span className="text-text-muted">Status:</span>
-                          <p className="font-medium text-text-primary">{result.isAbnormal ? 'Abnormal' : 'Normal'}</p>
-                        </div>
-                      </div>
-                      {result.notes && (
-                        <div className="mt-2">
-                          <span className="text-text-muted text-sm">Notes:</span>
-                          <p className="text-sm text-text-secondary">{result.notes}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <FormField label="Lab Test Description" required error={errors.notes}>
+              <TextArea
+                value={formData.notes}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                placeholder="Describe the lab test requirements, symptoms, or specific conditions to be tested..."
+                rows={4}
+              />
+            </FormField>
 
-            {viewingLabResult.notes && (
-              <div>
-                <label className="block text-sm font-medium text-text-primary">Notes</label>
-                <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.notes}</p>
-              </div>
-            )}
-
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-end space-x-3 pt-4">
               <Button
                 variant="secondary"
                 onClick={() => {
-                  setIsViewModalOpen(false);
-                  setViewingLabResult(null);
+                  setIsAddModalOpen(false);
+                  resetForm();
                 }}
               >
-                Close
+                Cancel
+              </Button>
+              <Button  className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
+                onClick={handleAddLabResult}
+                loading={loading}
+              >
+                Request Test
               </Button>
             </div>
           </div>
-        )}
-      </Modal>
-    </DashboardLayout>
+        </Modal>
+
+        {/* Edit Lab Result Modal */}
+        <Modal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingLabResult(null);
+            resetForm();
+          }}
+          title="Edit Lab Test Request"
+          size="lg"
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField label="Patient ID" required error={errors.patientId}>
+                <Input
+                  value={formData.patientId}
+                  onChange={(e) => handleInputChange('patientId', e.target.value)}
+                  placeholder="Enter patient ID"
+                />
+              </FormField>
+
+              <FormField label="Patient Name" required error={errors.patientName}>
+                <Input
+                  value={formData.patientName}
+                  onChange={(e) => handleInputChange('patientName', e.target.value)}
+                  placeholder="Enter patient name"
+                />
+              </FormField>
+
+              <FormField label="Test Type" required error={errors.testType}>
+                <Select
+                  value={formData.testType}
+                  onChange={(e) => handleInputChange('testType', e.target.value)}
+                  options={Object.entries(LAB_TEST_TYPES).map(([key, value]) => ({
+                    value,
+                    label: LAB_TEST_LABELS[value],
+                  }))}
+                />
+              </FormField>
+
+              <FormField label="Additional Test Types (Optional)">
+                <div className="space-y-2">
+                  <div className="text-sm text-text-muted mb-2">
+                    Select additional tests if patient needs multiple tests
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                    {Object.entries(LAB_TEST_TYPES).map(([key, value]) => (
+                      <label key={value} className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.selectedTestTypes.includes(value)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData(prev => ({
+                                ...prev,
+                                selectedTestTypes: [...prev.selectedTestTypes, value]
+                              }));
+                            } else {
+                              setFormData(prev => ({
+                                ...prev,
+                                selectedTestTypes: prev.selectedTestTypes.filter(t => t !== value)
+                              }));
+                            }
+                          }}
+                          className="rounded border-border-color text-accent-color focus:ring-accent-color"
+                        />
+                        <span className="text-sm text-text-primary">{LAB_TEST_LABELS[value]}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </FormField>
+
+              <FormField label="Test Name" error={errors.testName}>
+                <Input
+                  value={formData.testName}
+                  onChange={(e) => handleInputChange('testName', e.target.value)}
+                  placeholder="Enter test name (optional)"
+                />
+              </FormField>
+
+              {editingLabResult && canUpdateStatus(editingLabResult) && (
+                <FormField label="Status">
+                  <Select
+                    value={editingLabResult.status}
+                    onChange={(e) => handleStatusUpdate(editingLabResult._id, e.target.value)}
+                    disabled={statusUpdating === editingLabResult._id}
+                    options={[
+                      { value: 'PENDING', label: 'Pending' },
+                      { value: 'IN_PROGRESS', label: 'In Progress' },
+                      { value: 'COMPLETED', label: 'Completed' },
+                      { value: 'CANCELLED', label: 'Cancelled' },
+                    ]}
+                    className="w-full"
+                  />
+                  {statusUpdating === editingLabResult._id && (
+                    <div className="mt-1 text-sm text-blue-600">Updating status...</div>
+                  )}
+                </FormField>
+              )}
+
+              {editingLabResult && !canUpdateStatus(editingLabResult) && (
+                <FormField label="Status">
+                  <div className="flex items-center space-x-2">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(editingLabResult.status)}`}>
+                      {LAB_TEST_STATUS_LABELS[editingLabResult.status]}
+                    </span>
+                    <span className="text-xs text-gray-500">(Only Laboratorists and Super Admins can update status)</span>
+                  </div>
+                </FormField>
+              )}
+            </div>
+
+            <FormField label="Lab Test Description" required error={errors.notes}>
+              <TextArea
+                value={formData.notes}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                placeholder="Describe the lab test requirements, symptoms, or specific conditions to be tested..."
+                rows={4}
+              />
+            </FormField>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingLabResult(null);
+                  resetForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
+                onClick={handleUpdateLabResult}
+                loading={loading}
+              >
+                Update Request
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* View Lab Result Modal */}
+        <Modal
+          isOpen={isViewModalOpen}
+          onClose={() => {
+            setIsViewModalOpen(false);
+            setViewingLabResult(null);
+          }}
+          title="Lab Test Details"
+          size="lg"
+        >
+          {viewingLabResult && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-primary">Lab Result ID</label>
+                  <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.labResultId || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-primary">Patient ID</label>
+                  <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.patientId}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-primary">Patient Name</label>
+                  <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.patientName}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-primary">Test Types</label>
+                  <div className="mt-1 space-y-1">
+                    {/* Primary test type */}
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2 h-2 bg-accent-color rounded-full"></span>
+                      <span className="text-sm text-text-secondary font-medium">{LAB_TEST_LABELS[viewingLabResult.testType]}</span>
+                      <span className="text-xs text-text-muted">(Primary)</span>
+                    </div>
+                    
+                    {/* Additional test types */}
+                    {viewingLabResult.additionalTestTypes && viewingLabResult.additionalTestTypes.map((testType, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <span className="w-2 h-2 bg-text-muted rounded-full"></span>
+                        <span className="text-sm text-text-secondary">{LAB_TEST_LABELS[testType as keyof typeof LAB_TEST_TYPES]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-primary">Test Name</label>
+                  <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.testName || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-primary">Status</label>
+                  {canUpdateStatus(viewingLabResult) ? (
+                    <div className="mt-1">
+                      <Select
+                        value={viewingLabResult.status}
+                        onChange={(e) => handleStatusUpdate(viewingLabResult._id, e.target.value)}
+                        disabled={statusUpdating === viewingLabResult._id}
+                        options={[
+                          { value: 'PENDING', label: 'Pending' },
+                          { value: 'IN_PROGRESS', label: 'In Progress' },
+                          { value: 'COMPLETED', label: 'Completed' },
+                          { value: 'CANCELLED', label: 'Cancelled' },
+                        ]}
+                        className="w-full"
+                      />
+                      {statusUpdating === viewingLabResult._id && (
+                        <div className="mt-2 text-sm text-blue-600">Updating status...</div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingLabResult.status)}`}>
+                      {LAB_TEST_STATUS_LABELS[viewingLabResult.status]}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-primary">Requested At</label>
+                  <p className="mt-1 text-sm text-text-secondary">
+                    {formatDate(viewingLabResult.requestedAt)}
+                  </p>
+                </div>
+              </div>
+
+              {viewingLabResult.results && viewingLabResult.results.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">Test Results</label>
+                  <div className="space-y-2">
+                    {viewingLabResult.results.map((result, index) => (
+                      <div key={index} className="border border-border-color p-3 rounded-lg bg-card-bg">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-text-muted">Parameter:</span>
+                            <p className="font-medium text-text-primary">{result.parameter}</p>
+                          </div>
+                          <div>
+                            <span className="text-text-muted">Value:</span>
+                            <p className="font-medium text-text-primary">{result.value} {result.unit}</p>
+                          </div>
+                          {result.referenceRange && (
+                            <div>
+                              <span className="text-text-muted">Reference Range:</span>
+                              <p className="font-medium text-text-primary">{result.referenceRange}</p>
+                            </div>
+                          )}
+                          <div>
+                            <span className="text-text-muted">Status:</span>
+                            <p className="font-medium text-text-primary">{result.isAbnormal ? 'Abnormal' : 'Normal'}</p>
+                          </div>
+                        </div>
+                        {result.notes && (
+                          <div className="mt-2">
+                            <span className="text-text-muted text-sm">Notes:</span>
+                            <p className="text-sm text-text-secondary">{result.notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {viewingLabResult.notes && (
+                <div>
+                  <label className="block text-sm font-medium text-text-primary">Notes</label>
+                  <p className="mt-1 text-sm text-text-secondary">{viewingLabResult.notes}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setIsViewModalOpen(false);
+                    setViewingLabResult(null);
+                  }}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+      </DashboardLayout>
+      <Footer />
+    </>
   );
 } 

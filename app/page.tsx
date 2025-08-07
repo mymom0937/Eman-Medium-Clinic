@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser } from '@clerk/nextjs';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 export default function HomePage() {
   const { user, isSignedIn } = useUser();
@@ -269,59 +270,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-card-bg text-text-primary py-12 border-t border-border-color">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-8 h-8 bg-accent-color rounded-lg flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">🏥</span>
-                </div>
-                <span className="text-xl font-bold">Eman Clinic</span>
-              </div>
-              <p className="text-text-secondary text-sm leading-relaxed">
-                Modern clinic management for healthcare facilities. 
-                Streamline operations and improve patient care.
-              </p>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Features</h3>
-              <ul className="space-y-2 text-text-secondary text-sm">
-                <li>Drug Inventory</li>
-                <li>Patient Records</li>
-                <li>Sales Management</li>
-                <li>Medical Services</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Support</h3>
-              <ul className="space-y-2 text-text-secondary text-sm">
-                <li>Documentation</li>
-                <li>Help Center</li>
-                <li>Contact Support</li>
-                <li>Training</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Company</h3>
-              <ul className="space-y-2 text-text-secondary text-sm">
-                <li>About Us</li>
-                <li>Privacy Policy</li>
-                <li>Terms of Service</li>
-                <li>Contact</li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="border-t border-border-color mt-8 pt-8 text-center text-text-muted text-sm font-semibold">
-            <p>&copy; 2024 Eman Clinic. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

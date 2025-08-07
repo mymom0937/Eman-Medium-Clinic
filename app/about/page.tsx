@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FaDatabase, FaCloud, FaShieldAlt, FaServer, FaCogs, FaPalette } from 'react-icons/fa';
@@ -196,6 +197,7 @@ export default function AboutPage() {
           </Link>
         </div>
       </main>
+      <Footer />
     </>
   );
 } 

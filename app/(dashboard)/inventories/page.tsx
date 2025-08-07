@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import Footer from '@/components/Footer';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { useUserRole } from '@/hooks/useUserRole';
 import { PageLoader } from '@/components/common/loading-spinner';
@@ -1149,5 +1150,6 @@ export default function InventoryPage() {
       </Modal>
       
     </DashboardLayout>
+    <Footer />
   );
 } 
