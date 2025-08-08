@@ -1,36 +1,42 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import Footer from '@/components/Footer';
-import { StatsCard } from '@/components/dashboard/stats-card';
-import { useUserRole } from '@/hooks/useUserRole';
-import { PageLoader } from '@/components/common/loading-spinner';
-import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
-import { Modal } from '@/components/ui/modal';
-import { FormField, Input, Select, Button, TextArea } from '@/components/ui/form';
-import { toastManager } from '@/lib/utils/toast';
+import React, { useState, useEffect } from "react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import Footer from "@/components/Footer";
+import { StatsCard } from "@/components/dashboard/stats-card";
+import { useUserRole } from "@/hooks/useUserRole";
+import { PageLoader } from "@/components/common/loading-spinner";
+import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
+import { Modal } from "@/components/ui/modal";
+import {
+  FormField,
+  Input,
+  Select,
+  Button,
+  TextArea,
+} from "@/components/ui/form";
+import { toastManager } from "@/lib/utils/toast";
 
 interface Payment {
   _id: string;
   paymentId: string;
   patientId: string;
   patientName: string;
-  
+
   // Order Integration
-  orderId?: string;           // Reference to drug order or lab order
-  orderType?: 'DRUG_ORDER' | 'LAB_TEST' | 'CONSULTATION' | 'OTHER';
-  orderReference?: string;     // Human-readable order reference
-  drugOrderId?: string;       // Actual drug order ID (DRG000001 format)
-  
+  orderId?: string; // Reference to drug order or lab order
+  orderType?: "DRUG_ORDER" | "LAB_TEST" | "CONSULTATION" | "OTHER";
+  orderReference?: string; // Human-readable order reference
+  drugOrderId?: string; // Actual drug order ID (DRG000001 format)
+
   // Payment Details
   amount: number;
   paymentMethod: string;
   paymentStatus: string;
-  
+
   // Enhanced for Drug Sales
-  paymentType: 'DRUG_SALE' | 'LAB_TEST' | 'CONSULTATION' | 'OTHER';
-  
+  paymentType: "DRUG_SALE" | "LAB_TEST" | "CONSULTATION" | "OTHER";
+
   // Drug Sale Specific Fields (when paymentType === 'DRUG_SALE')
   items?: Array<{
     drugId: string;
@@ -39,20 +45,20 @@ interface Payment {
     unitPrice: number;
     totalPrice: number;
   }>;
-  
+
   // General Payment Fields
   discount: number;
   finalAmount: number;
   transactionReference?: string;
   notes?: string;
-  
+
   // Metadata
   recordedBy: string;
   createdAt: string;
   updatedAt: string;
-  
+
   // UI-specific properties
-  fullDescription?: string;    // For displaying full description in modal
+  fullDescription?: string; // For displaying full description in modal
 }
 
 interface PaymentStats {
@@ -70,24 +76,26 @@ interface PaymentStats {
 // This will be replaced with dynamic data from the database
 
 const PAYMENT_STATUS_OPTIONS = [
-  { value: 'all', label: 'All Status' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'failed', label: 'Failed' },
+  { value: "all", label: "All Status" },
+  { value: "completed", label: "Completed" },
+  { value: "pending", label: "Pending" },
+  { value: "failed", label: "Failed" },
 ];
 
 const PAYMENT_METHOD_OPTIONS = [
-  { value: 'all', label: 'All Methods' },
-  { value: 'cash', label: 'Cash' },
-  { value: 'card', label: 'Card' },
-  { value: 'mobile_money', label: 'Mobile Money' },
+  { value: "all", label: "All Methods" },
+  { value: "cash", label: "Cash" },
+  { value: "card", label: "Card" },
+  { value: "mobile_money", label: "Mobile Money" },
 ];
 
 export default function PaymentsPage() {
   const { userRole, userName, isLoaded } = useUserRole();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedMethod, setSelectedMethod] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedMethod, setSelectedMethod] = useState("all");
+  // Viewport-based rendering toggle (lg breakpoint: 1024px)
+  const [isLgUp, setIsLgUp] = useState<boolean>(true);
   const [isNewPaymentModalOpen, setIsNewPaymentModalOpen] = useState(false);
   const [isViewPaymentModalOpen, setIsViewPaymentModalOpen] = useState(false);
   const [isEditPaymentModalOpen, setIsEditPaymentModalOpen] = useState(false);
@@ -110,17 +118,17 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
-    patientId: '',
-    patientName: '',
-    amount: '',
-    paymentMethod: '',
-    paymentStatus: '',
-    transactionReference: '',
-    orderId: '',
-    orderType: '',
-    orderReference: '',
-    drugOrderId: '',
-    paymentType: 'OTHER',
+    patientId: "",
+    patientName: "",
+    amount: "",
+    paymentMethod: "",
+    paymentStatus: "",
+    transactionReference: "",
+    orderId: "",
+    orderType: "",
+    orderReference: "",
+    drugOrderId: "",
+    paymentType: "OTHER",
     items: [] as Array<{
       drugId: string;
       drugName: string;
@@ -128,53 +136,74 @@ export default function PaymentsPage() {
       unitPrice: number;
       totalPrice: number;
     }>,
-    discount: '0',
-    finalAmount: '',
-    notes: '',
+    discount: "0",
+    finalAmount: "",
+    notes: "",
   });
   const [errors, setErrors] = useState<any>({});
 
   // Enhanced stats calculation
   const calculateStats = (paymentsData: Payment[]) => {
-    const totalRevenue = paymentsData.reduce((sum, payment) => sum + (payment.finalAmount || payment.amount), 0);
+    const totalRevenue = paymentsData.reduce(
+      (sum, payment) => sum + (payment.finalAmount || payment.amount),
+      0
+    );
     const totalTransactions = paymentsData.length;
-    const averageTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
-    
+    const averageTransaction =
+      totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+
     // Calculate by payment type
     const totalDrugSales = paymentsData
-      .filter(payment => payment.paymentType === 'DRUG_SALE')
-      .reduce((sum, payment) => sum + (payment.finalAmount || payment.amount), 0);
-      
+      .filter((payment) => payment.paymentType === "DRUG_SALE")
+      .reduce(
+        (sum, payment) => sum + (payment.finalAmount || payment.amount),
+        0
+      );
+
     const totalLabPayments = paymentsData
-      .filter(payment => payment.paymentType === 'LAB_TEST')
-      .reduce((sum, payment) => sum + (payment.finalAmount || payment.amount), 0);
-      
+      .filter((payment) => payment.paymentType === "LAB_TEST")
+      .reduce(
+        (sum, payment) => sum + (payment.finalAmount || payment.amount),
+        0
+      );
+
     const totalConsultations = paymentsData
-      .filter(payment => payment.paymentType === 'CONSULTATION')
-      .reduce((sum, payment) => sum + (payment.finalAmount || payment.amount), 0);
-    
+      .filter((payment) => payment.paymentType === "CONSULTATION")
+      .reduce(
+        (sum, payment) => sum + (payment.finalAmount || payment.amount),
+        0
+      );
+
     const pendingAmount = paymentsData
-      .filter(payment => payment.paymentStatus === 'PENDING')
-      .reduce((sum, payment) => sum + (payment.finalAmount || payment.amount), 0);
-      
-    const completedPayments = paymentsData.filter(payment => payment.paymentStatus === 'COMPLETED').length;
-    
+      .filter((payment) => payment.paymentStatus === "PENDING")
+      .reduce(
+        (sum, payment) => sum + (payment.finalAmount || payment.amount),
+        0
+      );
+
+    const completedPayments = paymentsData.filter(
+      (payment) => payment.paymentStatus === "COMPLETED"
+    ).length;
+
     const today = new Date();
     const todayRevenue = paymentsData
-      .filter(payment => {
+      .filter((payment) => {
         const paymentDate = new Date(payment.createdAt);
         return paymentDate.toDateString() === today.toDateString();
       })
-      .reduce((sum, payment) => sum + (payment.finalAmount || payment.amount), 0);
+      .reduce(
+        (sum, payment) => sum + (payment.finalAmount || payment.amount),
+        0
+      );
 
     return {
-            totalRevenue,
+      totalRevenue,
       totalDrugSales,
       totalLabPayments,
       totalConsultations,
-            pendingAmount,
-            completedPayments,
-            totalTransactions,
+      pendingAmount,
+      completedPayments,
+      totalTransactions,
       averageTransaction,
       todayRevenue,
     };
@@ -187,8 +216,8 @@ export default function PaymentsPage() {
 
       try {
         setInitialLoading(true);
-        
-        const paymentsResponse = await fetch('/api/payments');
+
+        const paymentsResponse = await fetch("/api/payments");
         const paymentsResult = await paymentsResponse.json();
         if (paymentsResponse.ok && paymentsResult.success) {
           setPayments(paymentsResult.data || []);
@@ -196,25 +225,25 @@ export default function PaymentsPage() {
           setStats(stats);
         }
 
-        const patientsResponse = await fetch('/api/patients');
+        const patientsResponse = await fetch("/api/patients");
         const patientsResult = await patientsResponse.json();
         if (patientsResponse.ok && patientsResult.success) {
           setPatients(patientsResult.data || []);
         }
-        
+
         // TODO: Uncomment when API is ready
         // // Fetch payments and patients in parallel
         // const [paymentsResponse, patientsResponse] = await Promise.all([
         //   fetch('/api/payments'),
         //   fetch('/api/patients')
         // ]);
-        
+
         // const paymentsResult = await paymentsResponse.json();
         // const patientsResult = await patientsResponse.json();
-        
+
         // if (paymentsResponse.ok && paymentsResult.success) {
         //   setPayments(paymentsResult.data);
-          
+
         //   // Calculate enhanced stats
         //   const calculatedStats = calculateStats(paymentsResult.data);
         //   setStats(calculatedStats);
@@ -224,7 +253,7 @@ export default function PaymentsPage() {
         //   setPatients(patientsResult.data);
         // }
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error("Error loading data:", error);
       } finally {
         setInitialLoading(false);
       }
@@ -233,13 +262,20 @@ export default function PaymentsPage() {
     loadData();
   }, [isLoaded]);
 
+  // Setup viewport listener
+  useEffect(() => {
+    const compute = () => {
+      if (typeof window === "undefined") return;
+      setIsLgUp(window.innerWidth >= 1024);
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, []);
+
   if (!isLoaded || initialLoading) {
     return (
-      <DashboardLayout
-        title="Payments"
-        userRole={userRole}
-        userName={userName}
-      >
+      <DashboardLayout title="Payments" userRole={userRole} userName={userName}>
         <div className="flex items-center justify-center h-[60vh]">
           <PageLoader text="Loading payments..." />
         </div>
@@ -249,71 +285,65 @@ export default function PaymentsPage() {
 
   // Prepare dynamic options for patients
   const PATIENT_OPTIONS = [
-    { value: '', label: 'Select Patient' },
-    ...patients.map(patient => ({
-    value: patient.patientId,
-    label: `${patient.firstName} ${patient.lastName} (${patient.patientId})`
-    }))
+    { value: "", label: "Select Patient" },
+    ...patients.map((patient) => ({
+      value: patient.patientId,
+      label: `${patient.firstName} ${patient.lastName} (${patient.patientId})`,
+    })),
   ];
 
-
-
-
-
   // Filter payments based on search, status, and method
-  const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment.paymentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payment.patientId.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || payment.paymentStatus.toLowerCase() === selectedStatus;
-    const matchesMethod = selectedMethod === 'all' || payment.paymentMethod.toLowerCase().replace('_', '') === selectedMethod;
+  const filteredPayments = payments.filter((payment) => {
+    const matchesSearch =
+      payment.paymentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.patientId.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      selectedStatus === "all" ||
+      payment.paymentStatus.toLowerCase() === selectedStatus;
+    const matchesMethod =
+      selectedMethod === "all" ||
+      payment.paymentMethod.toLowerCase().replace("_", "") === selectedMethod;
     return matchesSearch && matchesStatus && matchesMethod;
   });
 
-
-
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'FAILED':
-        return 'bg-red-100 text-red-800';
+      case "COMPLETED":
+        return "bg-green-100 text-green-800";
+      case "PENDING":
+        return "bg-yellow-100 text-yellow-800";
+      case "FAILED":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getMethodIcon = (method: string) => {
     switch (method.toLowerCase()) {
-      case 'cash':
-        return '💵';
-      case 'card':
-        return '💳';
-      case 'mobile_money':
-        return '📱';
+      case "cash":
+        return "💵";
+      case "card":
+        return "💳";
+      case "mobile_money":
+        return "📱";
       default:
-        return '💰';
+        return "💰";
     }
   };
 
   const formatDate = (dateString: string | Date | null) => {
-    if (!dateString) return 'N/A';
-    
+    if (!dateString) return "N/A";
     try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return 'Invalid Date';
-      }
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (error) {
-      return 'Invalid Date';
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return "Invalid Date";
+      return new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }).format(d);
+    } catch {
+      return "Invalid Date";
     }
   };
 
@@ -321,16 +351,16 @@ export default function PaymentsPage() {
     const newErrors: any = {};
 
     if (!formData.patientId) {
-      newErrors.patientId = 'Patient ID is required';
+      newErrors.patientId = "Patient ID is required";
     }
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      newErrors.amount = 'Valid amount is required';
+      newErrors.amount = "Valid amount is required";
     }
     if (!formData.paymentMethod) {
-      newErrors.paymentMethod = 'Payment method is required';
+      newErrors.paymentMethod = "Payment method is required";
     }
     if (!formData.paymentStatus) {
-      newErrors.paymentStatus = 'Payment status is required';
+      newErrors.paymentStatus = "Payment status is required";
     }
 
     setErrors(newErrors);
@@ -342,10 +372,10 @@ export default function PaymentsPage() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/payments', {
-        method: 'POST',
+      const response = await fetch("/api/payments", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           patientId: formData.patientId,
@@ -362,21 +392,22 @@ export default function PaymentsPage() {
           paymentType: formData.paymentType,
           items: formData.items,
           discount: parseFloat(formData.discount),
-          finalAmount: parseFloat(formData.finalAmount) || parseFloat(formData.amount),
-          recordedBy: userName || 'Unknown',
+          finalAmount:
+            parseFloat(formData.finalAmount) || parseFloat(formData.amount),
+          recordedBy: userName || "Unknown",
         }),
       });
 
       const result = await response.json();
       if (response.ok && result.success) {
-        toastManager.success('Payment recorded successfully!');
+        toastManager.success("Payment recorded successfully!");
         setIsNewPaymentModalOpen(false);
         resetForm();
         // Reload data
         const loadData = async () => {
-      const paymentsResponse = await fetch('/api/payments');
-      const paymentsResult = await paymentsResponse.json();
-      if (paymentsResponse.ok && paymentsResult.success) {
+          const paymentsResponse = await fetch("/api/payments");
+          const paymentsResult = await paymentsResponse.json();
+          if (paymentsResponse.ok && paymentsResult.success) {
             setPayments(paymentsResult.data || []);
             const stats = calculateStats(paymentsResult.data || []);
             setStats(stats);
@@ -384,11 +415,11 @@ export default function PaymentsPage() {
         };
         loadData();
       } else {
-        toastManager.error(result.message || 'Failed to record payment');
+        toastManager.error(result.message || "Failed to record payment");
       }
     } catch (error) {
-      console.error('Error creating payment:', error);
-      toastManager.error('Failed to record payment. Please try again.');
+      console.error("Error creating payment:", error);
+      toastManager.error("Failed to record payment. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -403,67 +434,71 @@ export default function PaymentsPage() {
 
     try {
       // First, try to fetch all orders for the patient without status filter
-      const allOrdersResponse = await fetch(`/api/drug-orders?patientId=${patientId}`);
+      const allOrdersResponse = await fetch(
+        `/api/drug-orders?patientId=${patientId}`
+      );
       const allOrdersResult = await allOrdersResponse.json();
-      
+
       if (allOrdersResponse.ok) {
         // The API returns the data directly, not wrapped in success/data
         const orders = Array.isArray(allOrdersResult) ? allOrdersResult : [];
-        
+
         // Filter to show only approved and dispensed orders
-        const validOrders = orders.filter((order: any) => 
-          order.status === 'APPROVED' || order.status === 'DISPENSED'
-        ) || [];
+        const validOrders =
+          orders.filter(
+            (order: any) =>
+              order.status === "APPROVED" || order.status === "DISPENSED"
+          ) || [];
         setDrugOrders(validOrders);
       } else {
         setDrugOrders([]);
       }
     } catch (error) {
-      console.error('Error fetching drug orders:', error);
+      console.error("Error fetching drug orders:", error);
       setDrugOrders([]);
     }
   };
 
   // Enhanced helper functions for drug sales
   const handlePaymentTypeChange = (paymentType: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       paymentType,
-      items: paymentType === 'DRUG_SALE' ? [] : prev.items,
-      amount: paymentType !== 'DRUG_SALE' ? prev.amount : '',
+      items: paymentType === "DRUG_SALE" ? [] : prev.items,
+      amount: paymentType !== "DRUG_SALE" ? prev.amount : "",
     }));
   };
 
   const addItem = () => {
     const newItem = {
-      drugId: '',
-      drugName: '',
+      drugId: "",
+      drugName: "",
       quantity: 1,
       unitPrice: 0,
       totalPrice: 0,
     };
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      items: [...prev.items, newItem]
+      items: [...prev.items, newItem],
     }));
   };
 
   const updateItem = (index: number, field: string, value: any) => {
     const updatedItems = [...formData.items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
-    
+
     // Recalculate total price
-    if (field === 'quantity' || field === 'unitPrice') {
-      updatedItems[index].totalPrice = 
+    if (field === "quantity" || field === "unitPrice") {
+      updatedItems[index].totalPrice =
         updatedItems[index].quantity * updatedItems[index].unitPrice;
     }
-    
-    setFormData(prev => ({ ...prev, items: updatedItems }));
+
+    setFormData((prev) => ({ ...prev, items: updatedItems }));
   };
 
   const removeItem = (index: number) => {
     const updatedItems = formData.items.filter((_, i) => i !== index);
-    setFormData(prev => ({ ...prev, items: updatedItems }));
+    setFormData((prev) => ({ ...prev, items: updatedItems }));
   };
 
   const calculateSubtotal = () => {
@@ -496,71 +531,71 @@ export default function PaymentsPage() {
       amount: payment.amount.toString(),
       paymentMethod: payment.paymentMethod.toLowerCase(),
       paymentStatus: payment.paymentStatus.toLowerCase(),
-      transactionReference: payment.transactionReference || '',
-      notes: payment.notes || '',
-      
+      transactionReference: payment.transactionReference || "",
+      notes: payment.notes || "",
+
       // Order Integration
-      orderId: payment.orderId || '',
-      orderType: payment.orderType || 'DRUG_ORDER',
-      orderReference: payment.orderReference || '',
-      drugOrderId: payment.drugOrderId || '',
-      
+      orderId: payment.orderId || "",
+      orderType: payment.orderType || "DRUG_ORDER",
+      orderReference: payment.orderReference || "",
+      drugOrderId: payment.drugOrderId || "",
+
       // Enhanced Fields for Drug Sales
-      paymentType: payment.paymentType || 'DRUG_SALE',
+      paymentType: payment.paymentType || "DRUG_SALE",
       items: payment.items || [],
-      discount: payment.discount?.toString() || '0',
-      finalAmount: payment.finalAmount?.toString() || '',
+      discount: payment.discount?.toString() || "0",
+      finalAmount: payment.finalAmount?.toString() || "",
     });
-    
+
     // Fetch drug orders for the patient if they have an orderId
     if (payment.patientId) {
       fetchDrugOrdersForPatient(payment.patientId);
     }
-    
+
     setIsEditPaymentModalOpen(true);
   };
 
   const handleDeletePayment = async (paymentId: string) => {
-    if (!confirm('Are you sure you want to delete this payment?')) return;
-    
+    if (!confirm("Are you sure you want to delete this payment?")) return;
+
     try {
       const response = await fetch(`/api/payments/${paymentId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       const result = await response.json();
       if (response.ok && result.success) {
-        toastManager.success('Payment deleted successfully!');
+        toastManager.success("Payment deleted successfully!");
         // Reload data
-      const paymentsResponse = await fetch('/api/payments');
-      const paymentsResult = await paymentsResponse.json();
-      if (paymentsResponse.ok && paymentsResult.success) {
+        const paymentsResponse = await fetch("/api/payments");
+        const paymentsResult = await paymentsResponse.json();
+        if (paymentsResponse.ok && paymentsResult.success) {
           setPayments(paymentsResult.data || []);
           const stats = calculateStats(paymentsResult.data || []);
           setStats(stats);
         }
       } else {
-        toastManager.error(result.message || 'Failed to delete payment');
+        toastManager.error(result.message || "Failed to delete payment");
       }
     } catch (error) {
-      console.error('Error deleting payment:', error);
-      toastManager.error('Failed to delete payment. Please try again.');
+      console.error("Error deleting payment:", error);
+      toastManager.error("Failed to delete payment. Please try again.");
     }
   };
 
   const resetForm = () => {
     setFormData({
-      patientId: '',
-      patientName: '',
-      amount: '',
-      paymentMethod: '',
-      paymentStatus: '',
-      transactionReference: '',
-      orderId: '',
-      orderType: '',
-      orderReference: '',
-      drugOrderId: '',
-      paymentType: 'OTHER',
+      patientId: "",
+      patientName: "",
+      amount: "",
+      paymentMethod: "",
+      paymentStatus: "",
+      transactionReference: "",
+      orderId: "",
+      orderType: "",
+      orderReference: "",
+      drugOrderId: "",
+      paymentType: "OTHER",
       items: [] as Array<{
         drugId: string;
         drugName: string;
@@ -568,9 +603,9 @@ export default function PaymentsPage() {
         unitPrice: number;
         totalPrice: number;
       }>,
-      discount: '0',
-      finalAmount: '',
-      notes: '',
+      discount: "0",
+      finalAmount: "",
+      notes: "",
     });
     setErrors({});
     setDrugOrders([]);
@@ -582,9 +617,9 @@ export default function PaymentsPage() {
     setLoading(true);
     try {
       const response = await fetch(`/api/payments/${editingPayment._id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           patientId: formData.patientId,
@@ -601,47 +636,48 @@ export default function PaymentsPage() {
           paymentType: formData.paymentType,
           items: formData.items,
           discount: parseFloat(formData.discount),
-          finalAmount: parseFloat(formData.finalAmount) || parseFloat(formData.amount),
-          recordedBy: userName || 'Unknown',
+          finalAmount:
+            parseFloat(formData.finalAmount) || parseFloat(formData.amount),
+          recordedBy: userName || "Unknown",
         }),
       });
 
       const result = await response.json();
       if (response.ok && result.success) {
-        toastManager.success('Payment updated successfully!');
+        toastManager.success("Payment updated successfully!");
         setIsEditPaymentModalOpen(false);
         setEditingPayment(null);
         resetForm();
         // Reload data
-      const paymentsResponse = await fetch('/api/payments');
-      const paymentsResult = await paymentsResponse.json();
-      if (paymentsResponse.ok && paymentsResult.success) {
+        const paymentsResponse = await fetch("/api/payments");
+        const paymentsResult = await paymentsResponse.json();
+        if (paymentsResponse.ok && paymentsResult.success) {
           setPayments(paymentsResult.data || []);
           const stats = calculateStats(paymentsResult.data || []);
           setStats(stats);
         }
       } else {
-        toastManager.error(result.message || 'Failed to update payment');
+        toastManager.error(result.message || "Failed to update payment");
       }
     } catch (error) {
-      console.error('Error updating payment:', error);
-      toastManager.error('Failed to update payment. Please try again.');
+      console.error("Error updating payment:", error);
+      toastManager.error("Failed to update payment. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleStatusUpdate = async (paymentId: string, newStatus: string) => {
-    if (!userRole || userRole !== 'SUPER_ADMIN') {
-      toastManager.error('Only super admins can update payment status');
+    if (!userRole || userRole !== "SUPER_ADMIN") {
+      toastManager.error("Only super admins can update payment status");
       return;
     }
 
     try {
       const response = await fetch(`/api/payments/${paymentId}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           paymentStatus: newStatus,
@@ -650,53 +686,53 @@ export default function PaymentsPage() {
 
       const result = await response.json();
       if (response.ok && result.success) {
-        toastManager.success('Payment status updated successfully!');
+        toastManager.success("Payment status updated successfully!");
         // Reload data
-      const paymentsResponse = await fetch('/api/payments');
-      const paymentsResult = await paymentsResponse.json();
-      if (paymentsResponse.ok && paymentsResult.success) {
+        const paymentsResponse = await fetch("/api/payments");
+        const paymentsResult = await paymentsResponse.json();
+        if (paymentsResponse.ok && paymentsResult.success) {
           setPayments(paymentsResult.data || []);
           const stats = calculateStats(paymentsResult.data || []);
           setStats(stats);
         }
       } else {
-        toastManager.error(result.message || 'Failed to update payment status');
+        toastManager.error(result.message || "Failed to update payment status");
       }
     } catch (error) {
-      console.error('Error updating payment status:', error);
-      toastManager.error('Failed to update payment status. Please try again.');
+      console.error("Error updating payment status:", error);
+      toastManager.error("Failed to update payment status. Please try again.");
     }
   };
 
   // Prepare enhanced stats for display
   const displayStats = [
     {
-      title: 'Total Revenue',
+      title: "Total Revenue",
       value: `ETB ${stats.totalRevenue.toFixed(2)}`,
-      change: '+12% from last month',
-      changeType: 'positive' as const,
-      icon: '💰',
+      change: "+12% from last month",
+      changeType: "positive" as const,
+      icon: "💰",
     },
     {
-      title: 'Drug Sales',
+      title: "Drug Sales",
       value: `ETB ${stats.totalDrugSales.toFixed(2)}`,
-      change: '+8% from last week',
-      changeType: 'positive' as const,
-      icon: '💊',
+      change: "+8% from last week",
+      changeType: "positive" as const,
+      icon: "💊",
     },
     {
-      title: 'Lab Payments',
+      title: "Lab Payments",
       value: `ETB ${stats.totalLabPayments.toFixed(2)}`,
-      change: '+15% from last month',
-      changeType: 'positive' as const,
-      icon: '🔬',
+      change: "+15% from last month",
+      changeType: "positive" as const,
+      icon: "🔬",
     },
     {
-      title: 'Pending Amount',
+      title: "Pending Amount",
       value: `ETB ${stats.pendingAmount.toFixed(2)}`,
-      change: '-5% from yesterday',
-      changeType: 'negative' as const,
-      icon: '⏳',
+      change: "-5% from yesterday",
+      changeType: "negative" as const,
+      icon: "⏳",
     },
   ];
 
@@ -707,533 +743,811 @@ export default function PaymentsPage() {
         userRole={userRole}
         userName={userName}
       >
-      <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {displayStats.map((stat, index) => (
-            <StatsCard
-              key={index}
-              title={stat.title}
-              value={stat.value}
-              change={stat.change}
-              changeType={stat.changeType}
-              icon={stat.icon}
-            />
-          ))}
-        </div>
-
-        {/* Payment Records Section */}
-        <div className="bg-card-bg rounded-lg border border-border-color p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-text-primary">Payment Records</h2>
-            <Button onClick={() => setIsNewPaymentModalOpen(true)} className="cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
-              Record New Payment
-            </Button>
+        <div className="space-y-6 overflow-x-hidden">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {displayStats.map((stat, index) => (
+              <StatsCard
+                key={index}
+                title={stat.title}
+                value={stat.value}
+                change={stat.change}
+                changeType={stat.changeType}
+                icon={stat.icon}
+              />
+            ))}
           </div>
 
-          {/* Search and Filters */}
-          <div className="flex gap-4 mb-6">
-            <input
-              type="text"
-              placeholder="Search payments by ID, patient, or drug order..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary placeholder-text-muted bg-background"
-            />
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
-            >
-              {PAYMENT_STATUS_OPTIONS.map(option => (
-                <option key={option.value} value={option.value} className="text-text-primary">
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedMethod}
-              onChange={(e) => setSelectedMethod(e.target.value)}
-              className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
-            >
-              {PAYMENT_METHOD_OPTIONS.map(option => (
-                <option key={option.value} value={option.value} className="text-text-primary">
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Payment Records Section */}
+          <div className="bg-card-bg rounded-lg border border-border-color p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+              <h2 className="text-xl font-semibold text-text-primary">
+                Payment Records
+              </h2>
+              <Button
+                onClick={() => setIsNewPaymentModalOpen(true)}
+                className="cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
+              >
+                Record New Payment
+              </Button>
+            </div>
 
-          {/* Payments Table */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border-color">
-              <thead className="bg-card-bg">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                    <div className="block">
-                      <span className="block">Payment ID</span>
-                      <span className="block">Patient ID</span>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                    <div className="block">
-                      <span className="block">Patient Name</span>
-                      <span className="block">Drug Order ID</span>
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Method
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-background divide-y divide-border-color">
+            {/* Search and Filters */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
+              <input
+                type="text"
+                placeholder="Search payments by ID, patient, or drug order..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1 border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary placeholder-text-muted bg-background"
+              />
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full sm:w-auto border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+              >
+                {PAYMENT_STATUS_OPTIONS.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    className="text-text-primary"
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedMethod}
+                onChange={(e) => setSelectedMethod(e.target.value)}
+                className="w-full sm:w-auto border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+              >
+                {PAYMENT_METHOD_OPTIONS.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    className="text-text-primary"
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Payments Table (desktop) or Cards (mobile/tablet) */}
+            {isLgUp ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-border-color">
+                  <thead className="bg-card-bg">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                        <div className="block">
+                          <span className="block">Payment ID</span>
+                          <span className="block">Patient ID</span>
+                        </div>
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                        <div className="block">
+                          <span className="block">Patient Name</span>
+                          <span className="block">Drug Order ID</span>
+                        </div>
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                        Amount
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                        Method
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-background divide-y divide-border-color">
+                    {filteredPayments.map((payment) => (
+                      <tr key={payment._id} className="hover:bg-card-bg">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {payment.paymentId}
+                            </span>
+                            <span className="text-xs text-text-muted">
+                              {payment.patientId}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {payment.patientName}
+                            </span>
+                            <span className="text-xs text-text-muted">
+                              {(() => {
+                                // Priority: drugOrderId > orderReference > orderId
+                                const orderId =
+                                  payment.drugOrderId ||
+                                  payment.orderReference ||
+                                  payment.orderId;
+                                return orderId ? orderId : "N/A";
+                              })()}
+                            </span>
+                            <span className="text-xs text-text-muted">
+                              {payment.orderId
+                                ? `Order: ${payment.orderId}`
+                                : "No Order"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
+                          ETB {payment.amount.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                          <div className="flex items-center">
+                            <span className="mr-2">
+                              {getMethodIcon(payment.paymentMethod)}
+                            </span>
+                            {payment.paymentMethod
+                              .replace("_", " ")
+                              .toUpperCase()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {userRole === "SUPER_ADMIN" ? (
+                            <select
+                              value={payment.paymentStatus.toLowerCase()}
+                              onChange={(e) =>
+                                handleStatusUpdate(
+                                  payment.paymentId,
+                                  e.target.value
+                                )
+                              }
+                              className={`px-2 py-1 text-xs font-medium rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-accent-color ${getStatusColor(
+                                payment.paymentStatus
+                              )}`}
+                            >
+                              <option
+                                value="completed"
+                                className="bg-green-100 text-green-800"
+                              >
+                                COMPLETED
+                              </option>
+                              <option
+                                value="pending"
+                                className="bg-yellow-100 text-yellow-800"
+                              >
+                                PENDING
+                              </option>
+                              <option
+                                value="failed"
+                                className="bg-red-100 text-red-800"
+                              >
+                                FAILED
+                              </option>
+                              <option
+                                value="refunded"
+                                className="bg-blue-100 text-blue-800"
+                              >
+                                REFUNDED
+                              </option>
+                            </select>
+                          ) : (
+                            <span
+                              className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                                payment.paymentStatus
+                              )}`}
+                            >
+                              {payment.paymentStatus.toUpperCase()}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                          {formatDate(payment.updatedAt || payment.createdAt)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => handleViewPayment(payment)}
+                            className="text-accent-color hover:text-accent-hover mr-3 p-1 rounded hover:bg-accent-color/10 transition-colors cursor-pointer"
+                            title="View Payment"
+                          >
+                            <FaEye size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleEditPayment(payment)}
+                            className="text-success hover:text-success/80 mr-3 p-1 rounded hover:bg-success/10 transition-colors cursor-pointer"
+                            title="Edit Payment"
+                          >
+                            <FaEdit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeletePayment(payment._id)}
+                            className="text-error hover:text-error/80 p-1 rounded hover:bg-error/10 transition-colors cursor-pointer"
+                            title="Delete Payment"
+                          >
+                            <FaTrash size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="space-y-3 overflow-x-hidden">
+                {filteredPayments.length === 0 && (
+                  <div className="text-center py-8 text-text-secondary">
+                    No payments found.
+                  </div>
+                )}
                 {filteredPayments.map((payment) => (
-                  <tr key={payment._id} className="hover:bg-card-bg">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{payment.paymentId}</span>
-                        <span className="text-xs text-text-muted">{payment.patientId}</span>
+                  <div
+                    key={payment._id}
+                    className="border border-border-color rounded-lg p-3 bg-card-bg overflow-hidden"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-text-primary break-words">
+                          {payment.paymentId}
+                        </div>
+                        <div className="text-xs text-text-secondary break-words">
+                          Date:{" "}
+                          {formatDate(payment.updatedAt || payment.createdAt)}
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{payment.patientName}</span>
-                        <span className="text-xs text-text-muted">
-                          {(() => {
-                            // Priority: drugOrderId > orderReference > orderId
-                            const orderId = payment.drugOrderId || payment.orderReference || payment.orderId;
-                            return orderId ? orderId : 'N/A';
-                          })()}
-                        </span>
-                        <span className="text-xs text-text-muted">
-                          {payment.orderId ? `Order: ${payment.orderId}` : 'No Order'}
-                        </span>
+                      <div className="shrink-0">
+                        {userRole === "SUPER_ADMIN" ? (
+                          <select
+                            value={payment.paymentStatus.toLowerCase()}
+                            onChange={(e) =>
+                              handleStatusUpdate(
+                                payment.paymentId,
+                                e.target.value
+                              )
+                            }
+                            className={`px-2 py-1 text-xs font-medium rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-accent-color ${getStatusColor(
+                              payment.paymentStatus
+                            )}`}
+                          >
+                            <option value="completed">COMPLETED</option>
+                            <option value="pending">PENDING</option>
+                            <option value="failed">FAILED</option>
+                            <option value="refunded">REFUNDED</option>
+                          </select>
+                        ) : (
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                              payment.paymentStatus
+                            )}`}
+                          >
+                            {payment.paymentStatus.toUpperCase()}
+                          </span>
+                        )}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                      ETB {payment.amount.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                      <div className="flex items-center">
-                        <span className="mr-2">{getMethodIcon(payment.paymentMethod)}</span>
-                        {payment.paymentMethod.replace('_', ' ').toUpperCase()}
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-0">
+                      <div className="min-w-0">
+                        <div className="text-xs text-text-muted">Patient</div>
+                        <div className="text-sm text-text-primary break-words">
+                          {payment.patientName}
+                        </div>
+                        <div className="text-xs text-text-secondary break-words">
+                          {payment.patientId}
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {userRole === 'SUPER_ADMIN' ? (
-                        <select
-                          value={payment.paymentStatus.toLowerCase()}
-                          onChange={(e) => handleStatusUpdate(payment.paymentId, e.target.value)}
-                          className={`px-2 py-1 text-xs font-medium rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-accent-color ${getStatusColor(payment.paymentStatus)}`}
-                        >
-                          <option value="completed" className="bg-green-100 text-green-800">COMPLETED</option>
-                          <option value="pending" className="bg-yellow-100 text-yellow-800">PENDING</option>
-                          <option value="failed" className="bg-red-100 text-red-800">FAILED</option>
-                          <option value="refunded" className="bg-blue-100 text-blue-800">REFUNDED</option>
-                        </select>
-                      ) : (
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(payment.paymentStatus)}`}>
-                          {payment.paymentStatus.toUpperCase()}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
-                      {formatDate(payment.updatedAt || payment.createdAt)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button 
+                      <div className="min-w-0">
+                        <div className="text-xs text-text-muted">Order</div>
+                        <div className="text-sm text-text-primary break-words">
+                          {payment.drugOrderId ||
+                            payment.orderReference ||
+                            payment.orderId ||
+                            "N/A"}
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs text-text-muted">Amount</div>
+                        <div className="text-sm text-text-primary break-words">
+                          ETB {payment.amount.toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs text-text-muted">Method</div>
+                        <div className="text-sm text-text-primary break-words">
+                          {payment.paymentMethod
+                            .replace("_", " ")
+                            .toUpperCase()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-3">
+                      <button
                         onClick={() => handleViewPayment(payment)}
-                        className="text-accent-color hover:text-accent-hover mr-3 p-1 rounded hover:bg-accent-color/10 transition-colors cursor-pointer"
+                        className="text-accent-color hover:text-accent-hover p-1 rounded hover:bg-accent-color/10 transition-colors cursor-pointer"
                         title="View Payment"
                       >
                         <FaEye size={16} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleEditPayment(payment)}
-                        className="text-success hover:text-success/80 mr-3 p-1 rounded hover:bg-success/10 transition-colors cursor-pointer"
+                        className="text-success hover:text-success/80 p-1 rounded hover:bg-success/10 transition-colors cursor-pointer"
                         title="Edit Payment"
                       >
                         <FaEdit size={16} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeletePayment(payment._id)}
                         className="text-error hover:text-error/80 p-1 rounded hover:bg-error/10 transition-colors cursor-pointer"
                         title="Delete Payment"
                       >
                         <FaTrash size={16} />
                       </button>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* New Payment Modal */}
-      <Modal
-        isOpen={isNewPaymentModalOpen}
-        onClose={() => {
-          setIsNewPaymentModalOpen(false);
-          resetForm();
-        }}
-        title="Record New Payment"
-        size="lg"
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Patient" required error={errors.patientId}>
-              <Select
-                value={formData.patientId}
-                onChange={(e) => {
-                  const selectedPatient = patients.find(p => p.patientId === e.target.value);
-                  handleInputChange('patientId', e.target.value);
-                  handleInputChange('patientName', selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : '');
-                  
-                  // Fetch drug orders for the selected patient
-                  if (e.target.value) {
-                    fetchDrugOrdersForPatient(e.target.value);
-                  } else {
-                    setDrugOrders([]);
-                  }
-                  
-                  // Reset order-related fields when patient changes
-                  handleInputChange('orderId', '');
-                  handleInputChange('orderReference', '');
-                }}
-                options={PATIENT_OPTIONS}
-              />
-            </FormField>
-
-            <FormField label="Patient ID" required error={errors.patientId}>
-              <Input
-                value={formData.patientId}
-                onChange={(e) => handleInputChange('patientId', e.target.value)}
-                placeholder="Enter patient ID"
-              />
-            </FormField>
-
-            <FormField label="Amount (ETB)" required error={errors.amount}>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.amount}
-                onChange={(e) => handleInputChange('amount', e.target.value)}
-                placeholder="Enter amount"
-                min="0"
-              />
-            </FormField>
-
-            <FormField label="Payment Method" required error={errors.paymentMethod}>
-              <Select
-                value={formData.paymentMethod}
-                onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
-                options={[
-                  { value: 'cash', label: 'Cash' },
-                  { value: 'card', label: 'Card' },
-                  { value: 'mobile_money', label: 'Mobile Money' },
-                ]}
-              />
-            </FormField>
-
-            <FormField label="Status" required error={errors.paymentStatus}>
-              <Select
-                value={formData.paymentStatus}
-                onChange={(e) => handleInputChange('paymentStatus', e.target.value)}
-                options={[
-                  { value: 'completed', label: 'Completed' },
-                  { value: 'pending', label: 'Pending' },
-                  { value: 'failed', label: 'Failed' },
-                ]}
-              />
-            </FormField>
-            <FormField label="Reference Number">
-              <Input
-                value={formData.transactionReference}
-                onChange={(e) => handleInputChange('transactionReference', e.target.value)}
-                placeholder="Enter reference number (optional)"
-              />
-            </FormField>
-          </div>
-
-          <FormField label="Drug Order ID (Optional)" error={errors.orderId}>
-            <Select
-              value={formData.orderId}
-              onChange={(e) => {
-                const selectedOrder = drugOrders.find(order => order._id === e.target.value);
-                handleInputChange('orderId', e.target.value);
-                // Use drugOrderId if available, otherwise use _id as fallback
-                const orderReference = selectedOrder ? (selectedOrder.drugOrderId || selectedOrder._id) : '';
-                handleInputChange('orderReference', orderReference);
-                handleInputChange('drugOrderId', orderReference);
-                handleInputChange('orderType', 'DRUG_ORDER');
-              }}
-              options={[
-                { value: '', label: 'Select Drug Order (Optional)' },
-                ...drugOrders.map(order => ({
-                  value: order._id,
-                  label: `${order.drugOrderId || order._id} - ${order.patientName || 'Unknown Patient'}`
-                }))
-              ]}
-              disabled={!formData.patientId || drugOrders.length === 0}
-            />
-          </FormField>
-
-          <FormField label="Notes/Description (Optional)" error={errors.notes}>
-            <TextArea
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="Enter payment description or notes..."
-              rows={3}
-            />
-          </FormField>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setIsNewPaymentModalOpen(false);
-                resetForm();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
-              onClick={handleNewPayment}
-              loading={loading}
-            >
-              Record Payment
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* View Payment Modal */}
-      <Modal
-        isOpen={isViewPaymentModalOpen}
-        onClose={() => {
-          setIsViewPaymentModalOpen(false);
-          setViewingPayment(null);
-        }}
-        title="Payment Details"
-        size="md"
-      >
-        {viewingPayment && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-text-muted">Payment ID</label>
-                <p className="mt-1 text-sm text-text-primary">{viewingPayment.paymentId || viewingPayment._id}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-muted">Patient</label>
-                <p className="mt-1 text-sm text-text-primary">{viewingPayment.patientName || viewingPayment.patientId}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-muted">Amount</label>
-                <p className="mt-1 text-sm text-text-primary">ETB {viewingPayment.amount.toFixed(2)}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-muted">Payment Method</label>
-                <p className="mt-1 text-sm text-text-primary">{viewingPayment.paymentMethod ? viewingPayment.paymentMethod.replace('_', ' ') : 'Unknown'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-muted">Status</label>
-                <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingPayment.paymentStatus)}`}>
-                  {viewingPayment.paymentStatus ? viewingPayment.paymentStatus.toUpperCase() : 'UNKNOWN'}
-                </span>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-muted">Date</label>
-                <p className="mt-1 text-sm text-text-primary">{viewingPayment.createdAt ? new Date(viewingPayment.createdAt).toLocaleDateString() : 'Invalid Date'}</p>
-              </div>
-            </div>
-            
-            {/* Full Description Section */}
-            {(viewingPayment.fullDescription || viewingPayment.notes || (viewingPayment.items && viewingPayment.items.length > 0)) && (
-              <div className="border-t border-border-color pt-4">
-                <label className="block text-sm font-medium text-text-muted mb-2">Full Description</label>
-                <div className="bg-card-bg rounded-md p-3 border border-border-color">
-                  <p className="text-sm text-text-primary whitespace-pre-wrap">
-                    {viewingPayment.fullDescription || 
-                     (viewingPayment.paymentType === 'DRUG_SALE' 
-                       ? viewingPayment.items?.map(item => `${item.drugName} (${item.quantity})`).join(', ')
-                       : viewingPayment.notes) || 
-                     'No description available'}
-                  </p>
-                </div>
               </div>
             )}
-            <div className="flex justify-end pt-4">
+          </div>
+        </div>
+
+        {/* New Payment Modal */}
+        <Modal
+          isOpen={isNewPaymentModalOpen}
+          onClose={() => {
+            setIsNewPaymentModalOpen(false);
+            resetForm();
+          }}
+          title="Record New Payment"
+          size="lg"
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField label="Patient" required error={errors.patientId}>
+                <Select
+                  value={formData.patientId}
+                  onChange={(e) => {
+                    const selectedPatient = patients.find(
+                      (p) => p.patientId === e.target.value
+                    );
+                    handleInputChange("patientId", e.target.value);
+                    handleInputChange(
+                      "patientName",
+                      selectedPatient
+                        ? `${selectedPatient.firstName} ${selectedPatient.lastName}`
+                        : ""
+                    );
+
+                    // Fetch drug orders for the selected patient
+                    if (e.target.value) {
+                      fetchDrugOrdersForPatient(e.target.value);
+                    } else {
+                      setDrugOrders([]);
+                    }
+
+                    // Reset order-related fields when patient changes
+                    handleInputChange("orderId", "");
+                    handleInputChange("orderReference", "");
+                  }}
+                  options={PATIENT_OPTIONS}
+                />
+              </FormField>
+
+              <FormField label="Patient ID" required error={errors.patientId}>
+                <Input
+                  value={formData.patientId}
+                  onChange={(e) =>
+                    handleInputChange("patientId", e.target.value)
+                  }
+                  placeholder="Enter patient ID"
+                />
+              </FormField>
+
+              <FormField label="Amount (ETB)" required error={errors.amount}>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={(e) => handleInputChange("amount", e.target.value)}
+                  placeholder="Enter amount"
+                  min="0"
+                />
+              </FormField>
+
+              <FormField
+                label="Payment Method"
+                required
+                error={errors.paymentMethod}
+              >
+                <Select
+                  value={formData.paymentMethod}
+                  onChange={(e) =>
+                    handleInputChange("paymentMethod", e.target.value)
+                  }
+                  options={[
+                    { value: "cash", label: "Cash" },
+                    { value: "card", label: "Card" },
+                    { value: "mobile_money", label: "Mobile Money" },
+                  ]}
+                />
+              </FormField>
+
+              <FormField label="Status" required error={errors.paymentStatus}>
+                <Select
+                  value={formData.paymentStatus}
+                  onChange={(e) =>
+                    handleInputChange("paymentStatus", e.target.value)
+                  }
+                  options={[
+                    { value: "completed", label: "Completed" },
+                    { value: "pending", label: "Pending" },
+                    { value: "failed", label: "Failed" },
+                  ]}
+                />
+              </FormField>
+              <FormField label="Reference Number">
+                <Input
+                  value={formData.transactionReference}
+                  onChange={(e) =>
+                    handleInputChange("transactionReference", e.target.value)
+                  }
+                  placeholder="Enter reference number (optional)"
+                />
+              </FormField>
+            </div>
+
+            <FormField label="Drug Order ID (Optional)" error={errors.orderId}>
+              <Select
+                value={formData.orderId}
+                onChange={(e) => {
+                  const selectedOrder = drugOrders.find(
+                    (order) => order._id === e.target.value
+                  );
+                  handleInputChange("orderId", e.target.value);
+                  // Use drugOrderId if available, otherwise use _id as fallback
+                  const orderReference = selectedOrder
+                    ? selectedOrder.drugOrderId || selectedOrder._id
+                    : "";
+                  handleInputChange("orderReference", orderReference);
+                  handleInputChange("drugOrderId", orderReference);
+                  handleInputChange("orderType", "DRUG_ORDER");
+                }}
+                options={[
+                  { value: "", label: "Select Drug Order (Optional)" },
+                  ...drugOrders.map((order) => ({
+                    value: order._id,
+                    label: `${order.drugOrderId || order._id} - ${
+                      order.patientName || "Unknown Patient"
+                    }`,
+                  })),
+                ]}
+                disabled={!formData.patientId || drugOrders.length === 0}
+              />
+            </FormField>
+
+            <FormField
+              label="Notes/Description (Optional)"
+              error={errors.notes}
+            >
+              <TextArea
+                value={formData.notes}
+                onChange={(e) => handleInputChange("notes", e.target.value)}
+                placeholder="Enter payment description or notes..."
+                rows={3}
+              />
+            </FormField>
+
+            <div className="flex justify-end space-x-3 pt-4">
               <Button
                 variant="secondary"
                 onClick={() => {
-                  setIsViewPaymentModalOpen(false);
-                  setViewingPayment(null);
+                  setIsNewPaymentModalOpen(false);
+                  resetForm();
                 }}
               >
-                Close
+                Cancel
+              </Button>
+              <Button
+                className="hover:bg-gray-700 cursor-pointer bg-[#1447E6]"
+                onClick={handleNewPayment}
+                loading={loading}
+              >
+                Record Payment
               </Button>
             </div>
           </div>
-        )}
-      </Modal>
+        </Modal>
 
-      {/* Edit Payment Modal */}
-      <Modal
-        isOpen={isEditPaymentModalOpen}
-        onClose={() => {
-          setIsEditPaymentModalOpen(false);
-          setEditingPayment(null);
-          resetForm();
-        }}
-        title="Edit Payment"
-        size="lg"
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Patient" required error={errors.patientId}>
-              <Select
-                value={formData.patientId}
-                onChange={(e) => {
-                  const selectedPatient = patients.find(p => p.patientId === e.target.value);
-                  handleInputChange('patientId', e.target.value);
-                  handleInputChange('patientName', selectedPatient ? `${selectedPatient.firstName} ${selectedPatient.lastName}` : '');
-                  
-                  // Fetch drug orders for the selected patient
-                  if (e.target.value) {
-                    fetchDrugOrdersForPatient(e.target.value);
-                  } else {
-                    setDrugOrders([]);
+        {/* View Payment Modal */}
+        <Modal
+          isOpen={isViewPaymentModalOpen}
+          onClose={() => {
+            setIsViewPaymentModalOpen(false);
+            setViewingPayment(null);
+          }}
+          title="Payment Details"
+          size="md"
+        >
+          {viewingPayment && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-muted">
+                    Payment ID
+                  </label>
+                  <p className="mt-1 text-sm text-text-primary">
+                    {viewingPayment.paymentId || viewingPayment._id}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-muted">
+                    Patient
+                  </label>
+                  <p className="mt-1 text-sm text-text-primary">
+                    {viewingPayment.patientName || viewingPayment.patientId}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-muted">
+                    Amount
+                  </label>
+                  <p className="mt-1 text-sm text-text-primary">
+                    ETB {viewingPayment.amount.toFixed(2)}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-muted">
+                    Payment Method
+                  </label>
+                  <p className="mt-1 text-sm text-text-primary">
+                    {viewingPayment.paymentMethod
+                      ? viewingPayment.paymentMethod.replace("_", " ")
+                      : "Unknown"}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-muted">
+                    Status
+                  </label>
+                  <span
+                    className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                      viewingPayment.paymentStatus
+                    )}`}
+                  >
+                    {viewingPayment.paymentStatus
+                      ? viewingPayment.paymentStatus.toUpperCase()
+                      : "UNKNOWN"}
+                  </span>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-muted">
+                    Date
+                  </label>
+                  <p className="mt-1 text-sm text-text-primary">
+                    {viewingPayment.createdAt
+                      ? new Intl.DateTimeFormat("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        }).format(new Date(viewingPayment.createdAt))
+                      : "Invalid Date"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Full Description Section */}
+              {(viewingPayment.fullDescription ||
+                viewingPayment.notes ||
+                (viewingPayment.items && viewingPayment.items.length > 0)) && (
+                <div className="border-t border-border-color pt-4">
+                  <label className="block text-sm font-medium text-text-muted mb-2">
+                    Full Description
+                  </label>
+                  <div className="bg-card-bg rounded-md p-3 border border-border-color">
+                    <p className="text-sm text-text-primary whitespace-pre-wrap">
+                      {viewingPayment.fullDescription ||
+                        (viewingPayment.paymentType === "DRUG_SALE"
+                          ? viewingPayment.items
+                              ?.map(
+                                (item) => `${item.drugName} (${item.quantity})`
+                              )
+                              .join(", ")
+                          : viewingPayment.notes) ||
+                        "No description available"}
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end pt-4">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setIsViewPaymentModalOpen(false);
+                    setViewingPayment(null);
+                  }}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Edit Payment Modal */}
+        <Modal
+          isOpen={isEditPaymentModalOpen}
+          onClose={() => {
+            setIsEditPaymentModalOpen(false);
+            setEditingPayment(null);
+            resetForm();
+          }}
+          title="Edit Payment"
+          size="lg"
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField label="Patient" required error={errors.patientId}>
+                <Select
+                  value={formData.patientId}
+                  onChange={(e) => {
+                    const selectedPatient = patients.find(
+                      (p) => p.patientId === e.target.value
+                    );
+                    handleInputChange("patientId", e.target.value);
+                    handleInputChange(
+                      "patientName",
+                      selectedPatient
+                        ? `${selectedPatient.firstName} ${selectedPatient.lastName}`
+                        : ""
+                    );
+
+                    // Fetch drug orders for the selected patient
+                    if (e.target.value) {
+                      fetchDrugOrdersForPatient(e.target.value);
+                    } else {
+                      setDrugOrders([]);
+                    }
+
+                    // Reset order-related fields when patient changes
+                    handleInputChange("orderId", "");
+                    handleInputChange("orderReference", "");
+                  }}
+                  options={PATIENT_OPTIONS}
+                />
+              </FormField>
+
+              <FormField label="Patient ID" required error={errors.patientId}>
+                <Input
+                  value={formData.patientId}
+                  onChange={(e) =>
+                    handleInputChange("patientId", e.target.value)
                   }
-                  
-                  // Reset order-related fields when patient changes
-                  handleInputChange('orderId', '');
-                  handleInputChange('orderReference', '');
+                  placeholder="Enter patient ID"
+                />
+              </FormField>
+
+              <FormField label="Amount (ETB)" required error={errors.amount}>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={(e) => handleInputChange("amount", e.target.value)}
+                  placeholder="Enter amount"
+                  min="0"
+                />
+              </FormField>
+
+              <FormField
+                label="Payment Method"
+                required
+                error={errors.paymentMethod}
+              >
+                <Select
+                  value={formData.paymentMethod}
+                  onChange={(e) =>
+                    handleInputChange("paymentMethod", e.target.value)
+                  }
+                  options={[
+                    { value: "cash", label: "Cash" },
+                    { value: "card", label: "Card" },
+                    { value: "mobile_money", label: "Mobile Money" },
+                  ]}
+                />
+              </FormField>
+
+              <FormField label="Status" required error={errors.paymentStatus}>
+                <Select
+                  value={formData.paymentStatus}
+                  onChange={(e) =>
+                    handleInputChange("paymentStatus", e.target.value)
+                  }
+                  options={[
+                    { value: "completed", label: "Completed" },
+                    { value: "pending", label: "Pending" },
+                    { value: "failed", label: "Failed" },
+                  ]}
+                />
+              </FormField>
+            </div>
+
+            <FormField
+              label="Reference (Optional)"
+              error={errors.transactionReference}
+            >
+              <Input
+                value={formData.transactionReference}
+                onChange={(e) =>
+                  handleInputChange("transactionReference", e.target.value)
+                }
+                placeholder="Enter reference number"
+              />
+            </FormField>
+
+            <FormField label="Drug Order ID (Optional)" error={errors.orderId}>
+              <Select
+                value={formData.orderId}
+                onChange={(e) => {
+                  const selectedOrder = drugOrders.find(
+                    (order) => order._id === e.target.value
+                  );
+                  handleInputChange("orderId", e.target.value);
+                  // Use drugOrderId if available, otherwise use _id as fallback
+                  const orderReference = selectedOrder
+                    ? selectedOrder.drugOrderId || selectedOrder._id
+                    : "";
+                  handleInputChange("orderReference", orderReference);
+                  handleInputChange("drugOrderId", orderReference);
+                  handleInputChange("orderType", "DRUG_ORDER");
                 }}
-                options={PATIENT_OPTIONS}
-              />
-            </FormField>
-
-            <FormField label="Patient ID" required error={errors.patientId}>
-              <Input
-                value={formData.patientId}
-                onChange={(e) => handleInputChange('patientId', e.target.value)}
-                placeholder="Enter patient ID"
-              />
-            </FormField>
-
-            <FormField label="Amount (ETB)" required error={errors.amount}>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.amount}
-                onChange={(e) => handleInputChange('amount', e.target.value)}
-                placeholder="Enter amount"
-                min="0"
-              />
-            </FormField>
-
-            <FormField label="Payment Method" required error={errors.paymentMethod}>
-              <Select
-                value={formData.paymentMethod}
-                onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
                 options={[
-                  { value: 'cash', label: 'Cash' },
-                  { value: 'card', label: 'Card' },
-                  { value: 'mobile_money', label: 'Mobile Money' },
+                  { value: "", label: "Select Drug Order (Optional)" },
+                  ...drugOrders.map((order) => ({
+                    value: order._id,
+                    label: `${order.drugOrderId || order._id} - ${
+                      order.patientName || "Unknown Patient"
+                    }`,
+                  })),
                 ]}
+                disabled={!formData.patientId || drugOrders.length === 0}
               />
             </FormField>
 
-            <FormField label="Status" required error={errors.paymentStatus}>
-              <Select
-                value={formData.paymentStatus}
-                onChange={(e) => handleInputChange('paymentStatus', e.target.value)}
-                options={[
-                  { value: 'completed', label: 'Completed' },
-                  { value: 'pending', label: 'Pending' },
-                  { value: 'failed', label: 'Failed' },
-                ]}
+            <FormField
+              label="Notes/Description (Optional)"
+              error={errors.notes}
+            >
+              <TextArea
+                value={formData.notes}
+                onChange={(e) => handleInputChange("notes", e.target.value)}
+                placeholder="Enter payment description or notes..."
+                rows={3}
               />
             </FormField>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setIsEditPaymentModalOpen(false);
+                  setEditingPayment(null);
+                  resetForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="hover:bg-gray-700 cursor-pointer bg-[#1447E6]"
+                onClick={handleUpdatePayment}
+                loading={loading}
+              >
+                Update Payment
+              </Button>
+            </div>
           </div>
-
-          <FormField label="Reference (Optional)" error={errors.transactionReference}>
-            <Input
-              value={formData.transactionReference}
-              onChange={(e) => handleInputChange('transactionReference', e.target.value)}
-              placeholder="Enter reference number"
-            />
-          </FormField>
-
-          <FormField label="Drug Order ID (Optional)" error={errors.orderId}>
-            <Select
-              value={formData.orderId}
-              onChange={(e) => {
-                const selectedOrder = drugOrders.find(order => order._id === e.target.value);
-                handleInputChange('orderId', e.target.value);
-                // Use drugOrderId if available, otherwise use _id as fallback
-                const orderReference = selectedOrder ? (selectedOrder.drugOrderId || selectedOrder._id) : '';
-                handleInputChange('orderReference', orderReference);
-                handleInputChange('drugOrderId', orderReference);
-                handleInputChange('orderType', 'DRUG_ORDER');
-              }}
-              options={[
-                { value: '', label: 'Select Drug Order (Optional)' },
-                ...drugOrders.map(order => ({
-                  value: order._id,
-                  label: `${order.drugOrderId || order._id} - ${order.patientName || 'Unknown Patient'}`
-                }))
-              ]}
-              disabled={!formData.patientId || drugOrders.length === 0}
-            />
-          </FormField>
-
-          <FormField label="Notes/Description (Optional)" error={errors.notes}>
-            <TextArea
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="Enter payment description or notes..."
-              rows={3}
-            />
-          </FormField>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setIsEditPaymentModalOpen(false);
-                setEditingPayment(null);
-                resetForm();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button className='hover:bg-gray-700 cursor-pointer bg-[#1447E6]'
-              onClick={handleUpdatePayment}
-              loading={loading}
-            >
-              Update Payment
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        </Modal>
       </DashboardLayout>
-      <Footer />
+      {/* <Footer /> */}
     </>
   );
-} 
+}

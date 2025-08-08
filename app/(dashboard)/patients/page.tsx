@@ -220,38 +220,20 @@ export default function PatientsPage() {
 
   const formatDate = (dateString: string | Date | null) => {
     if (!dateString) return "N/A";
-
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return "Invalid Date";
-      }
-      return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch (error) {
-      return "Invalid Date";
-    }
-  };
-
-  // Simple D/M/Y date (no time) for registration date display
-  const formatDateDMY = (dateString: string | Date | null) => {
-    if (!dateString) return "N/A";
     try {
       const d = new Date(dateString);
       if (isNaN(d.getTime())) return "Invalid Date";
-      const day = String(d.getDate()).padStart(2, "0");
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const year = d.getFullYear();
-      return `${day}/${month}/${year}`;
+      return new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }).format(d);
     } catch {
       return "Invalid Date";
     }
   };
+
+  // Date-only (e.g., Aug 7, 2025) for registration and activity dates
 
   // Abbreviate gender to M/F
   const toShortGender = (gender: string | null | undefined) => {
@@ -727,7 +709,7 @@ export default function PatientsPage() {
                               {patient.bloodType || "-"}
                             </td>
                             <td className="px-2 py-1 whitespace-nowrap text-sm text-text-secondary">
-                              {formatDateDMY(patient.createdAt)}
+                              {formatDate(patient.createdAt)}
                             </td>
                             <td className="px-2 py-1 whitespace-nowrap">
                               <span
@@ -816,7 +798,7 @@ export default function PatientsPage() {
                       <div>
                         <span className="text-text-muted">Date:</span>
                         <span className="ml-1 text-text-primary break-words">
-                          {formatDateDMY(patient.createdAt)}
+                          {formatDate(patient.createdAt)}
                         </span>
                       </div>
                     </div>
@@ -1243,7 +1225,7 @@ export default function PatientsPage() {
                     Date
                   </label>
                   <p className="mt-1 text-sm text-text-primary">
-                    {formatDateDMY(viewingPatient.createdAt)}
+                    {formatDate(viewingPatient.createdAt)}
                   </p>
                 </div>
               </div>

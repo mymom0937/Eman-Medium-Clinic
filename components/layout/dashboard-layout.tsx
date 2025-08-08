@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Sidebar } from './sidebar';
-import Navbar from '../Navbar';
-import { ToastContainer } from '@/components/ui/toast';
+import React from "react";
+import { Sidebar } from "./sidebar";
+import Navbar from "../Navbar";
+import { ToastContainer } from "@/components/ui/toast";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -12,34 +12,31 @@ interface DashboardLayoutProps {
   userName?: string;
 }
 
-export function DashboardLayout({ 
-  children, 
-  title, 
-  userRole, 
-  userName 
+export function DashboardLayout({
+  children,
+  title,
+  userRole,
+  userName,
 }: DashboardLayoutProps) {
   return (
-    <div className="flex h-screen w-full bg-background">
+    <div className="flex h-screen w-full bg-background overflow-x-hidden">
       {/* Sidebar */}
       <div className="sticky top-0 h-screen">
         <Sidebar userRole={userRole} title={title} userName={userName} />
       </div>
-      
-       {/* Navbar */}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col ml-24 lg:ml-54">
+        {/* Navbar */}
         <div className="sticky top-0 z-40">
           <Navbar />
         </div>
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col ml-24 lg:ml-54">
-        <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6" style={{ marginTop: '5rem', paddingTop: '5rem' }}>
-          <div className="max-w-full">
-            {children}
-          </div>
+        <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 pt-20">
+          <div className="max-w-full">{children}</div>
         </main>
       </div>
-      
+
       {/* Toast Notifications */}
       <ToastContainer />
     </div>
   );
-} 
+}
