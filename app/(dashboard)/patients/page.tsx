@@ -568,7 +568,8 @@ export default function PatientsPage() {
           </div>
 
           {/* Patients Table */}
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="min-w-full divide-y divide-border-color">
               <thead className="bg-card-bg">
                 <tr>
@@ -660,6 +661,72 @@ export default function PatientsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile/Tablet Cards */}
+          <div className="lg:hidden space-y-4">
+            {filteredPatients.map((patient) => (
+              <div key={patient._id} className="bg-background border border-border-color rounded-lg p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium text-text-primary">{patient.patientId}</h3>
+                    <p className="text-sm text-text-secondary">{`${patient.firstName} ${patient.lastName}`}</p>
+                  </div>
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(patient.isActive ? 'active' : 'inactive')}`}>
+                    {patient.isActive ? 'ACTIVE' : 'INACTIVE'}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-text-muted">Age:</span>
+                    <span className="ml-1 text-text-primary">{patient.age || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-text-muted">Gender:</span>
+                    <span className="ml-1 text-text-primary">{patient.gender}</span>
+                  </div>
+                  <div>
+                    <span className="text-text-muted">Blood Type:</span>
+                    <span className="ml-1 text-text-primary">{patient.bloodType || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-text-muted">Last Visit:</span>
+                    <span className="ml-1 text-text-primary">{formatDate(patient.lastVisit)}</span>
+                  </div>
+                </div>
+                
+                <div className="text-sm">
+                  <div className="text-text-muted">Contact:</div>
+                  <div className="text-text-primary">{patient.phone}</div>
+                  <div className="text-text-secondary">{patient.email}</div>
+                </div>
+                
+                <div className="flex justify-end space-x-2 pt-2">
+                  <button 
+                    onClick={() => handleViewPatient(patient)}
+                    className="text-accent-color hover:text-accent-hover p-2 rounded hover:bg-accent-color/10 transition-colors"
+                    title="View Patient"
+                  >
+                    <FaEye size={16} />
+                  </button>
+                  <button 
+                    onClick={() => handleEditPatient(patient)}
+                    className="text-success hover:text-success/80 p-2 rounded hover:bg-success/10 transition-colors"
+                    title="Edit Patient"
+                  >
+                    <FaEdit size={16} />
+                  </button>
+                  <button 
+                    onClick={() => handleDeletePatient(patient._id)}
+                    className="text-error hover:text-error/80 p-2 rounded hover:bg-error/10 transition-colors"
+                    title="Delete Patient"
+                  >
+                    <FaTrash size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -17,6 +17,7 @@ interface DashboardStats {
   outOfStockItems: number;
   pendingOrders: number;
   todayServices: number;
+  totalLabResults: number;
 }
 
 interface RecentActivity {
@@ -69,6 +70,7 @@ export default function DashboardPage() {
     outOfStockItems: 0,
     pendingOrders: 0,
     todayServices: 0,
+    totalLabResults: 0,
   });
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,48 +83,46 @@ export default function DashboardPage() {
         setLoading(true);
         
         // Fetch all data in parallel
-        const [patientsRes, salesRes, drugsRes, drugOrdersRes] = await Promise.all([
+        const [patientsRes, paymentsRes, drugsRes, drugOrdersRes, labResultsRes] = await Promise.all([
           fetch('/api/patients'),
-          fetch('/api/sales'),
+          fetch('/api/payments'),
           fetch('/api/drugs'),
           fetch('/api/drug-orders'),
+          fetch('/api/lab-results'),
         ]);
 
         const patientsData = await patientsRes.json();
-        const salesData = await salesRes.json();
+        const paymentsData = await paymentsRes.json();
         const drugsData = await drugsRes.json();
         const drugOrdersData = await drugOrdersRes.json();
+        const labResultsData = await labResultsRes.json();
 
         // Calculate stats
         const totalPatients = patientsData.success ? patientsData.data.length : 0;
-        const totalSales = salesData.success ? salesData.data.length : 0;
-        const totalRevenue = salesData.success 
-          ? salesData.data.reduce((sum: number, sale: SaleData) => sum + (sale.totalAmount || 0), 0)
+        const totalPayments = paymentsData.success ? paymentsData.data.length : 0;
+        const totalRevenue = paymentsData.success 
+          ? paymentsData.data.reduce((sum: number, payment: any) => sum + (payment.amount || 0), 0)
           : 0;
         
         const totalDrugs = drugsData.success ? drugsData.data.length : 0;
         const lowStockItems = drugsData.success 
-          ? drugsData.data.filter((drug: DrugData) => drug.quantity <= 10 && drug.quantity > 0).length
+          ? drugsData.data.filter((drug: any) => (drug.stockQuantity || 0) <= 10 && (drug.stockQuantity || 0) > 0).length
           : 0;
         const outOfStockItems = drugsData.success
-          ? drugsData.data.filter((drug: DrugData) => drug.quantity === 0).length
+          ? drugsData.data.filter((drug: any) => (drug.stockQuantity || 0) === 0).length
           : 0;
 
         const pendingOrders = drugOrdersData.success
-          ? drugOrdersData.data.filter((order: DrugOrderData) => order.status === 'PENDING').length
+          ? drugOrdersData.data.filter((order: any) => order.status === 'PENDING').length
           : 0;
 
         // Calculate today's services (approximation)
         const today = new Date();
-        const todayServices = salesData.success
-          ? salesData.data.filter((sale: SaleData) => {
-              const saleDate = new Date(sale.soldAt || sale.createdAt);
-              return saleDate.toDateString() === today.toDateString();
-            }).length
-          : 0;
+        const totalLabResults = Array.isArray(labResultsData) ? labResultsData.length : 0;
+        const todayServices = totalLabResults; // Use lab results as services for now
 
         setStats({
-          totalSales,
+          totalSales: totalPayments, // Use payments as sales
           totalRevenue,
           totalPatients,
           totalDrugs,
@@ -130,21 +130,22 @@ export default function DashboardPage() {
           outOfStockItems,
           pendingOrders,
           todayServices,
+          totalLabResults,
         });
 
         // Generate recent activity from actual data
         const activities: RecentActivity[] = [];
         
-        // Add recent sales
-        if (salesData.success && salesData.data.length > 0) {
-          const recentSales = salesData.data.slice(0, 3);
-          recentSales.forEach((sale: SaleData) => {
+        // Add recent payments
+        if (paymentsData.success && paymentsData.data.length > 0) {
+          const recentPayments = paymentsData.data.slice(0, 3);
+          recentPayments.forEach((payment: any) => {
             activities.push({
-              id: sale.saleId || sale._id,
-              action: `Sale completed for ${sale.patientName}`,
-              time: getTimeAgo(new Date(sale.soldAt || sale.createdAt)),
+              id: payment.paymentId || payment._id,
+              action: `Payment received from ${payment.patientName}`,
+              time: getTimeAgo(new Date(payment.createdAt)),
               type: 'sale',
-              amount: `$${(sale.totalAmount || 0).toFixed(2)}`,
+              amount: `$${(payment.amount || 0).toFixed(2)}`,
             });
           });
         }
@@ -165,13 +166,26 @@ export default function DashboardPage() {
         // Add recent drug orders
         if (drugOrdersData.success && drugOrdersData.data.length > 0) {
           const recentOrders = drugOrdersData.data.slice(0, 2);
-          recentOrders.forEach((order: DrugOrderData) => {
+          recentOrders.forEach((order: any) => {
             activities.push({
               id: order._id,
               action: `Drug order created for ${order.patientName}`,
               time: getTimeAgo(new Date(order.createdAt)),
               type: 'service',
               amount: `$${(order.totalAmount || 0).toFixed(2)}`,
+            });
+          });
+        }
+
+        // Add recent lab results
+        if (Array.isArray(labResultsData) && labResultsData.length > 0) {
+          const recentLabResults = labResultsData.slice(0, 2);
+          recentLabResults.forEach((labResult: any) => {
+            activities.push({
+              id: labResult._id,
+              action: `Lab result completed for ${labResult.patientName}`,
+              time: getTimeAgo(new Date(labResult.createdAt)),
+              type: 'service',
             });
           });
         }
@@ -394,9 +408,9 @@ const getActivityIcon = (type: string) => {
   // Prepare stats for display
   const displayStats = [
     {
-      title: 'Total Sales',
+      title: 'Total Payments',
       value: stats.totalSales.toString(),
-      change: '+12% from last month',
+      change: `$${stats.totalRevenue.toFixed(2)} total revenue`,
       changeType: 'positive' as const,
       icon: '💰',
     },
@@ -410,16 +424,16 @@ const getActivityIcon = (type: string) => {
     {
       title: 'Total Patients',
       value: stats.totalPatients.toString(),
-      change: '+8% from last month',
+      change: `${stats.totalLabResults} lab results`,
       changeType: 'positive' as const,
       icon: '👥',
     },
     {
-      title: 'Services Today',
-      value: stats.todayServices.toString(),
-      change: '+15% from yesterday',
+      title: 'Lab Results',
+      value: stats.totalLabResults.toString(),
+      change: `${stats.pendingOrders} pending orders`,
       changeType: 'positive' as const,
-      icon: '📅',
+      icon: '🧪',
     },
   ];
 
@@ -529,39 +543,39 @@ const getActivityIcon = (type: string) => {
           <div className="bg-card-bg rounded-lg border border-border-color p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-text-secondary">Today&apos;s Revenue</p>
+                <p className="text-sm font-medium text-text-secondary">Total Revenue</p>
                 <p className="text-2xl font-bold text-text-primary">${stats.totalRevenue.toFixed(2)}</p>
               </div>
               <span className="text-2xl">💰</span>
             </div>
             <div className="mt-2">
-              <span className="text-xs text-success font-medium">+12% from yesterday</span>
+              <span className="text-xs text-success font-medium">{stats.totalSales} total payments</span>
             </div>
           </div>
 
           <div className="bg-card-bg rounded-lg border border-border-color p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-text-secondary">Patients Today</p>
-                <p className="text-2xl font-bold text-text-primary">{stats.todayServices}</p>
+                <p className="text-sm font-medium text-text-secondary">Lab Results</p>
+                <p className="text-2xl font-bold text-text-primary">{stats.totalLabResults}</p>
               </div>
-              <span className="text-2xl">👥</span>
+              <span className="text-2xl">🧪</span>
             </div>
             <div className="mt-2">
-              <span className="text-xs text-accent-color font-medium">+3 from yesterday</span>
+              <span className="text-xs text-accent-color font-medium">{stats.totalPatients} total patients</span>
             </div>
           </div>
 
           <div className="bg-card-bg rounded-lg border border-border-color p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-text-secondary">Pending Orders</p>
-                <p className="text-2xl font-bold text-text-primary">{stats.pendingOrders}</p>
+                <p className="text-sm font-medium text-text-secondary">Drug Inventory</p>
+                <p className="text-2xl font-bold text-text-primary">{stats.totalDrugs}</p>
               </div>
-              <span className="text-2xl">📋</span>
+              <span className="text-2xl">💊</span>
             </div>
             <div className="mt-2">
-              <span className="text-xs text-warning font-medium">Requires attention</span>
+              <span className="text-xs text-warning font-medium">{stats.lowStockItems} low stock items</span>
             </div>
           </div>
         </div>
