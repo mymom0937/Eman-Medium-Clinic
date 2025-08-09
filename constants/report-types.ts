@@ -5,6 +5,7 @@ export const REPORT_TYPES = [
   { value: 'drug-orders', label: 'Drug Orders Report', description: 'Prescription and dispensing statistics' },
   { value: 'inventories', label: 'Inventory Report', description: 'Drug inventory levels and stock management' },
   { value: 'payments', label: 'Payments Report', description: 'Payment processing and financial transactions' },
+  { value: 'walk-in-services', label: 'Walk-in Services Report', description: 'Quick services and direct patient care' },
 ];
 
 export const DATE_RANGES = [

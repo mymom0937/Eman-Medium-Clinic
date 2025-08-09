@@ -20,6 +20,7 @@ import {
   FaShoppingCart,
   FaCreditCard,
   FaChartLine,
+  FaStethoscope,
 } from "react-icons/fa";
 import {
   REPORT_TYPES,
@@ -49,6 +50,7 @@ const REPORT_TYPES_WITH_ICONS = [
   { ...REPORT_TYPES[4], icon: FaBoxes },
   { ...REPORT_TYPES[5], icon: FaShoppingCart },
   { ...REPORT_TYPES[6], icon: FaCreditCard },
+  { ...REPORT_TYPES[7], icon: FaStethoscope },
 ];
 
 export default function ReportsPage() {
@@ -308,6 +310,38 @@ export default function ReportsPage() {
               change: "+10% from last month",
               changeType: "positive" as const,
               icon: "📦",
+            }
+          );
+          break;
+        case "walk-in-services":
+          stats.push(
+            {
+              title: "Total Services",
+              value: summary.totalServices || 0,
+              change: "+15% from last month",
+              changeType: "positive" as const,
+              icon: "🏥",
+            },
+            {
+              title: "Total Revenue",
+              value: `ETB ${(summary.totalRevenue || 0).toFixed(2)}`,
+              change: "+18% from last month",
+              changeType: "positive" as const,
+              icon: "💰",
+            },
+            {
+              title: "Average Service Price",
+              value: `ETB ${(summary.averageServicePrice || 0).toFixed(2)}`,
+              change: "+5% from last month",
+              changeType: "positive" as const,
+              icon: "📊",
+            },
+            {
+              title: "Completed Services",
+              value: summary.completedServices || 0,
+              change: "+12% from last month",
+              changeType: "positive" as const,
+              icon: "✅",
             }
           );
           break;

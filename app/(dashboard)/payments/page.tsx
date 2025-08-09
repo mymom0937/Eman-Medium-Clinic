@@ -35,7 +35,7 @@ interface Payment {
   paymentStatus: string;
 
   // Enhanced for Drug Sales
-  paymentType: "DRUG_SALE" | "LAB_TEST" | "CONSULTATION" | "OTHER";
+  paymentType: "DRUG_SALE" | "LAB_TEST" | "CONSULTATION" | "WALK_IN_SERVICE" | "OTHER";
 
   // Drug Sale Specific Fields (when paymentType === 'DRUG_SALE')
   items?: Array<{
@@ -66,6 +66,7 @@ interface PaymentStats {
   totalDrugSales: number;
   totalLabPayments: number;
   totalConsultations: number;
+  totalWalkInServices: number;
   pendingAmount: number;
   completedPayments: number;
   totalTransactions: number;
@@ -109,6 +110,7 @@ export default function PaymentsPage() {
     totalDrugSales: 0,
     totalLabPayments: 0,
     totalConsultations: 0,
+    totalWalkInServices: 0,
     pendingAmount: 0,
     completedPayments: 0,
     totalTransactions: 0,
@@ -143,7 +145,7 @@ export default function PaymentsPage() {
   const [errors, setErrors] = useState<any>({});
 
   // Enhanced stats calculation
-  const calculateStats = (paymentsData: Payment[]) => {
+  const calculateStats = (paymentsData: Payment[]): PaymentStats => {
     const totalRevenue = paymentsData.reduce(
       (sum, payment) => sum + (payment.finalAmount || payment.amount),
       0
@@ -169,6 +171,13 @@ export default function PaymentsPage() {
 
     const totalConsultations = paymentsData
       .filter((payment) => payment.paymentType === "CONSULTATION")
+      .reduce(
+        (sum, payment) => sum + (payment.finalAmount || payment.amount),
+        0
+      );
+
+    const totalWalkInServices = paymentsData
+      .filter((payment) => payment.paymentType === "WALK_IN_SERVICE")
       .reduce(
         (sum, payment) => sum + (payment.finalAmount || payment.amount),
         0
@@ -201,6 +210,7 @@ export default function PaymentsPage() {
       totalDrugSales,
       totalLabPayments,
       totalConsultations,
+      totalWalkInServices,
       pendingAmount,
       completedPayments,
       totalTransactions,
@@ -728,11 +738,11 @@ export default function PaymentsPage() {
       icon: "🔬",
     },
     {
-      title: "Pending Amount",
-      value: `ETB ${stats.pendingAmount.toFixed(2)}`,
-      change: "-5% from yesterday",
-      changeType: "negative" as const,
-      icon: "⏳",
+      title: "Walk-in Services",
+      value: `ETB ${stats.totalWalkInServices.toFixed(2)}`,
+      change: "+10% from last week",
+      changeType: "positive" as const,
+      icon: "🏥",
     },
   ];
 

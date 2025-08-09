@@ -5,6 +5,7 @@ import Payment from './payment';
 import { LabResult } from './lab-result';
 import { DrugOrder } from './drug-order';
 import { Feedback } from './feedback';
+import { WalkInService } from './walk-in-service';
 
 export {
   User,
@@ -13,5 +14,6 @@ export {
   Payment,
   LabResult,
   DrugOrder,
-  Feedback
+  Feedback,
+  WalkInService
 }; 

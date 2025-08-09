@@ -8,6 +8,7 @@ export const ROUTES = {
   PAYMENTS: '/payments',
   LAB_RESULTS: '/lab-results',
   DRUG_ORDERS: '/drug-orders',
+  WALK_IN_SERVICES: '/walk-in-services',
   REPORTS: '/reports',
   FEEDBACK: '/feedback',
   PROFILE: '/profile',
@@ -20,6 +21,7 @@ export const PROTECTED_ROUTES = [
   ROUTES.PAYMENTS,
   ROUTES.LAB_RESULTS,
   ROUTES.DRUG_ORDERS,
+  ROUTES.WALK_IN_SERVICES,
   ROUTES.REPORTS,
   ROUTES.FEEDBACK,
 ];

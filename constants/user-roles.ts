@@ -28,6 +28,8 @@ export const ROLE_PERMISSIONS = {
     'reports:read',
     'users:read',
     'users:write',
+    'walk-in-services:read',
+    'walk-in-services:write',
   ],
   [USER_ROLES.NURSE]: [
     'dashboard:read',
@@ -54,6 +56,8 @@ export const ROLE_PERMISSIONS = {
     'payments:write',
     'drug-orders:read',
     'drug-orders:write',
+    'walk-in-services:read',
+    'walk-in-services:write',
   ],
 } as const;
 

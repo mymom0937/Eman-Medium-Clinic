@@ -18,6 +18,7 @@ interface DashboardStats {
   pendingOrders: number;
   todayServices: number;
   totalLabResults: number;
+  totalWalkInServices: number;
 }
 
 interface RecentActivity {
@@ -71,6 +72,7 @@ export default function DashboardPage() {
     pendingOrders: 0,
     todayServices: 0,
     totalLabResults: 0,
+    totalWalkInServices: 0,
   });
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,12 +85,13 @@ export default function DashboardPage() {
         setLoading(true);
         
         // Fetch all data in parallel
-        const [patientsRes, paymentsRes, drugsRes, drugOrdersRes, labResultsRes] = await Promise.all([
+        const [patientsRes, paymentsRes, drugsRes, drugOrdersRes, labResultsRes, walkInServicesRes] = await Promise.all([
           fetch('/api/patients'),
           fetch('/api/payments'),
           fetch('/api/drugs'),
           fetch('/api/drug-orders'),
           fetch('/api/lab-results'),
+          fetch('/api/walk-in-services'),
         ]);
 
         const patientsData = await patientsRes.json();
@@ -96,6 +99,7 @@ export default function DashboardPage() {
         const drugsData = await drugsRes.json();
         const drugOrdersData = await drugOrdersRes.json();
         const labResultsData = await labResultsRes.json();
+        const walkInServicesData = await walkInServicesRes.json();
 
         // Calculate stats
         const totalPatients = patientsData.success ? patientsData.data.length : 0;
@@ -119,7 +123,8 @@ export default function DashboardPage() {
         // Calculate today's services (approximation)
         const today = new Date();
         const totalLabResults = Array.isArray(labResultsData) ? labResultsData.length : 0;
-        const todayServices = totalLabResults; // Use lab results as services for now
+        const totalWalkInServices = walkInServicesData.success ? walkInServicesData.data.length : 0;
+        const todayServices = totalLabResults + totalWalkInServices; // Include both lab results and walk-in services
 
         setStats({
           totalSales: totalPayments, // Use payments as sales
@@ -131,6 +136,7 @@ export default function DashboardPage() {
           pendingOrders,
           todayServices,
           totalLabResults,
+          totalWalkInServices,
         });
 
         // Generate recent activity from actual data
@@ -186,6 +192,20 @@ export default function DashboardPage() {
               action: `Lab result completed for ${labResult.patientName}`,
               time: getTimeAgo(new Date(labResult.createdAt)),
               type: 'service',
+            });
+          });
+        }
+
+        // Add recent walk-in services
+        if (walkInServicesData.success && walkInServicesData.data.length > 0) {
+          const recentWalkInServices = walkInServicesData.data.slice(0, 2);
+          recentWalkInServices.forEach((service: any) => {
+            activities.push({
+              id: service._id,
+              action: `Walk-in service: ${service.serviceType} for ${service.patientName}`,
+              time: getTimeAgo(new Date(service.createdAt)),
+              type: 'service',
+              amount: `$${(service.amount || 0).toFixed(2)}`,
             });
           });
         }
@@ -333,26 +353,26 @@ const getRoleBasedQuickActions = (userRole: string) => {
       return [
         {
           id: 1,
-          title: 'Process Sale',
-          description: 'Complete drug transactions',
-          icon: '💰',
-          href: '/sales',
+          title: 'Walk-in Services',
+          description: 'Record quick services',
+          icon: '🏥',
+          href: '/walk-in-services',
           color: 'bg-blue-50 border-blue-200 hover:bg-blue-100',
         },
         {
           id: 2,
-          title: 'Manage Inventory',
-          description: 'Update drug stock levels',
-          icon: '📦',
-          href: '/inventory',
+          title: 'Process Sale',
+          description: 'Complete drug transactions',
+          icon: '💰',
+          href: '/sales',
           color: 'bg-green-50 border-green-200 hover:bg-green-100',
         },
         {
           id: 3,
-          title: 'View Orders',
-          description: 'Check pending drug orders',
-          icon: '💊',
-          href: '/drug-orders',
+          title: 'Manage Inventory',
+          description: 'Update drug stock levels',
+          icon: '📦',
+          href: '/inventory',
           color: 'bg-purple-50 border-purple-200 hover:bg-purple-100',
         },
         {
@@ -435,6 +455,13 @@ const getActivityIcon = (type: string) => {
       changeType: 'positive' as const,
       icon: '🧪',
     },
+    {
+      title: 'Walk-in Services',
+      value: stats.totalWalkInServices.toString(),
+      change: `${stats.totalWalkInServices} services provided`,
+      changeType: 'positive' as const,
+      icon: '🏥',
+    },
   ];
 
   return (
@@ -466,7 +493,7 @@ const getActivityIcon = (type: string) => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {displayStats.map((stat, index) => (
             <StatsCard
               key={index}

@@ -39,12 +39,17 @@ const navigationItems = [
     roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.NURSE, USER_ROLES.PHARMACIST],
   },
   {
+    name: 'Walk-in Services',
+    href: ROUTES.WALK_IN_SERVICES,
+    icon: '🏥',
+    roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.PHARMACIST],
+  },
+  {
     name: 'Inventories',
     href: ROUTES.INVENTORIES,
     icon: '📦',
     roles: [USER_ROLES.SUPER_ADMIN, USER_ROLES.PHARMACIST],
   },
-
   {
     name: 'Payments',
     href: ROUTES.PAYMENTS,

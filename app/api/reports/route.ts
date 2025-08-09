@@ -75,6 +75,9 @@ export async function GET(request: NextRequest) {
       case 'payments':
         reportData = await generatePaymentsReport(db, queryStartDate, queryEndDate);
         break;
+      case 'walk-in-services':
+        reportData = await generateWalkInServicesReport(db, queryStartDate, queryEndDate);
+        break;
       case 'comprehensive':
         reportData = await generateComprehensiveReport(db, queryStartDate, queryEndDate);
         break;
@@ -310,13 +313,58 @@ async function generatePaymentsReport(db: any, startDate: Date, endDate: Date) {
   };
 }
 
+async function generateWalkInServicesReport(db: any, startDate: Date, endDate: Date) {
+  const walkInServices = await db.collection('walkinservices').find({
+    createdAt: { $gte: startDate, $lte: endDate }
+  }).toArray();
+
+  const totalServices = walkInServices.length;
+  const totalRevenue = walkInServices.reduce((sum: number, service: any) => {
+    return service.paymentStatus === 'COMPLETED' ? sum + service.amount : sum;
+  }, 0);
+
+  const serviceTypeDistribution = walkInServices.reduce((acc: any, service: any) => {
+    const serviceType = service.serviceType || 'UNKNOWN';
+    acc[serviceType] = (acc[serviceType] || 0) + 1;
+    return acc;
+  }, {});
+
+  const paymentMethodDistribution = walkInServices.reduce((acc: any, service: any) => {
+    const method = service.paymentMethod || 'UNKNOWN';
+    acc[method] = (acc[method] || 0) + 1;
+    return acc;
+  }, {});
+
+  return {
+    summary: {
+      totalServices,
+      totalRevenue,
+      averageServicePrice: totalServices > 0 ? totalRevenue / totalServices : 0,
+      completedServices: walkInServices.filter((s: any) => s.paymentStatus === 'COMPLETED').length,
+      pendingServices: walkInServices.filter((s: any) => s.paymentStatus === 'PENDING').length
+    },
+    serviceTypeDistribution,
+    paymentMethodDistribution,
+    services: walkInServices.map((s: any) => ({
+      serviceId: s.serviceId,
+      patientName: s.patientName,
+      serviceType: s.serviceType,
+      amount: s.amount,
+      paymentMethod: s.paymentMethod,
+      paymentStatus: s.paymentStatus,
+      createdAt: s.createdAt
+    }))
+  };
+}
+
 async function generateComprehensiveReport(db: any, startDate: Date, endDate: Date) {
-  const [patients, labResults, drugOrders, drugs, payments] = await Promise.all([
+  const [patients, labResults, drugOrders, drugs, payments, walkInServices] = await Promise.all([
     db.collection('patients').find({}).toArray(),
     db.collection('labresults').find({}).toArray(),
     db.collection('drugorders').find({}).toArray(),
     db.collection('drugs').find({}).toArray(),
-    db.collection('payments').find({}).toArray()
+    db.collection('payments').find({}).toArray(),
+    db.collection('walkinservices').find({}).toArray()
   ]);
 
   const reportData = {
@@ -326,13 +374,16 @@ async function generateComprehensiveReport(db: any, startDate: Date, endDate: Da
       totalDrugOrders: drugOrders.length,
       totalDrugs: drugs.length,
       totalSales: payments.length, // Use payments as sales
-      totalPayments: payments.length
+      totalPayments: payments.length,
+      totalWalkInServices: walkInServices.length
     },
     financial: {
       totalRevenue: payments.reduce((sum: number, p: any) => 
         p.paymentStatus === 'COMPLETED' ? sum + p.amount : sum, 0),
       totalPayments: payments.reduce((sum: number, p: any) => 
         p.paymentStatus === 'COMPLETED' ? sum + p.amount : sum, 0),
+      walkInServicesRevenue: walkInServices.reduce((sum: number, s: any) => 
+        s.paymentStatus === 'COMPLETED' ? sum + s.amount : sum, 0),
       inventoryValue: drugs.reduce((sum: number, d: any) => sum + (d.sellingPrice * d.stockQuantity), 0)
     },
     performance: {
@@ -341,7 +392,9 @@ async function generateComprehensiveReport(db: any, startDate: Date, endDate: Da
       orderDispenseRate: drugOrders.length > 0 ? 
         (drugOrders.filter((order: any) => order.status === 'DISPENSED').length / drugOrders.length) * 100 : 0,
       paymentSuccessRate: payments.length > 0 ? 
-        (payments.filter((p: any) => p.paymentStatus === 'COMPLETED').length / payments.length) * 100 : 0
+        (payments.filter((p: any) => p.paymentStatus === 'COMPLETED').length / payments.length) * 100 : 0,
+      walkInServicesSuccessRate: walkInServices.length > 0 ? 
+        (walkInServices.filter((s: any) => s.paymentStatus === 'COMPLETED').length / walkInServices.length) * 100 : 0
     }
   };
 
