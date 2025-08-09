@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/config/database";
-import { WalkInService } from "@/models/walk-in-service";
+import { WalkInService } from "../../../models/walk-in-service";
 
 export async function GET() {
   try {
@@ -36,9 +36,9 @@ export async function POST(request: NextRequest) {
     // Generate service ID
     const lastService = await WalkInService.findOne({})
       .sort({ serviceId: -1 })
-      .lean();
+      .lean() as any;
     
-    const lastNumber = lastService
+    const lastNumber = lastService && lastService.serviceId
       ? parseInt(lastService.serviceId.replace("WIS", ""))
       : 0;
     const serviceId = `WIS${String(lastNumber + 1).padStart(6, "0")}`;

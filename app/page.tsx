@@ -7,9 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser } from '@clerk/nextjs';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { hasDashboardAccess } from '@/lib/client-auth';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export default function HomePage() {
   const { user, isSignedIn } = useUser();
+  const { userRole } = useUserRole();
 
   const features = [
     {
@@ -218,7 +221,7 @@ export default function HomePage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-text-secondary mb-4 leading-relaxed">{feature.description}</p>
-                  {isSignedIn && (
+                  {isSignedIn && hasDashboardAccess(userRole) && (
                     <Link href={feature.href}>
                       <Button variant="outline" size="sm" className="w-full border-border-color text-text-primary hover:bg-gray-700 cursor-pointer bg-[#1447E6]">
                         Explore
@@ -243,7 +246,7 @@ export default function HomePage() {
             and patient care with our comprehensive management system.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {isSignedIn ? (
+            {isSignedIn && hasDashboardAccess(userRole) ? (
               <Link href="/dashboard">
                 <Button size="lg" className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg  hover:bg-gray-700 cursor-pointer bg-[#1447E6]">
                   Access Dashboard
@@ -252,6 +255,17 @@ export default function HomePage() {
                   </svg>
                 </Button>
               </Link>
+            ) : isSignedIn ? (
+              <div className="text-center">
+                <p className="text-text-secondary mb-4">
+                  You don't have permission to access the dashboard. Please contact your administrator.
+                </p>
+                <Link href="/sign-out">
+                  <Button size="lg" variant="outline" className="text-lg px-8 py-4 border-2 border-border-color text-text-primary hover:bg-card-bg cursor-pointer">
+                    Sign Out
+                  </Button>
+                </Link>
+              </div>
             ) : (
               <>
                 <Link href="/sign-up">

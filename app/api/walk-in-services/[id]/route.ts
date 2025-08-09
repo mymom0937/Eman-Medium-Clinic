@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/config/database";
-import { WalkInService } from "@/models/walk-in-service";
+import { WalkInService } from "../../../../models/walk-in-service";
 
 export async function GET(
   request: NextRequest,
