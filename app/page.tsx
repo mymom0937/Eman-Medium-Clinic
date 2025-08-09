@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser } from '@clerk/nextjs';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { hasDashboardAccess } from '@/lib/client-auth';
-import { useUserRole } from '@/hooks/useUserRole';
+import React from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUser } from "@clerk/nextjs";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { hasDashboardAccess } from "@/lib/client-auth";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export default function HomePage() {
   const { user, isSignedIn } = useUser();
@@ -16,71 +16,73 @@ export default function HomePage() {
 
   const features = [
     {
-      icon: '💊',
-      title: 'Drug Inventory',
-      description: 'Track medication stock levels and expiry dates with automated alerts.',
-      href: '/inventory'
+      icon: "💊",
+      title: "Drug Inventory",
+      description:
+        "Track medication stock levels and expiry dates with automated alerts.",
+      href: "/inventory",
     },
     {
-      icon: '👥',
-      title: 'Patient Records',
-      description: 'Manage patient information and medical history securely.',
-      href: '/patients'
+      icon: "👥",
+      title: "Patient Records",
+      description: "Manage patient information and medical history securely.",
+      href: "/patients",
     },
     {
-      icon: '💰',
-      title: 'Sales & Payments',
-      description: 'Process transactions and track payment records efficiently.',
-      href: '/sales'
+      icon: "💰",
+      title: "Sales & Payments",
+      description:
+        "Process transactions and track payment records efficiently.",
+      href: "/sales",
     },
     {
-      icon: '🏥',
-      title: 'Medical Services',
-      description: 'Schedule appointments and manage healthcare services.',
-      href: '/services'
+      icon: "🏥",
+      title: "Medical Services",
+      description: "Schedule appointments and manage healthcare services.",
+      href: "/services",
     },
     {
-      icon: '📊',
-      title: 'Reports & Analytics',
-      description: 'Generate insights and track clinic performance.',
-      href: '/reports'
+      icon: "📊",
+      title: "Reports & Analytics",
+      description: "Generate insights and track clinic performance.",
+      href: "/reports",
     },
     {
-      icon: '🔔',
-      title: 'Smart Notifications',
-      description: 'Stay updated with automated alerts and reminders.',
-      href: '/dashboard'
-    }
+      icon: "🔔",
+      title: "Smart Notifications",
+      description: "Stay updated with automated alerts and reminders.",
+      href: "/dashboard",
+    },
   ];
 
   const benefits = [
     {
-      icon: '⚡',
-      title: 'Streamlined Operations',
-      description: 'Reduce administrative workload and focus on patient care'
+      icon: "⚡",
+      title: "Streamlined Operations",
+      description: "Reduce administrative workload and focus on patient care",
     },
     {
-      icon: '🔒',
-      title: 'Secure & Compliant',
-      description: 'HIPAA-compliant data protection and privacy controls'
+      icon: "🔒",
+      title: "Secure & Compliant",
+      description: "HIPAA-compliant data protection and privacy controls",
     },
     {
-      icon: '📱',
-      title: 'Mobile-Friendly',
-      description: 'Access your clinic data from anywhere, anytime'
+      icon: "📱",
+      title: "Mobile-Friendly",
+      description: "Access your clinic data from anywhere, anytime",
     },
     {
-      icon: '📈',
-      title: 'Data-Driven Insights',
-      description: 'Make informed decisions with comprehensive analytics'
-    }
+      icon: "📈",
+      title: "Data-Driven Insights",
+      description: "Make informed decisions with comprehensive analytics",
+    },
   ];
 
   const stats = [
-    { label: 'Clinics Served', value: '500+', change: '+15%' },
-    { label: 'Patients Managed', value: '50K+', change: '+25%' },
-    { label: 'Uptime', value: '99.9%', change: 'Reliable' },
-    { label: 'Support', value: '24/7', change: 'Available' }
+    { label: "Clinics Served", value: "500+", change: "+15%" },
+    { label: "Patients Managed", value: "50K+", change: "+25%" },
+    { label: "Uptime", value: "99.9%", change: "Reliable" },
+    { label: "Support", value: "24/7", change: "Available" },
   ];
 
   return (
@@ -105,32 +107,58 @@ export default function HomePage() {
               </span>
             </h1>
             <p className="text-lg md:text-xl text-text-secondary mb-8 max-w-3xl mx-auto leading-relaxed">
-              Comprehensive digital solution designed specifically for healthcare facilities. 
-              Manage inventory, patients, and services with precision and ease.
+              Comprehensive digital solution designed specifically for
+              healthcare facilities. Manage inventory, patients, and services
+              with precision and ease.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              {isSignedIn ? (
+              {isSignedIn && hasDashboardAccess(userRole) ? (
                 <Link href="/dashboard">
-                  <Button size="lg" className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
+                  <Button
+                    size="lg"
+                    className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
+                  >
                     Access Dashboard
-                    <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                    <svg
+                      className="w-4 h-4 ml-2"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </Button>
                 </Link>
-              ) : (
+              ) : !isSignedIn ? (
                 <>
                   <Link href="/sign-up">
-                    <Button size="lg" className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
+                    <Button
+                      size="lg"
+                      className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
+                    >
                       Start Free Trial
                     </Button>
                   </Link>
                   <Link href="/sign-in">
-                    <Button variant="outline" size="lg" className="text-lg px-8 py-4 border-2 border-border-color text-text-primary cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="text-lg px-8 py-4 border-2 border-border-color text-text-primary cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
+                    >
                       Sign In
                     </Button>
                   </Link>
                 </>
+              ) : (
+                <div>
+                  <p className="text-text-secondary font-medium">
+                    Your account doesn’t have dashboard access. Contact an
+                    administrator.
+                  </p>
+                </div>
               )}
             </div>
             <div className="flex items-center justify-center space-x-8 text-sm text-text-secondary font-medium">
@@ -157,8 +185,12 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-accent-color mb-2">{stat.value}</div>
-                <div className="text-sm md:text-base text-text-secondary mb-1">{stat.label}</div>
+                <div className="text-3xl md:text-4xl font-bold text-accent-color mb-2">
+                  {stat.value}
+                </div>
+                <div className="text-sm md:text-base text-text-secondary mb-1">
+                  {stat.label}
+                </div>
                 <div className="text-xs text-success">{stat.change}</div>
               </div>
             ))}
@@ -174,25 +206,31 @@ export default function HomePage() {
               Why Choose Eman Clinic?
             </h2>
             <p className="text-lg text-text-secondary max-w-2xl mx-auto">
-              Built specifically for healthcare professionals who want to focus on patient care, not paperwork.
+              Built specifically for healthcare professionals who want to focus
+              on patient care, not paperwork.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((benefit, index) => (
-              <Card key={index} className="text-center hover:shadow-lg transition-all duration-300 border-border-color shadow-sm bg-card-bg">
-              <CardHeader>
-                <div className="w-16 h-16 bg-accent-color/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Card
+                key={index}
+                className="text-center hover:shadow-lg transition-all duration-300 border-border-color shadow-sm bg-card-bg"
+              >
+                <CardHeader>
+                  <div className="w-16 h-16 bg-accent-color/10 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-2xl">{benefit.icon}</span>
-                </div>
-                  <CardTitle className="text-lg text-text-primary">{benefit.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
+                  </div>
+                  <CardTitle className="text-lg text-text-primary">
+                    {benefit.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
                   <p className="text-text-secondary text-sm leading-relaxed">
                     {benefit.description}
-                </p>
-              </CardContent>
-            </Card>
+                  </p>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
@@ -206,24 +244,36 @@ export default function HomePage() {
               Complete Clinic Solution
             </h2>
             <p className="text-lg text-text-secondary max-w-2xl mx-auto">
-              Everything you need to manage your healthcare facility efficiently and securely.
+              Everything you need to manage your healthcare facility efficiently
+              and securely.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="hover:shadow-lg transition-all duration-300 border-border-color shadow-sm bg-card-bg">
+              <Card
+                key={index}
+                className="hover:shadow-lg transition-all duration-300 border-border-color shadow-sm bg-card-bg"
+              >
                 <CardHeader>
                   <div className="flex items-center space-x-3">
                     <span className="text-2xl">{feature.icon}</span>
-                    <CardTitle className="text-lg text-text-primary">{feature.title}</CardTitle>
+                    <CardTitle className="text-lg text-text-primary">
+                      {feature.title}
+                    </CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-text-secondary mb-4 leading-relaxed">{feature.description}</p>
+                  <p className="text-text-secondary mb-4 leading-relaxed">
+                    {feature.description}
+                  </p>
                   {isSignedIn && hasDashboardAccess(userRole) && (
                     <Link href={feature.href}>
-                      <Button variant="outline" size="sm" className="w-full border-border-color text-text-primary hover:bg-gray-700 cursor-pointer bg-[#1447E6]">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-border-color text-text-primary hover:bg-gray-700 cursor-pointer bg-[#1447E6]"
+                      >
                         Explore
                       </Button>
                     </Link>
@@ -242,26 +292,43 @@ export default function HomePage() {
             Ready to Transform Your Clinic?
           </h2>
           <p className="text-lg md:text-xl text-text-secondary mb-8 max-w-2xl mx-auto leading-relaxed font-medium">
-            Join healthcare facilities that have already improved their operations 
-            and patient care with our comprehensive management system.
+            Join healthcare facilities that have already improved their
+            operations and patient care with our comprehensive management
+            system.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {isSignedIn && hasDashboardAccess(userRole) ? (
               <Link href="/dashboard">
-                <Button size="lg" className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg  hover:bg-gray-700 cursor-pointer bg-[#1447E6]">
+                <Button
+                  size="lg"
+                  className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg  hover:bg-gray-700 cursor-pointer bg-[#1447E6]"
+                >
                   Access Dashboard
-                  <svg className="w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                  <svg
+                    className="w-4 h-4 ml-2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 </Button>
               </Link>
             ) : isSignedIn ? (
               <div className="text-center">
                 <p className="text-text-secondary mb-4">
-                  You don't have permission to access the dashboard. Please contact your administrator.
+                  You don't have permission to access the dashboard. Please
+                  contact your administrator.
                 </p>
                 <Link href="/sign-out">
-                  <Button size="lg" variant="outline" className="text-lg px-8 py-4 border-2 border-border-color text-text-primary hover:bg-card-bg cursor-pointer">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="text-lg px-8 py-4 border-2 border-border-color text-text-primary hover:bg-card-bg cursor-pointer"
+                  >
                     Sign Out
                   </Button>
                 </Link>
@@ -269,12 +336,19 @@ export default function HomePage() {
             ) : (
               <>
                 <Link href="/sign-up">
-                  <Button size="lg" className="text-lg px-8 py-4 bg-accent-color text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700">
+                  <Button
+                    size="lg"
+                    className="text-lg px-8 py-4 bg-accent-color text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
+                  >
                     Start Free Trial
                   </Button>
                 </Link>
                 <Link href="/sign-in">
-                  <Button size="lg" variant="outline" className="text-lg px-8 py-4 border-2 border-border-color text-text-primary hover:bg-card-bg cursor-pointer">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="text-lg px-8 py-4 border-2 border-border-color text-text-primary hover:bg-card-bg cursor-pointer"
+                  >
                     Sign In
                   </Button>
                 </Link>

@@ -5,6 +5,8 @@ import { assets, BagIcon, BoxIcon, CartIcon, HomeIcon } from "@/assets/assets";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAppContext } from "@/context/AppContext";
+import { useUserRole } from "@/hooks/useUserRole";
+import { hasDashboardAccess } from "@/lib/client-auth";
 import { useTheme } from "@/context/ThemeContext";
 import Image from "next/image";
 import { useClerk, UserButton } from "@clerk/nextjs";
@@ -25,6 +27,9 @@ const Navbar = () => {
     userRole,
     handleLogout: contextLogout,
   } = useAppContext();
+  // Also read role directly from Clerk (publicMetadata) for earlier availability
+  const { userRole: clerkRole } = useUserRole();
+  const effectiveRole = (userRole as string) || (clerkRole as string) || "";
   const { theme, toggleTheme } = useTheme();
   const isDarkMode = theme === "dark";
   const { openSignIn, signOut } = useClerk();
@@ -154,74 +159,87 @@ const Navbar = () => {
       {/* Desktop Menu - Center */}
       <div className="desktop-menu hidden lg:flex items-center space-x-6">
         {/* Home */}
-          <Link
-            href="/"
+        <Link
+          href="/"
           className={`font-medium transition px-3 py-1.5 rounded-full ${
-              isActive("/")
-                ? "bg-[#00D4AA] text-white"
-                : theme === "dark" ? "text-white hover:text-gray-300" : "text-gray-800 hover:text-accent-color"
-            }`}
-          >
-            Home
-          </Link>
+            isActive("/")
+              ? "bg-[#00D4AA] text-white"
+              : theme === "dark"
+              ? "text-white hover:text-gray-300"
+              : "text-gray-800 hover:text-accent-color"
+          }`}
+        >
+          Home
+        </Link>
 
         {/* About */}
-          <Link
-            href="/about"
+        <Link
+          href="/about"
           className={`font-medium transition px-3 py-1.5 rounded-full ${
-              isActive("/about")
-                ? "bg-[#00D4AA] text-white"
-                : theme === "dark" ? "text-white hover:text-gray-300" : "text-gray-800 hover:text-accent-color"
-            }`}
-          >
-            About
-          </Link>
+            isActive("/about")
+              ? "bg-[#00D4AA] text-white"
+              : theme === "dark"
+              ? "text-white hover:text-gray-300"
+              : "text-gray-800 hover:text-accent-color"
+          }`}
+        >
+          About
+        </Link>
 
         {/* Services */}
-          <Link
-            href="/services"
+        <Link
+          href="/services"
           className={`font-medium transition px-3 py-1.5 rounded-full ${
-              isActive("/services")
-                ? "bg-[#00D4AA] text-white"
-                : theme === "dark" ? "text-white hover:text-gray-300" : "text-gray-800 hover:text-accent-color"
-            }`}
-          >
-            Services
-          </Link>
+            isActive("/services")
+              ? "bg-[#00D4AA] text-white"
+              : theme === "dark"
+              ? "text-white hover:text-gray-300"
+              : "text-gray-800 hover:text-accent-color"
+          }`}
+        >
+          Services
+        </Link>
 
         {/* Features */}
-          <Link
-            href="/features"
+        <Link
+          href="/features"
           className={`font-medium transition px-3 py-1.5 rounded-full ${
-              isActive("/features")
-                ? "bg-[#00D4AA] text-white"
-                : theme === "dark" ? "text-white hover:text-gray-300" : "text-gray-800 hover:text-accent-color"
-            }`}
-          >
-            Features
-          </Link>
+            isActive("/features")
+              ? "bg-[#00D4AA] text-white"
+              : theme === "dark"
+              ? "text-white hover:text-gray-300"
+              : "text-gray-800 hover:text-accent-color"
+          }`}
+        >
+          Features
+        </Link>
 
         {/* Contact */}
-          <Link
-            href="/contact"
+        <Link
+          href="/contact"
           className={`font-medium transition px-3 py-1.5 rounded-full ${
-              isActive("/contact")
-                ? "bg-[#00D4AA] text-white"
-                : theme === "dark" ? "text-white hover:text-gray-300" : "text-gray-800 hover:text-accent-color"
-            }`}
-          >
-            Contact
-          </Link>
+            isActive("/contact")
+              ? "bg-[#00D4AA] text-white"
+              : theme === "dark"
+              ? "text-white hover:text-gray-300"
+              : "text-gray-800 hover:text-accent-color"
+          }`}
+        >
+          Contact
+        </Link>
       </div>
 
       {/* Right Side - Theme Toggle and Sign In */}
-      <div className="hidden lg:flex items-center space-x-4" style={{ display: 'flex' }}>
+      <div
+        className="hidden lg:flex items-center space-x-4"
+        style={{ display: "flex" }}
+      >
         {/* Theme toggle button */}
         <button
           onClick={toggleTheme}
           className={`p-1.5 rounded-full transition ${
-            theme === "dark" 
-              ? "hover:bg-gray-700 text-white" 
+            theme === "dark"
+              ? "hover:bg-gray-700 text-white"
               : "hover:bg-gray-100 text-gray-800"
           }`}
           aria-label="Toggle theme"
@@ -266,10 +284,10 @@ const Navbar = () => {
               afterSignOutUrl="/"
               appearance={{
                 ...getClerkConfig(theme).appearance,
-                elements: { 
+                elements: {
                   ...getClerkConfig(theme).appearance.elements,
-                  avatarBox: "w-7 h-7 md:w-8 md:h-8" 
-                }
+                  avatarBox: "w-7 h-7 md:w-8 md:h-8",
+                },
               }}
             >
               <UserButton.MenuItems>
@@ -390,29 +408,29 @@ const Navbar = () => {
                   onClick={() => (window.location.href = "/contact")}
                 />
 
-                {/* Dashboard */}
-                <UserButton.Action
-                  label="Dashboard"
-                  labelIcon={
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-5 h-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605"
-                      />
-                    </svg>
-                  }
-                  onClick={() => (window.location.href = "/dashboard")}
-                />
-
-
+                {/* Dashboard (role-restricted) */}
+                {hasDashboardAccess(effectiveRole) && (
+                  <UserButton.Action
+                    label="Dashboard"
+                    labelIcon={
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M3.75 6A2.25 2.25 0 0 1 6 3.75h3A2.25 2.25 0 0 1 11.25 6v3A2.25 2.25 0 0 1 9 11.25H6A2.25 2.25 0 0 1 3.75 9V6zM12.75 6A2.25 2.25 0 0 1 15 3.75h3A2.25 2.25 0 0 1 20.25 6v3A2.25 2.25 0 0 1 18 11.25h-3A2.25 2.25 0 0 1 12.75 9V6zM3.75 15A2.25 2.25 0 0 1 6 12.75h3A2.25 2.25 0 0 1 11.25 15v3A2.25 2.25 0 0 1 9 20.25H6A2.25 2.25 0 0 1 3.75 18v-3zM12.75 15A2.25 2.25 0 0 1 15 12.75h3A2.25 2.25 0 0 1 20.25 15v3A2.25 2.25 0 0 1 18 20.25h-3A2.25 2.25 0 0 1 12.75 18v-3z"
+                        />
+                      </svg>
+                    }
+                    onClick={() => (window.location.href = "/dashboard")}
+                  />
+                )}
               </UserButton.MenuItems>
             </UserButton>
           </div>
@@ -445,242 +463,270 @@ const Navbar = () => {
       </div>
 
       {/* Mobile/Tablet menu */}
-        {isMenuOpen && (
+      {isMenuOpen && (
         <div
-            className="fixed right-0 top-0 h-full w-64 max-w-[80vw] p-5 z-[160] shadow-2xl lg:hidden"
-            style={{
-              backgroundColor: theme === "dark" ? "#1e293b" : "#ffffff",
-              borderLeft: `1px solid ${
-                theme === "dark" ? "#334155" : "#e2e8f0"
-              }`,
-              boxShadow: "0 0 20px rgba(0, 0, 0, 0.3)",
-            }}
-          >
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-2"></div>
-              <div className="flex items-center gap-2">
-                {/* Theme toggle for mobile */}
-                             <button
-                   onClick={toggleTheme}
-                   className={`p-1.5 rounded-full transition ${
-                     theme === "dark" 
-                       ? "hover:bg-gray-700 text-white" 
-                       : "hover:bg-gray-100 text-gray-800"
-                   }`}
-                   aria-label="Toggle theme"
-                 >
-                  {theme === "dark" ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"
-                      />
-                    </svg>
-                  )}
+          className="fixed right-0 top-0 h-full w-64 max-w-[80vw] p-5 z-[160] shadow-2xl lg:hidden"
+          style={{
+            backgroundColor: theme === "dark" ? "#1e293b" : "#ffffff",
+            borderLeft: `1px solid ${theme === "dark" ? "#334155" : "#e2e8f0"}`,
+            boxShadow: "0 0 20px rgba(0, 0, 0, 0.3)",
+          }}
+        >
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-2"></div>
+            <div className="flex items-center gap-2">
+              {/* Theme toggle for mobile */}
+              <button
+                onClick={toggleTheme}
+                className={`p-1.5 rounded-full transition ${
+                  theme === "dark"
+                    ? "hover:bg-gray-700 text-white"
+                    : "hover:bg-gray-100 text-gray-800"
+                }`}
+                aria-label="Toggle theme"
+              >
+                {theme === "dark" ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"
+                    />
+                  </svg>
+                )}
               </button>
               <button
-                  onClick={() => setIsMenuOpen(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-card-bg hover:text-red-500 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-card-bg hover:text-red-500 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  className="w-6 h-6"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    className="w-6 h-6"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
               </button>
             </div>
-            </div>
+          </div>
 
-            <div className="flex flex-col">
-              <Link
-                href="/"
-                className={`transition py-3 flex items-center gap-2 px-4 border-b border-border-color ${
+          <div className="flex flex-col">
+            <Link
+              href="/"
+              className={`transition py-3 flex items-center gap-2 px-4 border-b border-border-color ${
+                isActive("/")
+                  ? "bg-[#00D4AA] text-white"
+                  : "bg-background hover:text-accent-color"
+              }`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <span
+                className={
                   isActive("/")
-                    ? "bg-[#00D4AA] text-white"
-                    : "bg-background hover:text-accent-color"
-                }`}
-                onClick={() => setIsMenuOpen(false)}
+                    ? "text-white"
+                    : theme === "dark"
+                    ? "text-white"
+                    : "text-gray-800"
+                }
               >
-                <span
-                  className={
-                    isActive("/")
-                      ? "text-white"
-                      : theme === "dark"
-                      ? "text-white"
-                      : "text-gray-800"
-                  }
-                >
-                  <HomeIcon />
-                </span>
-                <span
-                  className={`text-base ${
-                    isActive("/") ? "text-white" : "text-text-primary"
-                  }`}
-                >
-                  Home
-                </span>
-              </Link>
-              <Link
-                href="/about"
-                className={`transition py-3 flex items-center gap-2 px-4 border-b border-border-color ${
+                <HomeIcon />
+              </span>
+              <span
+                className={`text-base ${
+                  isActive("/") ? "text-white" : "text-text-primary"
+                }`}
+              >
+                Home
+              </span>
+            </Link>
+            <Link
+              href="/about"
+              className={`transition py-3 flex items-center gap-2 px-4 border-b border-border-color ${
+                isActive("/about")
+                  ? "bg-[#00D4AA] text-white"
+                  : "bg-background hover:text-accent-color"
+              }`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`w-5 h-5 ${
                   isActive("/about")
-                    ? "bg-[#00D4AA] text-white"
-                    : "bg-background hover:text-accent-color"
+                    ? "text-white"
+                    : theme === "dark"
+                    ? "text-white"
+                    : "text-gray-800"
                 }`}
-                onClick={() => setIsMenuOpen(false)}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className={`w-5 h-5 ${
-                    isActive("/about")
-                      ? "text-white"
-                      : theme === "dark"
-                      ? "text-white"
-                      : "text-gray-800"
-                  }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
-                  />
-                </svg>
-                <span
-                  className={`text-base ${
-                    isActive("/about") ? "text-white" : "text-text-primary"
-                  }`}
-                >
-                  About
-                </span>
-              </Link>
-              <Link
-                href="/services"
-                className={`transition py-3 flex items-center gap-2 px-4 border-b border-border-color ${
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
+                />
+              </svg>
+              <span
+                className={`text-base ${
+                  isActive("/about") ? "text-white" : "text-text-primary"
+                }`}
+              >
+                About
+              </span>
+            </Link>
+            <Link
+              href="/services"
+              className={`transition py-3 flex items-center gap-2 px-4 border-b border-border-color ${
+                isActive("/services")
+                  ? "bg-[#00D4AA] text-white"
+                  : "bg-background hover:text-accent-color"
+              }`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`w-5 h-5 ${
                   isActive("/services")
-                    ? "bg-[#00D4AA] text-white"
-                    : "bg-background hover:text-accent-color"
+                    ? "text-white"
+                    : theme === "dark"
+                    ? "text-white"
+                    : "text-gray-800"
                 }`}
-                onClick={() => setIsMenuOpen(false)}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className={`w-5 h-5 ${
-                    isActive("/services")
-                      ? "text-white"
-                      : theme === "dark"
-                      ? "text-white"
-                      : "text-gray-800"
-                  }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V19.5a2.25 2.25 0 0 0 2.25 2.25h.75m0-3H21"
-                  />
-                </svg>
-                <span
-                  className={`text-base ${
-                    isActive("/services") ? "text-white" : "text-text-primary"
-                  }`}
-                >
-                  Services
-                </span>
-              </Link>
-              <Link
-                href="/features"
-                className={`transition py-3 flex items-center gap-2 px-4 border-b border-border-color ${
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V19.5a2.25 2.25 0 0 0 2.25 2.25h.75m0-3H21"
+                />
+              </svg>
+              <span
+                className={`text-base ${
+                  isActive("/services") ? "text-white" : "text-text-primary"
+                }`}
+              >
+                Services
+              </span>
+            </Link>
+            <Link
+              href="/features"
+              className={`transition py-3 flex items-center gap-2 px-4 border-b border-border-color ${
+                isActive("/features")
+                  ? "bg-[#00D4AA] text-white"
+                  : "bg-background hover:text-accent-color"
+              }`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`w-5 h-5 ${
                   isActive("/features")
-                    ? "bg-[#00D4AA] text-white"
-                    : "bg-background hover:text-accent-color"
+                    ? "text-white"
+                    : theme === "dark"
+                    ? "text-white"
+                    : "text-gray-800"
                 }`}
-                onClick={() => setIsMenuOpen(false)}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className={`w-5 h-5 ${
-                    isActive("/features")
-                      ? "text-white"
-                      : theme === "dark"
-                      ? "text-white"
-                      : "text-gray-800"
-                  }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"
-                  />
-                </svg>
-                <span
-                  className={`text-base ${
-                    isActive("/features") ? "text-white" : "text-text-primary"
-                  }`}
-                >
-                  Features
-                </span>
-              </Link>
-              <Link
-                href="/contact"
-                className={`transition py-3 flex items-center gap-2 px-4 border-b border-border-color ${
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"
+                />
+              </svg>
+              <span
+                className={`text-base ${
+                  isActive("/features") ? "text-white" : "text-text-primary"
+                }`}
+              >
+                Features
+              </span>
+            </Link>
+            <Link
+              href="/contact"
+              className={`transition py-3 flex items-center gap-2 px-4 border-b border-border-color ${
+                isActive("/contact")
+                  ? "bg-[#00D4AA] text-white"
+                  : "bg-background hover:text-accent-color"
+              }`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`w-5 h-5 ${
                   isActive("/contact")
-                    ? "bg-[#00D4AA] text-white"
-                    : "bg-background hover:text-accent-color"
+                    ? "text-white"
+                    : theme === "dark"
+                    ? "text-white"
+                    : "text-gray-800"
                 }`}
-                onClick={() => setIsMenuOpen(false)}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
+                />
+              </svg>
+              <span
+                className={`text-base ${
+                  isActive("/contact") ? "text-white" : "text-text-primary"
+                }`}
+              >
+                Contact
+              </span>
+            </Link>
+            {!user && (
+              <button
+                onClick={() => {
+                  openSignIn();
+                  setIsMenuOpen(false);
+                }}
+                className="flex items-center gap-2 mt-4 bg-[#F8BD19] text-white px-4 py-2 rounded hover:bg-[#F8BD19]/90 transition w-full justify-center"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className={`w-5 h-5 ${
-                    isActive("/contact")
-                      ? "text-white"
-                      : theme === "dark"
-                      ? "text-white"
-                      : "text-gray-800"
-                  }`}
+                  className="h-5 w-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -689,28 +735,24 @@ const Navbar = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={1.5}
-                    d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                   />
                 </svg>
-                <span
-                  className={`text-base ${
-                    isActive("/contact") ? "text-white" : "text-text-primary"
-                  }`}
-                >
-                  Contact
-                </span>
-              </Link>
-              {!user && (
-                <button
-                  onClick={() => {
-                    openSignIn();
-                    setIsMenuOpen(false);
-                  }}
-                  className="flex items-center gap-2 mt-4 bg-[#F8BD19] text-white px-4 py-2 rounded hover:bg-[#F8BD19]/90 transition w-full justify-center"
+                Sign In
+              </button>
+            )}
+            {user && (
+              <>
+                <Link
+                  href="/profile"
+                  className="transition py-3 flex items-center gap-2 px-4 border-b border-border-color bg-background hover:text-accent-color"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
+                    className={`w-5 h-5 ${
+                      theme === "dark" ? "text-white" : "text-gray-800"
+                    }`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -719,66 +761,40 @@ const Navbar = () => {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={1.5}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.118a7.5 7.5 0 0 1 6.941-4.486A3.75 3.75 0 0 1 18 15.75v.231a2.25 2.25 0 0 1-2.25 2.25h-5.5A2.25 2.25 0 0 1 8.25 18v-.231a3.75 3.75 0 0 1 1.559-6.441A7.5 7.5 0 0 1 4.5 20.118Z"
                     />
                   </svg>
-                  Sign In
+                  <span className="text-base text-text-primary">
+                    Profile Settings
+                  </span>
+                </Link>
+                <button
+                  onClick={handleMobileLogout}
+                  className="hover:text-red-600 transition py-3 border-b border-border-color text-left text-red-600 flex items-center gap-2 bg-background px-4"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={`w-5 h-5 ${
+                      theme === "dark" ? "text-red-400" : "text-red-600"
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
+                    />
+                  </svg>
+                  <span className="text-base">Sign Out</span>
                 </button>
-              )}
-              {user && (
-                <>
-                  <Link
-                    href="/profile"
-                    className="transition py-3 flex items-center gap-2 px-4 border-b border-border-color bg-background hover:text-accent-color"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className={`w-5 h-5 ${
-                        theme === "dark" ? "text-white" : "text-gray-800"
-                      }`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.118a7.5 7.5 0 0 1 6.941-4.486A3.75 3.75 0 0 1 18 15.75v.231a2.25 2.25 0 0 1-2.25 2.25h-5.5A2.25 2.25 0 0 1 8.25 18v-.231a3.75 3.75 0 0 1 1.559-6.441A7.5 7.5 0 0 1 4.5 20.118Z"
-                      />
-                    </svg>
-                    <span className="text-base text-text-primary">
-                      Profile Settings
-                    </span>
-                  </Link>
-                  <button
-                    onClick={handleMobileLogout}
-                    className="hover:text-red-600 transition py-3 border-b border-border-color text-left text-red-600 flex items-center gap-2 bg-background px-4"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className={`w-5 h-5 ${
-                        theme === "dark" ? "text-red-400" : "text-red-600"
-                      }`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
-                      />
-                    </svg>
-                    <span className="text-base">Sign Out</span>
-                  </button>
-                </>
-              )}
-            </div>
+              </>
+            )}
+          </div>
         </div>
-        )}
+      )}
     </nav>
   );
 };
