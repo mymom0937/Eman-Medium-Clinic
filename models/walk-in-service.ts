@@ -109,6 +109,11 @@ const WalkInServiceSchema = new Schema<IWalkInService>(
         type: String,
         required: false,
       },
+      customServiceName: {
+        type: String,
+        required: false,
+        trim: true,
+      },
     },
     amount: {
       type: Number,
@@ -145,5 +150,6 @@ WalkInServiceSchema.index({ patientName: 1 });
 WalkInServiceSchema.index({ serviceType: 1 });
 WalkInServiceSchema.index({ createdAt: -1 });
 
-export const WalkInService = mongoose.models.WalkInService || 
+export const WalkInService =
+  mongoose.models.WalkInService ||
   mongoose.model<IWalkInService>("WalkInService", WalkInServiceSchema);

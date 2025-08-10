@@ -23,7 +23,6 @@ import {
   SERVICE_TYPES,
   INJECTION_TYPES,
   INJECTION_SITES,
-  SERVICE_PRICES,
   SERVICE_LABELS,
 } from "@/constants/service-types";
 
@@ -46,6 +45,7 @@ interface WalkInService {
     weight?: string;
     height?: string;
     notes?: string;
+  customServiceName?: string; // added for custom service
   };
   amount: number;
   paymentMethod: string;
@@ -72,6 +72,9 @@ interface ServiceFormData {
   patientAge: string;
   patientGender: string;
   serviceType: string;
+  isCustomService: boolean; // toggle for custom service
+  customServiceName: string; // name entered by user
+  manualAmount: string; // unified manual amount for all services
   injectionType: string;
   injectionSite: string;
   bloodPressure: string;
@@ -128,6 +131,9 @@ export default function WalkInServicesPage() {
     patientAge: "",
     patientGender: "",
     serviceType: "",
+  isCustomService: false,
+  customServiceName: "",
+  manualAmount: "",
     injectionType: "",
     injectionSite: "",
     bloodPressure: "",
@@ -314,8 +320,20 @@ export default function WalkInServicesPage() {
     if (!formData.patientName.trim()) {
       newErrors.patientName = "Patient name is required";
     }
-    if (!formData.serviceType) {
-      newErrors.serviceType = "Service type is required";
+    if (!formData.isCustomService) {
+      if (!formData.serviceType) {
+        newErrors.serviceType = "Service type is required";
+      }
+    } else {
+      if (!formData.customServiceName.trim()) {
+        newErrors.customServiceName = "Custom service name is required";
+      }
+    }
+    // unified amount validation for all services
+    if (!formData.manualAmount.trim()) {
+      (newErrors as any).manualAmount = "Amount is required";
+    } else if (isNaN(Number(formData.manualAmount)) || Number(formData.manualAmount) <= 0) {
+      (newErrors as any).manualAmount = "Enter a valid amount";
     }
     if (!formData.paymentMethod || formData.paymentMethod.trim() === "") {
       newErrors.paymentMethod = "Payment method is required";
@@ -344,7 +362,7 @@ export default function WalkInServicesPage() {
     console.log("Form data before submission:", formData);
     setLoading(true);
     try {
-      const serviceData = {
+  const serviceData = {
         patientName: formData.patientName,
         patientPhone: formData.patientPhone
           ? `${formData.selectedCountry.dialCode} ${formData.patientPhone}`
@@ -352,7 +370,7 @@ export default function WalkInServicesPage() {
         patientEmail: formData.patientEmail,
         patientAge: formData.patientAge ? parseInt(formData.patientAge) : null,
         patientGender: formData.patientGender || undefined,
-        serviceType: formData.serviceType,
+        serviceType: formData.isCustomService ? SERVICE_TYPES.OTHER : formData.serviceType,
         serviceDetails: {
           injectionType: formData.injectionType || undefined,
           injectionSite: formData.injectionSite || undefined,
@@ -362,10 +380,9 @@ export default function WalkInServicesPage() {
           weight: formData.weight || undefined,
           height: formData.height || undefined,
           notes: formData.notes || undefined,
+          customServiceName: formData.isCustomService ? formData.customServiceName.trim() : undefined,
         },
-        amount:
-          SERVICE_PRICES[formData.serviceType as keyof typeof SERVICE_PRICES] ||
-          50,
+  amount: Number(formData.manualAmount),
         paymentMethod: formData.paymentMethod || "CASH",
         paymentStatus: "COMPLETED", // Default to completed for walk-in services
         recordedBy: userName || "Unknown",
@@ -442,6 +459,9 @@ export default function WalkInServicesPage() {
       patientAge: service.patientAge?.toString() || "",
       patientGender: service.patientGender || "",
       serviceType: service.serviceType,
+  isCustomService: service.serviceType === SERVICE_TYPES.OTHER && !!service.serviceDetails?.customServiceName,
+  customServiceName: service.serviceDetails?.customServiceName || "",
+  manualAmount: service.amount.toString(),
       injectionType: service.serviceDetails?.injectionType || "",
       injectionSite: service.serviceDetails?.injectionSite || "",
       bloodPressure: service.serviceDetails?.bloodPressure || "",
@@ -469,7 +489,7 @@ export default function WalkInServicesPage() {
         patientEmail: formData.patientEmail,
         patientAge: formData.patientAge ? parseInt(formData.patientAge) : null,
         patientGender: formData.patientGender || undefined,
-        serviceType: formData.serviceType,
+        serviceType: formData.isCustomService ? SERVICE_TYPES.OTHER : formData.serviceType,
         serviceDetails: {
           injectionType: formData.injectionType || undefined,
           injectionSite: formData.injectionSite || undefined,
@@ -479,10 +499,9 @@ export default function WalkInServicesPage() {
           weight: formData.weight || undefined,
           height: formData.height || undefined,
           notes: formData.notes || undefined,
+          customServiceName: formData.isCustomService ? formData.customServiceName.trim() : undefined,
         },
-        amount:
-          SERVICE_PRICES[formData.serviceType as keyof typeof SERVICE_PRICES] ||
-          50,
+  amount: Number(formData.manualAmount),
         paymentMethod: formData.paymentMethod || "CASH",
         paymentStatus: "COMPLETED",
         recordedBy: userName || "Unknown",
@@ -565,6 +584,9 @@ export default function WalkInServicesPage() {
       patientAge: "",
       patientGender: "",
       serviceType: "",
+  isCustomService: false,
+  customServiceName: "",
+  manualAmount: "",
       injectionType: "",
       injectionSite: "",
       bloodPressure: "",
@@ -612,6 +634,10 @@ export default function WalkInServicesPage() {
       case SERVICE_TYPES.HEIGHT_CHECK:
         return `${details.height || "N/A"} cm`;
       default:
+        // For custom service prefer custom name then notes
+        if (service.serviceType === SERVICE_TYPES.OTHER && details.customServiceName) {
+          return details.customServiceName + (details.notes ? ` - ${details.notes}` : "");
+        }
         return details.notes || "No details";
     }
   };
@@ -777,9 +803,12 @@ export default function WalkInServicesPage() {
                                 {getServiceIcon(service.serviceType)}
                               </span>
                               <span>
-                                {SERVICE_LABELS[
-                                  service.serviceType as keyof typeof SERVICE_LABELS
-                                ] || service.serviceType}
+                                {service.serviceType === SERVICE_TYPES.OTHER && service.serviceDetails?.customServiceName
+                                  ? service.serviceDetails.customServiceName
+                                  :
+                                    (SERVICE_LABELS[
+                                      service.serviceType as keyof typeof SERVICE_LABELS
+                                    ] || service.serviceType)}
                               </span>
                             </div>
                           </td>
@@ -863,9 +892,12 @@ export default function WalkInServicesPage() {
                     <div>
                       <span className="text-text-muted">Service:</span>
                       <span className="ml-1 text-text-primary break-words">
-                        {SERVICE_LABELS[
-                          service.serviceType as keyof typeof SERVICE_LABELS
-                        ] || service.serviceType}
+                        {service.serviceType === SERVICE_TYPES.OTHER && service.serviceDetails?.customServiceName
+                          ? service.serviceDetails.customServiceName
+                          :
+                            (SERVICE_LABELS[
+                              service.serviceType as keyof typeof SERVICE_LABELS
+                            ] || service.serviceType)}
                       </span>
                     </div>
                     <div>
@@ -1009,17 +1041,71 @@ export default function WalkInServicesPage() {
               </FormField>
 
               <FormField
-                label="Service Type"
+                label="Service Type & Amount"
                 required
-                error={errors.serviceType}
+                error={formData.isCustomService ? (errors.customServiceName || (errors as any).manualAmount) : (errors.serviceType || (errors as any).manualAmount)}
               >
-                <Select
-                  value={formData.serviceType}
-                  onChange={(e) =>
-                    handleInputChange("serviceType", e.target.value)
-                  }
-                  options={SERVICE_OPTIONS}
-                />
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isCustomService}
+                      onChange={(e) => {
+                        handleInputChange("isCustomService", e.target.checked as any);
+                        if (e.target.checked) {
+                          handleInputChange("serviceType", "");
+                        } else {
+                          handleInputChange("customServiceName", "");
+                          handleInputChange("manualAmount", "");
+                        }
+                      }}
+                      className="rounded border-border-color"
+                    />
+                    <span>Custom Service</span>
+                  </label>
+                  {!formData.isCustomService && (
+                    <div className="grid grid-cols-1 gap-2">
+                      <Select
+                        value={formData.serviceType}
+                        onChange={(e) =>
+                          handleInputChange("serviceType", e.target.value)
+                        }
+                        options={SERVICE_OPTIONS}
+                      />
+                      <Input
+                        type="number"
+                        value={formData.manualAmount}
+                        onChange={(e) => handleInputChange("manualAmount", e.target.value)}
+                        placeholder="Enter amount (EBR)"
+                        min="0"
+                      />
+                    </div>
+                  )}
+                  {formData.isCustomService && (
+                    <div className="grid grid-cols-1 gap-2">
+                      <Input
+                        value={formData.customServiceName}
+                        onChange={(e) =>
+                          handleInputChange("customServiceName", e.target.value)
+                        }
+                        placeholder="Enter custom service name"
+                      />
+                      <Input
+                        type="number"
+                        value={formData.manualAmount}
+                        onChange={(e) => handleInputChange("manualAmount", e.target.value)}
+                        placeholder="Enter amount (EBR)"
+                        min="0"
+                      />
+                    </div>
+                  )}
+                  {errors.customServiceName && formData.isCustomService && (
+                    <p className="text-error text-xs">{errors.customServiceName}</p>
+                  )}
+                  {(errors as any).manualAmount && (
+                    <p className="text-error text-xs">{(errors as any).manualAmount}</p>
+                  )}
+                </div>
               </FormField>
 
               <FormField
@@ -1187,9 +1273,12 @@ export default function WalkInServicesPage() {
                     Service Type
                   </label>
                   <p className="mt-1 text-sm text-text-primary">
-                    {SERVICE_LABELS[
-                      viewingService.serviceType as keyof typeof SERVICE_LABELS
-                    ] || viewingService.serviceType}
+                    {viewingService.serviceType === SERVICE_TYPES.OTHER && viewingService.serviceDetails?.customServiceName
+                      ? viewingService.serviceDetails.customServiceName
+                      :
+                        (SERVICE_LABELS[
+                          viewingService.serviceType as keyof typeof SERVICE_LABELS
+                        ] || viewingService.serviceType)}
                   </p>
                 </div>
                 <div>
@@ -1337,17 +1426,71 @@ export default function WalkInServicesPage() {
                 </FormField>
 
                 <FormField
-                  label="Service Type"
+                  label="Service Type & Amount"
                   required
-                  error={errors.serviceType}
+                  error={formData.isCustomService ? (errors.customServiceName || (errors as any).manualAmount) : (errors.serviceType || (errors as any).manualAmount)}
                 >
-                  <Select
-                    value={formData.serviceType}
-                    onChange={(e) =>
-                      handleInputChange("serviceType", e.target.value)
-                    }
-                    options={SERVICE_OPTIONS}
-                  />
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.isCustomService}
+                        onChange={(e) => {
+                          handleInputChange("isCustomService", e.target.checked as any);
+                          if (e.target.checked) {
+                            handleInputChange("serviceType", "");
+                          } else {
+                            handleInputChange("customServiceName", "");
+                            handleInputChange("manualAmount", "");
+                          }
+                        }}
+                        className="rounded border-border-color"
+                      />
+                      <span>Custom Service</span>
+                    </label>
+                    {!formData.isCustomService && (
+                        <div className="grid grid-cols-1 gap-2">
+                          <Select
+                            value={formData.serviceType}
+                            onChange={(e) =>
+                              handleInputChange("serviceType", e.target.value)
+                            }
+                            options={SERVICE_OPTIONS}
+                          />
+                          <Input
+                            type="number"
+                            value={formData.manualAmount}
+                            onChange={(e) => handleInputChange("manualAmount", e.target.value)}
+                            placeholder="Enter amount (EBR)"
+                            min="0"
+                          />
+                        </div>
+                    )}
+                    {formData.isCustomService && (
+                      <div className="grid grid-cols-1 gap-2">
+                        <Input
+                          value={formData.customServiceName}
+                          onChange={(e) =>
+                            handleInputChange("customServiceName", e.target.value)
+                          }
+                          placeholder="Enter custom service name"
+                        />
+                          <Input
+                            type="number"
+                            value={formData.manualAmount}
+                            onChange={(e) => handleInputChange("manualAmount", e.target.value)}
+                            placeholder="Enter amount (EBR)"
+                            min="0"
+                          />
+                      </div>
+                    )}
+                    {errors.customServiceName && formData.isCustomService && (
+                      <p className="text-error text-xs">{errors.customServiceName}</p>
+                    )}
+                    {(errors as any).manualAmount && (
+                        <p className="text-error text-xs">{(errors as any).manualAmount}</p>
+                      )}
+                  </div>
                 </FormField>
 
                 <FormField
