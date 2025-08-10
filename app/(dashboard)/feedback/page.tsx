@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Feedback, FeedbackListResponse } from "@/types/feedback";
 import { formatDate } from "@/utils/format";
 import { useUserRole } from "@/hooks/useUserRole";
+import { PaginationControls } from "@/components/ui/pagination";
 
 interface FeedbackPageProps {}
 
@@ -16,6 +17,7 @@ export default function FeedbackPage({}: FeedbackPageProps) {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [searchEmail, setSearchEmail] = useState("");
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(
@@ -47,7 +49,7 @@ export default function FeedbackPage({}: FeedbackPageProps) {
 
       const params = new URLSearchParams({
         page: currentPage.toString(),
-        limit: "10",
+        limit: "5",
         ...(selectedStatus !== "all" && { status: selectedStatus }),
         ...(searchEmail && { email: searchEmail }),
       });
@@ -63,6 +65,7 @@ export default function FeedbackPage({}: FeedbackPageProps) {
       if (result.success) {
         setFeedback(result.data);
         setTotalPages(result.pagination.pages);
+        setTotalItems(result.pagination.total);
       } else {
         setError("Failed to load feedback");
         console.error("Failed to load feedback:", result);
@@ -188,7 +191,10 @@ export default function FeedbackPage({}: FeedbackPageProps) {
                 <input
                   type="email"
                   value={searchEmail}
-                  onChange={(e) => setSearchEmail(e.target.value)}
+                  onChange={(e) => {
+                    setSearchEmail(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   placeholder="Enter email to search..."
                   className="w-full px-3 py-2 border border-border-color rounded-md focus:outline-none focus:ring-2 focus:ring-accent-color bg-background text-text-primary"
                 />
@@ -199,7 +205,10 @@ export default function FeedbackPage({}: FeedbackPageProps) {
                 </label>
                 <select
                   value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedStatus(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   className="w-full px-3 py-2 border border-border-color rounded-md focus:outline-none focus:ring-2 focus:ring-accent-color bg-background text-text-primary"
                 >
                   <option value="all">All Status</option>
@@ -371,34 +380,13 @@ export default function FeedbackPage({}: FeedbackPageProps) {
               </div>
             )}
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center mt-6">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.max(1, prev - 1))
-                    }
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <span className="px-4 py-2 text-text-primary">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
+            <PaginationControls
+              page={currentPage}
+              total={totalItems}
+              pageSize={5}
+              onPageChange={setCurrentPage}
+              className="mt-6"
+            />
           </CardContent>
         </Card>
       </div>

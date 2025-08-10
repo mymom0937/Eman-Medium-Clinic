@@ -23,6 +23,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { PageLoader } from "@/components/common/loading-spinner";
 import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
 import { toastManager } from "@/lib/utils/toast";
+import { PaginationControls } from "@/components/ui/pagination";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { formatDate } from "@/utils/format";
 
@@ -142,6 +143,18 @@ export default function DrugOrdersPage() {
       selectedStatus === "all" || order.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const pageSize = 5; // show 5 drug orders per page
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, selectedStatus]);
+  const totalFiltered = filteredDrugOrders.length;
+  const paginatedDrugOrders = filteredDrugOrders.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -583,7 +596,7 @@ export default function DrugOrdersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDrugOrders.map((order) => (
+              {paginatedDrugOrders.map((order) => (
                 <TableRow
                   key={order._id}
                   className="border-b border-border-color hover:bg-card-bg"
@@ -681,12 +694,12 @@ export default function DrugOrdersPage() {
           </Table>
         ) : (
           <div className="space-y-3">
-            {filteredDrugOrders.length === 0 && (
+            {paginatedDrugOrders.length === 0 && (
               <div className="text-center py-8 text-text-secondary">
                 No drug orders found.
               </div>
             )}
-            {filteredDrugOrders.map((order) => (
+            {paginatedDrugOrders.map((order) => (
               <div
                 key={order._id}
                 className="border border-border-color rounded-lg p-3 bg-card-bg overflow-hidden"
@@ -782,6 +795,12 @@ export default function DrugOrdersPage() {
             ))}
           </div>
         )}
+        <PaginationControls
+          page={page}
+          total={totalFiltered}
+          pageSize={pageSize}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* Add Drug Order Modal */}

@@ -15,15 +15,16 @@ import {
 } from "@/components/ui/form";
 import { toastManager } from "@/lib/utils/toast";
 import { FaEye, FaEdit, FaTrash, FaPlus } from "react-icons/fa";
+import { PaginationControls } from "@/components/ui/pagination";
 import { CountryCodeSelector } from "@/components/ui/country-code-selector";
 import { COUNTRY_CODES, CountryCode } from "@/constants/country-codes";
-import { 
-  SERVICE_OPTIONS, 
-  SERVICE_TYPES, 
-  INJECTION_TYPES, 
+import {
+  SERVICE_OPTIONS,
+  SERVICE_TYPES,
+  INJECTION_TYPES,
   INJECTION_SITES,
   SERVICE_PRICES,
-  SERVICE_LABELS
+  SERVICE_LABELS,
 } from "@/constants/service-types";
 
 interface WalkInService {
@@ -102,8 +103,12 @@ export default function WalkInServicesPage() {
   const [isNewServiceModalOpen, setIsNewServiceModalOpen] = useState(false);
   const [isViewServiceModalOpen, setIsViewServiceModalOpen] = useState(false);
   const [isEditServiceModalOpen, setIsEditServiceModalOpen] = useState(false);
-  const [viewingService, setViewingService] = useState<WalkInService | null>(null);
-  const [editingService, setEditingService] = useState<WalkInService | null>(null);
+  const [viewingService, setViewingService] = useState<WalkInService | null>(
+    null
+  );
+  const [editingService, setEditingService] = useState<WalkInService | null>(
+    null
+  );
   const [services, setServices] = useState<WalkInService[]>([]);
   const [stats, setStats] = useState<ServiceStats>({
     totalServices: 0,
@@ -132,9 +137,13 @@ export default function WalkInServicesPage() {
     height: "",
     notes: "",
     paymentMethod: "CASH", // Set default payment method
-    selectedCountry: COUNTRY_CODES.find((country) => country.code === "ET") || COUNTRY_CODES[0],
+    selectedCountry:
+      COUNTRY_CODES.find((country) => country.code === "ET") ||
+      COUNTRY_CODES[0],
   });
   const [errors, setErrors] = useState<Partial<ServiceFormData>>({});
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
 
   useEffect(() => {
     const handleResize = () => setIsLgUp(window.innerWidth >= 1024);
@@ -155,25 +164,34 @@ export default function WalkInServicesPage() {
 
           // Calculate stats
           const totalServices = result.data.length;
-          const totalRevenue = result.data.reduce((sum: number, service: WalkInService) => 
-            sum + service.amount, 0);
-          
+          const totalRevenue = result.data.reduce(
+            (sum: number, service: WalkInService) => sum + service.amount,
+            0
+          );
+
           const today = new Date();
           const todayServices = result.data.filter((service: WalkInService) => {
             const serviceDate = new Date(service.createdAt);
             return serviceDate.toDateString() === today.toDateString();
           }).length;
-          
-          const todayRevenue = result.data.filter((service: WalkInService) => {
-            const serviceDate = new Date(service.createdAt);
-            return serviceDate.toDateString() === today.toDateString();
-          }).reduce((sum: number, service: WalkInService) => sum + service.amount, 0);
 
-          const pendingPayments = result.data.filter((service: WalkInService) => 
-            service.paymentStatus === "PENDING").length;
-          
-          const completedServices = result.data.filter((service: WalkInService) => 
-            service.paymentStatus === "COMPLETED").length;
+          const todayRevenue = result.data
+            .filter((service: WalkInService) => {
+              const serviceDate = new Date(service.createdAt);
+              return serviceDate.toDateString() === today.toDateString();
+            })
+            .reduce(
+              (sum: number, service: WalkInService) => sum + service.amount,
+              0
+            );
+
+          const pendingPayments = result.data.filter(
+            (service: WalkInService) => service.paymentStatus === "PENDING"
+          ).length;
+
+          const completedServices = result.data.filter(
+            (service: WalkInService) => service.paymentStatus === "COMPLETED"
+          ).length;
 
           setStats({
             totalServices,
@@ -196,9 +214,18 @@ export default function WalkInServicesPage() {
     }
   }, [isLoaded]);
 
+  // Ensure this hook is declared before any conditional return to maintain stable hook order
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, selectedStatus, selectedServiceType]);
+
   if (!isLoaded || initialLoading) {
     return (
-      <DashboardLayout title="Walk-in Services" userRole={userRole} userName={userName}>
+      <DashboardLayout
+        title="Walk-in Services"
+        userRole={userRole}
+        userName={userName}
+      >
         <div className="flex items-center justify-center h-[60vh]">
           <PageLoader text="Loading Walk-in Services..." />
         </div>
@@ -211,7 +238,8 @@ export default function WalkInServicesPage() {
     const matchesSearch =
       service.serviceId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       service.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (service.patientPhone && service.patientPhone.toLowerCase().includes(searchTerm.toLowerCase()));
+      (service.patientPhone &&
+        service.patientPhone.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus =
       selectedStatus === "all" ||
       service.paymentStatus.toLowerCase() === selectedStatus;
@@ -220,6 +248,12 @@ export default function WalkInServicesPage() {
       service.serviceType.toLowerCase() === selectedServiceType;
     return matchesSearch && matchesStatus && matchesServiceType;
   });
+
+  const totalFiltered = filteredServices.length;
+  const paginatedServices = filteredServices.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
 
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
@@ -286,10 +320,17 @@ export default function WalkInServicesPage() {
     if (!formData.paymentMethod || formData.paymentMethod.trim() === "") {
       newErrors.paymentMethod = "Payment method is required";
     }
-    if (formData.patientPhone.trim() && (formData.patientPhone.length < 7 || formData.patientPhone.length > 15)) {
-      newErrors.patientPhone = "Please enter a valid phone number (7-15 digits)";
+    if (
+      formData.patientPhone.trim() &&
+      (formData.patientPhone.length < 7 || formData.patientPhone.length > 15)
+    ) {
+      newErrors.patientPhone =
+        "Please enter a valid phone number (7-15 digits)";
     }
-    if (formData.patientEmail.trim() && !/\S+@\S+\.\S+/.test(formData.patientEmail)) {
+    if (
+      formData.patientEmail.trim() &&
+      !/\S+@\S+\.\S+/.test(formData.patientEmail)
+    ) {
       newErrors.patientEmail = "Please enter a valid email address";
     }
 
@@ -305,7 +346,9 @@ export default function WalkInServicesPage() {
     try {
       const serviceData = {
         patientName: formData.patientName,
-        patientPhone: formData.patientPhone ? `${formData.selectedCountry.dialCode} ${formData.patientPhone}` : "",
+        patientPhone: formData.patientPhone
+          ? `${formData.selectedCountry.dialCode} ${formData.patientPhone}`
+          : "",
         patientEmail: formData.patientEmail,
         patientAge: formData.patientAge ? parseInt(formData.patientAge) : null,
         patientGender: formData.patientGender || undefined,
@@ -320,7 +363,9 @@ export default function WalkInServicesPage() {
           height: formData.height || undefined,
           notes: formData.notes || undefined,
         },
-        amount: SERVICE_PRICES[formData.serviceType as keyof typeof SERVICE_PRICES] || 50,
+        amount:
+          SERVICE_PRICES[formData.serviceType as keyof typeof SERVICE_PRICES] ||
+          50,
         paymentMethod: formData.paymentMethod || "CASH",
         paymentStatus: "COMPLETED", // Default to completed for walk-in services
         recordedBy: userName || "Unknown",
@@ -343,7 +388,7 @@ export default function WalkInServicesPage() {
         setIsNewServiceModalOpen(false);
         resetForm();
         toastManager.success("Service recorded successfully!");
-        
+
         // Reload data to update stats
         const loadServices = async () => {
           const response = await fetch("/api/walk-in-services");
@@ -373,7 +418,9 @@ export default function WalkInServicesPage() {
     setEditingService(service);
     // Parse phone number
     let phoneNumber = service.patientPhone || "";
-    let selectedCountry = COUNTRY_CODES.find((country) => country.code === "ET") || COUNTRY_CODES[0];
+    let selectedCountry =
+      COUNTRY_CODES.find((country) => country.code === "ET") ||
+      COUNTRY_CODES[0];
 
     if (phoneNumber) {
       const foundCountry = COUNTRY_CODES.find((country) =>
@@ -381,7 +428,10 @@ export default function WalkInServicesPage() {
       );
       if (foundCountry) {
         selectedCountry = foundCountry;
-        phoneNumber = phoneNumber.replace(foundCountry.dialCode, "").replace(/\s/g, "").trim();
+        phoneNumber = phoneNumber
+          .replace(foundCountry.dialCode, "")
+          .replace(/\s/g, "")
+          .trim();
       }
     }
 
@@ -390,7 +440,7 @@ export default function WalkInServicesPage() {
       patientPhone: phoneNumber,
       patientEmail: service.patientEmail || "",
       patientAge: service.patientAge?.toString() || "",
-             patientGender: service.patientGender || "",
+      patientGender: service.patientGender || "",
       serviceType: service.serviceType,
       injectionType: service.serviceDetails?.injectionType || "",
       injectionSite: service.serviceDetails?.injectionSite || "",
@@ -400,7 +450,7 @@ export default function WalkInServicesPage() {
       weight: service.serviceDetails?.weight || "",
       height: service.serviceDetails?.height || "",
       notes: service.serviceDetails?.notes || "",
-             paymentMethod: service.paymentMethod,
+      paymentMethod: service.paymentMethod,
       selectedCountry,
     });
     setIsEditServiceModalOpen(true);
@@ -413,7 +463,9 @@ export default function WalkInServicesPage() {
     try {
       const serviceData = {
         patientName: formData.patientName,
-        patientPhone: formData.patientPhone ? `${formData.selectedCountry.dialCode} ${formData.patientPhone}` : "",
+        patientPhone: formData.patientPhone
+          ? `${formData.selectedCountry.dialCode} ${formData.patientPhone}`
+          : "",
         patientEmail: formData.patientEmail,
         patientAge: formData.patientAge ? parseInt(formData.patientAge) : null,
         patientGender: formData.patientGender || undefined,
@@ -428,7 +480,9 @@ export default function WalkInServicesPage() {
           height: formData.height || undefined,
           notes: formData.notes || undefined,
         },
-        amount: SERVICE_PRICES[formData.serviceType as keyof typeof SERVICE_PRICES] || 50,
+        amount:
+          SERVICE_PRICES[formData.serviceType as keyof typeof SERVICE_PRICES] ||
+          50,
         paymentMethod: formData.paymentMethod || "CASH",
         paymentStatus: "COMPLETED",
         recordedBy: userName || "Unknown",
@@ -436,26 +490,31 @@ export default function WalkInServicesPage() {
 
       console.log("Updating service data:", serviceData);
 
-      const response = await fetch(`/api/walk-in-services/${editingService._id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(serviceData),
-      });
+      const response = await fetch(
+        `/api/walk-in-services/${editingService._id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(serviceData),
+        }
+      );
 
       const result = await response.json();
 
       if (response.ok && result.success) {
         // Update the service in the local state
-        setServices(services.map((service) => 
-          service._id === editingService._id ? result.data : service
-        ));
+        setServices(
+          services.map((service) =>
+            service._id === editingService._id ? result.data : service
+          )
+        );
         setIsEditServiceModalOpen(false);
         setEditingService(null);
         resetForm();
         toastManager.success("Service updated successfully!");
-        
+
         // Reload data to update stats
         const loadServices = async () => {
           const response = await fetch("/api/walk-in-services");
@@ -477,7 +536,8 @@ export default function WalkInServicesPage() {
   };
 
   const handleDeleteService = async (serviceId: string) => {
-    if (!confirm("Are you sure you want to delete this service record?")) return;
+    if (!confirm("Are you sure you want to delete this service record?"))
+      return;
 
     try {
       const response = await fetch(`/api/walk-in-services/${serviceId}`, {
@@ -514,12 +574,17 @@ export default function WalkInServicesPage() {
       height: "",
       notes: "",
       paymentMethod: "CASH",
-      selectedCountry: COUNTRY_CODES.find((country) => country.code === "ET") || COUNTRY_CODES[0],
+      selectedCountry:
+        COUNTRY_CODES.find((country) => country.code === "ET") ||
+        COUNTRY_CODES[0],
     });
     setErrors({});
   };
 
-  const handleInputChange = (field: keyof ServiceFormData, value: string | CountryCode) => {
+  const handleInputChange = (
+    field: keyof ServiceFormData,
+    value: string | CountryCode
+  ) => {
     console.log(`Updating ${field} to:`, value);
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field as keyof typeof errors]) {
@@ -533,19 +598,21 @@ export default function WalkInServicesPage() {
 
     switch (service.serviceType) {
       case SERVICE_TYPES.INJECTION:
-        return `${details.injectionType || 'N/A'} - ${details.injectionSite || 'N/A'}`;
+        return `${details.injectionType || "N/A"} - ${
+          details.injectionSite || "N/A"
+        }`;
       case SERVICE_TYPES.BLOOD_PRESSURE_CHECK:
-        return details.bloodPressure || 'N/A';
+        return details.bloodPressure || "N/A";
       case SERVICE_TYPES.DIABETES_SCREENING:
-        return `${details.bloodGlucose || 'N/A'} mg/dL`;
+        return `${details.bloodGlucose || "N/A"} mg/dL`;
       case SERVICE_TYPES.TEMPERATURE_CHECK:
-        return `${details.temperature || 'N/A'}°C`;
+        return `${details.temperature || "N/A"}°C`;
       case SERVICE_TYPES.WEIGHT_CHECK:
-        return `${details.weight || 'N/A'} kg`;
+        return `${details.weight || "N/A"} kg`;
       case SERVICE_TYPES.HEIGHT_CHECK:
-        return `${details.height || 'N/A'} cm`;
+        return `${details.height || "N/A"} cm`;
       default:
-        return details.notes || 'No details';
+        return details.notes || "No details";
     }
   };
 
@@ -582,7 +649,11 @@ export default function WalkInServicesPage() {
   ];
 
   return (
-    <DashboardLayout title="Walk-in Services" userRole={userRole} userName={userName}>
+    <DashboardLayout
+      title="Walk-in Services"
+      userRole={userRole}
+      userName={userName}
+    >
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -646,185 +717,211 @@ export default function WalkInServicesPage() {
             </select>
           </div>
 
-                     {/* Services Table */}
-           {/* Desktop Table */}
-           {isLgUp && (
-             <div className="w-full">
-               <div className="overflow-x-auto w-full border border-border-color rounded-md">
-                 <table className="w-full min-w-[800px] divide-y divide-border-color">
-                   <thead className="bg-card-bg">
-                     <tr>
-                       <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
-                         Patient & Service ID
-                       </th>
-                       <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
-                         Service
-                       </th>
-                       <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
-                         Details
-                       </th>
-                       <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
-                         Amount
-                       </th>
-                       <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
-                         Status
-                       </th>
-                       <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
-                         Date
-                       </th>
-                       <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
-                         Actions
-                       </th>
-                     </tr>
-                   </thead>
-                   <tbody className="bg-background divide-y divide-border-color">
-                     {filteredServices.length === 0 ? (
-                       <tr>
-                         <td colSpan={7} className="px-4 py-8 text-center text-sm text-text-secondary">
-                           No services found. Add a new service to get started.
-                         </td>
-                       </tr>
-                     ) : (
-                       filteredServices.map((service) => (
-                         <tr key={service._id} className="hover:bg-card-bg">
-                           <td className="px-2 py-1 text-sm text-text-primary align-top">
-                             <div className="leading-tight block">
-                               <div className="text-text-primary font-medium block">
-                                 {service.patientName}
-                               </div>
-                               <div className="text-xs text-text-secondary block">
-                                 {service.serviceId}
-                               </div>
-                             </div>
-                           </td>
-                           <td className="px-2 py-1 whitespace-nowrap text-sm text-text-primary">
-                             <div className="flex items-center">
-                               <span className="mr-2">{getServiceIcon(service.serviceType)}</span>
-                               <span>{SERVICE_LABELS[service.serviceType as keyof typeof SERVICE_LABELS] || service.serviceType}</span>
-                             </div>
-                           </td>
-                           <td className="px-2 py-1 whitespace-nowrap text-sm text-text-secondary">
-                             {getServiceDetails(service)}
-                           </td>
-                           <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-text-primary">
-                             ETB {service.amount.toFixed(2)}
-                           </td>
-                           <td className="px-2 py-1 whitespace-nowrap">
-                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(service.paymentStatus)}`}>
-                               {service.paymentStatus.toUpperCase()}
-                             </span>
-                           </td>
-                           <td className="px-2 py-1 whitespace-nowrap text-sm text-text-secondary">
-                             {formatDate(service.createdAt)}
-                           </td>
-                           <td className="px-2 py-1 whitespace-nowrap text-sm font-medium">
-                             <button
-                               onClick={() => handleViewService(service)}
-                               className="text-accent-color hover:text-accent-hover mr-2 p-1 rounded hover:bg-accent-color/10 transition-colors cursor-pointer"
-                               title="View Service"
-                             >
-                               <FaEye size={16} />
-                             </button>
-                             <button
-                               onClick={() => handleEditService(service)}
-                               className="text-success hover:text-success/80 mr-2 p-1 rounded hover:bg-success/10 transition-colors cursor-pointer"
-                               title="Edit Service"
-                             >
-                               <FaEdit size={16} />
-                             </button>
-                             <button
-                               onClick={() => handleDeleteService(service._id)}
-                               className="text-error hover:text-error/80 p-1 rounded hover:bg-error/10 transition-colors cursor-pointer"
-                               title="Delete Service"
-                             >
-                               <FaTrash size={16} />
-                             </button>
-                           </td>
-                         </tr>
-                       ))
-                     )}
-                   </tbody>
-                 </table>
-               </div>
-             </div>
-           )}
+          {/* Services Table */}
+          {/* Desktop Table */}
+          {isLgUp && (
+            <div className="w-full">
+              <div className="overflow-x-auto w-full border border-border-color rounded-md">
+                <table className="w-full min-w-[800px] divide-y divide-border-color">
+                  <thead className="bg-card-bg">
+                    <tr>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
+                        Patient & Service ID
+                      </th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
+                        Service
+                      </th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
+                        Details
+                      </th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
+                        Amount
+                      </th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
+                        Status
+                      </th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
+                        Date
+                      </th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-background divide-y divide-border-color">
+                    {paginatedServices.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="px-4 py-8 text-center text-sm text-text-secondary"
+                        >
+                          No services found. Add a new service to get started.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedServices.map((service) => (
+                        <tr key={service._id} className="hover:bg-card-bg">
+                          <td className="px-2 py-1 text-sm text-text-primary align-top">
+                            <div className="leading-tight block">
+                              <div className="text-text-primary font-medium block">
+                                {service.patientName}
+                              </div>
+                              <div className="text-xs text-text-secondary block">
+                                {service.serviceId}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-2 py-1 whitespace-nowrap text-sm text-text-primary">
+                            <div className="flex items-center">
+                              <span className="mr-2">
+                                {getServiceIcon(service.serviceType)}
+                              </span>
+                              <span>
+                                {SERVICE_LABELS[
+                                  service.serviceType as keyof typeof SERVICE_LABELS
+                                ] || service.serviceType}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-2 py-1 whitespace-nowrap text-sm text-text-secondary">
+                            {getServiceDetails(service)}
+                          </td>
+                          <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-text-primary">
+                            ETB {service.amount.toFixed(2)}
+                          </td>
+                          <td className="px-2 py-1 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                                service.paymentStatus
+                              )}`}
+                            >
+                              {service.paymentStatus.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="px-2 py-1 whitespace-nowrap text-sm text-text-secondary">
+                            {formatDate(service.createdAt)}
+                          </td>
+                          <td className="px-2 py-1 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => handleViewService(service)}
+                              className="text-accent-color hover:text-accent-hover mr-2 p-1 rounded hover:bg-accent-color/10 transition-colors cursor-pointer"
+                              title="View Service"
+                            >
+                              <FaEye size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleEditService(service)}
+                              className="text-success hover:text-success/80 mr-2 p-1 rounded hover:bg-success/10 transition-colors cursor-pointer"
+                              title="Edit Service"
+                            >
+                              <FaEdit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteService(service._id)}
+                              className="text-error hover:text-error/80 p-1 rounded hover:bg-error/10 transition-colors cursor-pointer"
+                              title="Delete Service"
+                            >
+                              <FaTrash size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
-           {/* Mobile/Tablet Cards */}
-           {!isLgUp && (
-             <div className="space-y-4 w-full">
-               {filteredServices.map((service) => (
-                 <div
-                   key={service._id}
-                   className="bg-background border border-border-color rounded-lg p-4 space-y-3 overflow-hidden"
-                 >
-                   <div className="flex justify-between items-start">
-                     <div>
-                       <h3 className="font-medium text-text-primary">
-                         {service.serviceId}
-                       </h3>
-                       <p className="text-sm text-text-secondary">{service.patientName}</p>
-                     </div>
-                     <span
-                       className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(service.paymentStatus)}`}
-                     >
-                       {service.paymentStatus.toUpperCase()}
-                     </span>
-                   </div>
+          {/* Mobile/Tablet Cards */}
+          {!isLgUp && (
+            <div className="space-y-4 w-full">
+              {paginatedServices.map((service) => (
+                <div
+                  key={service._id}
+                  className="bg-background border border-border-color rounded-lg p-4 space-y-3 overflow-hidden"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium text-text-primary">
+                        {service.serviceId}
+                      </h3>
+                      <p className="text-sm text-text-secondary">
+                        {service.patientName}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                        service.paymentStatus
+                      )}`}
+                    >
+                      {service.paymentStatus.toUpperCase()}
+                    </span>
+                  </div>
 
-                   <div className="grid grid-cols-2 gap-2 text-sm min-w-0">
-                     <div>
-                       <span className="text-text-muted">Service:</span>
-                       <span className="ml-1 text-text-primary break-words">
-                         {SERVICE_LABELS[service.serviceType as keyof typeof SERVICE_LABELS] || service.serviceType}
-                       </span>
-                     </div>
-                     <div>
-                       <span className="text-text-muted">Amount:</span>
-                       <span className="ml-1 text-text-primary break-words">
-                         ETB {service.amount.toFixed(2)}
-                       </span>
-                     </div>
-                     <div>
-                       <span className="text-text-muted">Date:</span>
-                       <span className="ml-1 text-text-primary break-words">
-                         {formatDate(service.createdAt)}
-                       </span>
-                     </div>
-                     <div>
-                       <span className="text-text-muted">Details:</span>
-                       <span className="ml-1 text-text-primary break-words">
-                         {getServiceDetails(service)}
-                       </span>
-                     </div>
-                   </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm min-w-0">
+                    <div>
+                      <span className="text-text-muted">Service:</span>
+                      <span className="ml-1 text-text-primary break-words">
+                        {SERVICE_LABELS[
+                          service.serviceType as keyof typeof SERVICE_LABELS
+                        ] || service.serviceType}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-text-muted">Amount:</span>
+                      <span className="ml-1 text-text-primary break-words">
+                        ETB {service.amount.toFixed(2)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-text-muted">Date:</span>
+                      <span className="ml-1 text-text-primary break-words">
+                        {formatDate(service.createdAt)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-text-muted">Details:</span>
+                      <span className="ml-1 text-text-primary break-words">
+                        {getServiceDetails(service)}
+                      </span>
+                    </div>
+                  </div>
 
-                   <div className="flex justify-end space-x-2 pt-2">
-                     <button
-                       onClick={() => handleViewService(service)}
-                       className="text-accent-color hover:text-accent-hover p-2 rounded hover:bg-accent-color/10 transition-colors"
-                       title="View Service"
-                     >
-                       <FaEye size={16} />
-                     </button>
-                     <button
-                       onClick={() => handleEditService(service)}
-                       className="text-success hover:text-success/80 p-2 rounded hover:bg-success/10 transition-colors"
-                       title="Edit Service"
-                     >
-                       <FaEdit size={16} />
-                     </button>
-                     <button
-                       onClick={() => handleDeleteService(service._id)}
-                       className="text-error hover:text-error/80 p-2 rounded hover:bg-error/10 transition-colors"
-                       title="Delete Service"
-                     >
-                       <FaTrash size={16} />
-                     </button>
-                   </div>
-                 </div>
-               ))}
-             </div>
-           )}
+                  <div className="flex justify-end space-x-2 pt-2">
+                    <button
+                      onClick={() => handleViewService(service)}
+                      className="text-accent-color hover:text-accent-hover p-2 rounded hover:bg-accent-color/10 transition-colors"
+                      title="View Service"
+                    >
+                      <FaEye size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleEditService(service)}
+                      className="text-success hover:text-success/80 p-2 rounded hover:bg-success/10 transition-colors"
+                      title="Edit Service"
+                    >
+                      <FaEdit size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteService(service._id)}
+                      className="text-error hover:text-error/80 p-2 rounded hover:bg-error/10 transition-colors"
+                      title="Delete Service"
+                    >
+                      <FaTrash size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <PaginationControls
+            page={page}
+            total={totalFiltered}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            className="mt-4"
+          />
         </div>
 
         {/* New Service Modal */}
@@ -839,10 +936,16 @@ export default function WalkInServicesPage() {
         >
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Patient Name" required error={errors.patientName}>
+              <FormField
+                label="Patient Name"
+                required
+                error={errors.patientName}
+              >
                 <Input
                   value={formData.patientName}
-                  onChange={(e) => handleInputChange("patientName", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("patientName", e.target.value)
+                  }
                   placeholder="Enter patient's full name"
                 />
               </FormField>
@@ -851,7 +954,9 @@ export default function WalkInServicesPage() {
                 <Input
                   type="number"
                   value={formData.patientAge}
-                  onChange={(e) => handleInputChange("patientAge", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("patientAge", e.target.value)
+                  }
                   placeholder="Enter age (optional)"
                   min="1"
                   max="120"
@@ -861,7 +966,9 @@ export default function WalkInServicesPage() {
               <FormField label="Gender" error={errors.patientGender}>
                 <Select
                   value={formData.patientGender}
-                  onChange={(e) => handleInputChange("patientGender", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("patientGender", e.target.value)
+                  }
                   options={GENDER_OPTIONS}
                 />
               </FormField>
@@ -881,7 +988,9 @@ export default function WalkInServicesPage() {
                   <Input
                     type="tel"
                     value={formData.patientPhone}
-                    onChange={(e) => handleInputChange("patientPhone", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("patientPhone", e.target.value)
+                    }
                     placeholder="Enter phone number (optional)"
                     className="rounded-l-none flex-1"
                   />
@@ -892,23 +1001,37 @@ export default function WalkInServicesPage() {
                 <Input
                   type="email"
                   value={formData.patientEmail}
-                  onChange={(e) => handleInputChange("patientEmail", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("patientEmail", e.target.value)
+                  }
                   placeholder="Enter email (optional)"
                 />
               </FormField>
 
-              <FormField label="Service Type" required error={errors.serviceType}>
+              <FormField
+                label="Service Type"
+                required
+                error={errors.serviceType}
+              >
                 <Select
                   value={formData.serviceType}
-                  onChange={(e) => handleInputChange("serviceType", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("serviceType", e.target.value)
+                  }
                   options={SERVICE_OPTIONS}
                 />
               </FormField>
 
-              <FormField label="Payment Method" required error={errors.paymentMethod}>
+              <FormField
+                label="Payment Method"
+                required
+                error={errors.paymentMethod}
+              >
                 <Select
                   value={formData.paymentMethod}
-                  onChange={(e) => handleInputChange("paymentMethod", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("paymentMethod", e.target.value)
+                  }
                   options={PAYMENT_METHOD_OPTIONS}
                 />
               </FormField>
@@ -920,15 +1043,25 @@ export default function WalkInServicesPage() {
                 <FormField label="Injection Type">
                   <Select
                     value={formData.injectionType}
-                    onChange={(e) => handleInputChange("injectionType", e.target.value)}
-                    options={INJECTION_TYPES.map(type => ({ value: type, label: type }))}
+                    onChange={(e) =>
+                      handleInputChange("injectionType", e.target.value)
+                    }
+                    options={INJECTION_TYPES.map((type) => ({
+                      value: type,
+                      label: type,
+                    }))}
                   />
                 </FormField>
                 <FormField label="Injection Site">
                   <Select
                     value={formData.injectionSite}
-                    onChange={(e) => handleInputChange("injectionSite", e.target.value)}
-                    options={INJECTION_SITES.map(site => ({ value: site, label: site }))}
+                    onChange={(e) =>
+                      handleInputChange("injectionSite", e.target.value)
+                    }
+                    options={INJECTION_SITES.map((site) => ({
+                      value: site,
+                      label: site,
+                    }))}
                   />
                 </FormField>
               </div>
@@ -938,7 +1071,9 @@ export default function WalkInServicesPage() {
               <FormField label="Blood Pressure Reading">
                 <Input
                   value={formData.bloodPressure}
-                  onChange={(e) => handleInputChange("bloodPressure", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("bloodPressure", e.target.value)
+                  }
                   placeholder="e.g., 120/80 mmHg"
                 />
               </FormField>
@@ -948,7 +1083,9 @@ export default function WalkInServicesPage() {
               <FormField label="Blood Glucose Level">
                 <Input
                   value={formData.bloodGlucose}
-                  onChange={(e) => handleInputChange("bloodGlucose", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("bloodGlucose", e.target.value)
+                  }
                   placeholder="e.g., 120 mg/dL"
                 />
               </FormField>
@@ -958,7 +1095,9 @@ export default function WalkInServicesPage() {
               <FormField label="Temperature">
                 <Input
                   value={formData.temperature}
-                  onChange={(e) => handleInputChange("temperature", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("temperature", e.target.value)
+                  }
                   placeholder="e.g., 37.2°C"
                 />
               </FormField>
@@ -1048,7 +1187,9 @@ export default function WalkInServicesPage() {
                     Service Type
                   </label>
                   <p className="mt-1 text-sm text-text-primary">
-                    {SERVICE_LABELS[viewingService.serviceType as keyof typeof SERVICE_LABELS] || viewingService.serviceType}
+                    {SERVICE_LABELS[
+                      viewingService.serviceType as keyof typeof SERVICE_LABELS
+                    ] || viewingService.serviceType}
                   </p>
                 </div>
                 <div>
@@ -1063,7 +1204,11 @@ export default function WalkInServicesPage() {
                   <label className="block text-sm font-medium text-text-muted">
                     Payment Status
                   </label>
-                  <span className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(viewingService.paymentStatus)}`}>
+                  <span
+                    className={`mt-1 inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                      viewingService.paymentStatus
+                    )}`}
+                  >
                     {viewingService.paymentStatus.toUpperCase()}
                   </span>
                 </div>
@@ -1119,10 +1264,16 @@ export default function WalkInServicesPage() {
           {editingService && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField label="Patient Name" required error={errors.patientName}>
+                <FormField
+                  label="Patient Name"
+                  required
+                  error={errors.patientName}
+                >
                   <Input
                     value={formData.patientName}
-                    onChange={(e) => handleInputChange("patientName", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("patientName", e.target.value)
+                    }
                     placeholder="Enter patient's full name"
                   />
                 </FormField>
@@ -1131,7 +1282,9 @@ export default function WalkInServicesPage() {
                   <Input
                     type="number"
                     value={formData.patientAge}
-                    onChange={(e) => handleInputChange("patientAge", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("patientAge", e.target.value)
+                    }
                     placeholder="Enter age (optional)"
                     min="1"
                     max="120"
@@ -1141,7 +1294,9 @@ export default function WalkInServicesPage() {
                 <FormField label="Gender" error={errors.patientGender}>
                   <Select
                     value={formData.patientGender}
-                    onChange={(e) => handleInputChange("patientGender", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("patientGender", e.target.value)
+                    }
                     options={GENDER_OPTIONS}
                   />
                 </FormField>
@@ -1161,7 +1316,9 @@ export default function WalkInServicesPage() {
                     <Input
                       type="tel"
                       value={formData.patientPhone}
-                      onChange={(e) => handleInputChange("patientPhone", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("patientPhone", e.target.value)
+                      }
                       placeholder="Enter phone number (optional)"
                       className="rounded-l-none flex-1"
                     />
@@ -1172,23 +1329,37 @@ export default function WalkInServicesPage() {
                   <Input
                     type="email"
                     value={formData.patientEmail}
-                    onChange={(e) => handleInputChange("patientEmail", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("patientEmail", e.target.value)
+                    }
                     placeholder="Enter email (optional)"
                   />
                 </FormField>
 
-                <FormField label="Service Type" required error={errors.serviceType}>
+                <FormField
+                  label="Service Type"
+                  required
+                  error={errors.serviceType}
+                >
                   <Select
                     value={formData.serviceType}
-                    onChange={(e) => handleInputChange("serviceType", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("serviceType", e.target.value)
+                    }
                     options={SERVICE_OPTIONS}
                   />
                 </FormField>
 
-                <FormField label="Payment Method" required error={errors.paymentMethod}>
+                <FormField
+                  label="Payment Method"
+                  required
+                  error={errors.paymentMethod}
+                >
                   <Select
                     value={formData.paymentMethod}
-                    onChange={(e) => handleInputChange("paymentMethod", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("paymentMethod", e.target.value)
+                    }
                     options={PAYMENT_METHOD_OPTIONS}
                   />
                 </FormField>
@@ -1200,15 +1371,25 @@ export default function WalkInServicesPage() {
                   <FormField label="Injection Type">
                     <Select
                       value={formData.injectionType}
-                      onChange={(e) => handleInputChange("injectionType", e.target.value)}
-                      options={INJECTION_TYPES.map(type => ({ value: type, label: type }))}
+                      onChange={(e) =>
+                        handleInputChange("injectionType", e.target.value)
+                      }
+                      options={INJECTION_TYPES.map((type) => ({
+                        value: type,
+                        label: type,
+                      }))}
                     />
                   </FormField>
                   <FormField label="Injection Site">
                     <Select
                       value={formData.injectionSite}
-                      onChange={(e) => handleInputChange("injectionSite", e.target.value)}
-                      options={INJECTION_SITES.map(site => ({ value: site, label: site }))}
+                      onChange={(e) =>
+                        handleInputChange("injectionSite", e.target.value)
+                      }
+                      options={INJECTION_SITES.map((site) => ({
+                        value: site,
+                        label: site,
+                      }))}
                     />
                   </FormField>
                 </div>
@@ -1218,7 +1399,9 @@ export default function WalkInServicesPage() {
                 <FormField label="Blood Pressure Reading">
                   <Input
                     value={formData.bloodPressure}
-                    onChange={(e) => handleInputChange("bloodPressure", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("bloodPressure", e.target.value)
+                    }
                     placeholder="e.g., 120/80 mmHg"
                   />
                 </FormField>
@@ -1228,7 +1411,9 @@ export default function WalkInServicesPage() {
                 <FormField label="Blood Glucose Level">
                   <Input
                     value={formData.bloodGlucose}
-                    onChange={(e) => handleInputChange("bloodGlucose", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("bloodGlucose", e.target.value)
+                    }
                     placeholder="e.g., 120 mg/dL"
                   />
                 </FormField>
@@ -1238,7 +1423,9 @@ export default function WalkInServicesPage() {
                 <FormField label="Temperature">
                   <Input
                     value={formData.temperature}
-                    onChange={(e) => handleInputChange("temperature", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("temperature", e.target.value)
+                    }
                     placeholder="e.g., 37.2°C"
                   />
                 </FormField>
@@ -1248,7 +1435,9 @@ export default function WalkInServicesPage() {
                 <FormField label="Weight">
                   <Input
                     value={formData.weight}
-                    onChange={(e) => handleInputChange("weight", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("weight", e.target.value)
+                    }
                     placeholder="e.g., 70 kg"
                   />
                 </FormField>
@@ -1258,7 +1447,9 @@ export default function WalkInServicesPage() {
                 <FormField label="Height">
                   <Input
                     value={formData.height}
-                    onChange={(e) => handleInputChange("height", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("height", e.target.value)
+                    }
                     placeholder="e.g., 170 cm"
                   />
                 </FormField>

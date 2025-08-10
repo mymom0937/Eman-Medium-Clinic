@@ -27,6 +27,7 @@ import { USER_ROLES } from "@/constants/user-roles";
 import { useUserRole } from "@/hooks/useUserRole";
 import { PageLoader } from "@/components/common/loading-spinner";
 import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
+import { PaginationControls } from "@/components/ui/pagination";
 import { toastManager } from "@/lib/utils/toast";
 
 const TEST_STATUS_OPTIONS = [
@@ -84,6 +85,9 @@ export default function LabResultsPage() {
   });
   const [errors, setErrors] = useState<Partial<LabResultFormData>>({});
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  // Pagination
+  const [page, setPage] = useState(1);
+  const pageSize = 5; // Updated to show 5 lab results per page
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -149,6 +153,17 @@ export default function LabResultsPage() {
       selectedTestType === "all" || result.testType === selectedTestType;
     return matchesSearch && matchesStatus && matchesTestType;
   });
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, selectedStatus, selectedTestType]);
+
+  const totalFiltered = filteredLabResults.length;
+  const paginatedLabResults = filteredLabResults.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -531,7 +546,7 @@ export default function LabResultsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredLabResults.map((result) => (
+                    {paginatedLabResults.map((result) => (
                       <TableRow key={result._id}>
                         <TableCell>
                           <div className="font-medium text-text-primary">
@@ -714,12 +729,12 @@ export default function LabResultsPage() {
                 </Table>
               ) : (
                 <div className="space-y-3">
-                  {filteredLabResults.length === 0 && (
+                  {paginatedLabResults.length === 0 && (
                     <div className="text-center py-8 text-text-secondary">
                       No lab results found.
                     </div>
                   )}
-                  {filteredLabResults.map((result) => (
+                  {paginatedLabResults.map((result) => (
                     <div
                       key={result._id}
                       className="border border-border-color rounded-lg p-3 bg-card-bg overflow-hidden"
@@ -823,6 +838,12 @@ export default function LabResultsPage() {
                   ))}
                 </div>
               )}
+              <PaginationControls
+                page={page}
+                total={totalFiltered}
+                pageSize={pageSize}
+                onPageChange={setPage}
+              />
             </CardContent>
           </Card>
         </div>

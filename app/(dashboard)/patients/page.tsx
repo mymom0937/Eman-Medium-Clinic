@@ -17,6 +17,7 @@ import {
 import { toastManager } from "@/lib/utils/toast";
 import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
 import { CountryCodeSelector } from "@/components/ui/country-code-selector";
+import { PaginationControls } from "@/components/ui/pagination";
 import { COUNTRY_CODES, CountryCode } from "@/constants/country-codes";
 
 interface Patient {
@@ -114,6 +115,9 @@ export default function PatientsPage() {
   const [errors, setErrors] = useState<Partial<PatientFormData>>({});
   // Explicitly track viewport width to control desktop vs mobile rendering
   const [isLgUp, setIsLgUp] = useState(false);
+  // Pagination
+  const [page, setPage] = useState(1);
+  const pageSize = 5; // Updated to show 5 patients per page
 
   useEffect(() => {
     const handleResize = () => setIsLgUp(window.innerWidth >= 1024);
@@ -180,6 +184,12 @@ export default function PatientsPage() {
     }
   }, [isLoaded]);
 
+  // Always declare hooks before any conditional return to preserve order.
+  // Reset to page 1 when filters/search change
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, selectedStatus, selectedGender]);
+
   if (!isLoaded || initialLoading) {
     return (
       <DashboardLayout title="Patients" userRole={userRole} userName={userName}>
@@ -192,20 +202,30 @@ export default function PatientsPage() {
 
   // Filter patients based on search, status, and gender
   const filteredPatients = patients.filter((patient) => {
-    const fullName = `${patient.firstName} ${patient.lastName}`.trim();
+    const safeLower = (v: any) =>
+      typeof v === "string" ? v.toLowerCase() : "";
+    const fullName = `${patient.firstName || ""} ${
+      patient.lastName || ""
+    }`.trim();
+    const search = safeLower(searchTerm);
     const matchesSearch =
-      patient.patientId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.phone.toLowerCase().includes(searchTerm.toLowerCase());
+      safeLower(patient.patientId).includes(search) ||
+      safeLower(fullName).includes(search) ||
+      safeLower(patient.email).includes(search) ||
+      safeLower(patient.phone).includes(search);
     const matchesStatus =
       selectedStatus === "all" ||
       (patient.isActive ? "active" : "inactive") === selectedStatus;
     const matchesGender =
-      selectedGender === "all" ||
-      patient.gender.toLowerCase() === selectedGender;
+      selectedGender === "all" || safeLower(patient.gender) === selectedGender;
     return matchesSearch && matchesStatus && matchesGender;
   });
+
+  const totalFiltered = filteredPatients.length;
+  const paginatedPatients = filteredPatients.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -672,7 +692,7 @@ export default function PatientsPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-background divide-y divide-border-color">
-                      {filteredPatients.length === 0 ? (
+                      {paginatedPatients.length === 0 ? (
                         <tr>
                           <td
                             colSpan={6}
@@ -683,7 +703,7 @@ export default function PatientsPage() {
                           </td>
                         </tr>
                       ) : (
-                        filteredPatients.map((patient) => (
+                        paginatedPatients.map((patient) => (
                           <tr key={patient._id} className="hover:bg-card-bg">
                             <td className="px-2 py-1 whitespace-nowrap text-sm text-text-primary">
                               <div className="leading-tight">
@@ -755,7 +775,7 @@ export default function PatientsPage() {
             {/* Mobile/Tablet Cards */}
             {!isLgUp && (
               <div className="space-y-4 w-full">
-                {filteredPatients.map((patient) => (
+                {paginatedPatients.map((patient) => (
                   <div
                     key={patient._id}
                     className="bg-background border border-border-color rounded-lg p-4 space-y-3 overflow-hidden"
@@ -840,6 +860,12 @@ export default function PatientsPage() {
                 ))}
               </div>
             )}
+            <PaginationControls
+              page={page}
+              total={totalFiltered}
+              pageSize={pageSize}
+              onPageChange={setPage}
+            />
           </div>
         </div>
 

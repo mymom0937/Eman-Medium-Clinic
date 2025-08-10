@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import { toastManager } from "@/lib/utils/toast";
 import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
+import { PaginationControls } from "@/components/ui/pagination";
 import Image from "next/image";
 import { assets } from "@/assets/assets";
 
@@ -76,6 +77,13 @@ export default function InventoryPage() {
   // Image upload state
   const [drugImages, setDrugImages] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+
+  // Pagination (moved above conditional return to preserve hook order)
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, selectedCategory, selectedStatus]);
 
   // Load drugs data on component mount
   useEffect(() => {
@@ -201,6 +209,13 @@ export default function InventoryPage() {
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
+
+  // Pagination derived values
+  const totalFiltered = filteredDrugs.length;
+  const paginatedDrugs = filteredDrugs.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
 
   const getDrugStatus = (quantity: number): string => {
     if (quantity === 0) return "out_of_stock";
@@ -701,7 +716,7 @@ export default function InventoryPage() {
               <div className="overflow-x-auto">
                 <div className="min-w-full">
                   <div className="block">
-                    {filteredDrugs.length === 0 ? (
+                    {paginatedDrugs.length === 0 ? (
                       <div className="text-center py-8">
                         <p className="text-text-secondary">
                           No drugs found matching your criteria.
@@ -741,7 +756,7 @@ export default function InventoryPage() {
                           </tr>
                         </thead>
                         <tbody className="bg-background divide-y divide-border-color">
-                          {filteredDrugs.map((drug) => (
+                          {paginatedDrugs.map((drug) => (
                             <tr key={drug._id} className="hover:bg-card-bg">
                               <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                                 <div className="flex flex-col">
@@ -811,15 +826,25 @@ export default function InventoryPage() {
                     )}
                   </div>
                 </div>
+                {totalFiltered > pageSize && (
+                  <div className="mt-4">
+                    <PaginationControls
+                      page={page}
+                      total={totalFiltered}
+                      pageSize={pageSize}
+                      onPageChange={setPage}
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredDrugs.length === 0 && (
+                {paginatedDrugs.length === 0 && (
                   <div className="text-center py-8 text-text-secondary">
                     No drugs found.
                   </div>
                 )}
-                {filteredDrugs.map((drug) => (
+                {paginatedDrugs.map((drug) => (
                   <div
                     key={drug._id}
                     className="border border-border-color rounded-lg p-3 bg-card-bg overflow-hidden"
@@ -902,6 +927,16 @@ export default function InventoryPage() {
                     </div>
                   </div>
                 ))}
+                {totalFiltered > pageSize && (
+                  <div className="pt-2">
+                    <PaginationControls
+                      page={page}
+                      total={totalFiltered}
+                      pageSize={pageSize}
+                      onPageChange={setPage}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>

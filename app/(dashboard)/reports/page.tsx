@@ -8,6 +8,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { PageLoader } from "@/components/common/loading-spinner";
 import { Button } from "@/components/ui/form";
 import { toastManager } from "@/lib/utils/toast";
+import { PaginationControls } from "@/components/ui/pagination";
 import {
   FaDownload,
   FaCalendar,
@@ -64,6 +65,14 @@ export default function ReportsPage() {
   const [reportMeta, setReportMeta] = useState<ReportMeta | null>(null);
   const [showCustomDate, setShowCustomDate] = useState(false);
   const [scheduledReports, setScheduledReports] = useState<any[]>([]);
+  // Pagination for scheduled reports
+  const [schedulePage, setSchedulePage] = useState(1);
+  const schedulePageSize = 5;
+  const totalSchedules = scheduledReports.length;
+  const paginatedSchedules = scheduledReports.slice(
+    (schedulePage - 1) * schedulePageSize,
+    schedulePage * schedulePageSize
+  );
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleFrequency, setScheduleFrequency] = useState("daily");
   const [scheduleEmail, setScheduleEmail] = useState("");
@@ -714,9 +723,9 @@ export default function ReportsPage() {
                 <h2 className="text-xl font-semibold text-text-primary mb-6">
                   Scheduled Reports
                 </h2>
-                {scheduledReports.length > 0 ? (
+                {totalSchedules > 0 ? (
                   <div className="space-y-4">
-                    {scheduledReports.map((schedule) => (
+                    {paginatedSchedules.map((schedule) => (
                       <div
                         key={schedule.id}
                         className="flex items-center justify-between p-4 bg-background rounded-lg"
@@ -757,6 +766,12 @@ export default function ReportsPage() {
                         </div>
                       </div>
                     ))}
+                    <PaginationControls
+                      page={schedulePage}
+                      total={totalSchedules}
+                      pageSize={schedulePageSize}
+                      onPageChange={setSchedulePage}
+                    />
                   </div>
                 ) : (
                   <div className="text-text-secondary">

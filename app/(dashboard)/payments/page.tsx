@@ -7,6 +7,7 @@ import { StatsCard } from "@/components/dashboard/stats-card";
 import { useUserRole } from "@/hooks/useUserRole";
 import { PageLoader } from "@/components/common/loading-spinner";
 import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
+import { PaginationControls } from "@/components/ui/pagination";
 import { Modal } from "@/components/ui/modal";
 import {
   FormField,
@@ -35,7 +36,12 @@ interface Payment {
   paymentStatus: string;
 
   // Enhanced for Drug Sales
-  paymentType: "DRUG_SALE" | "LAB_TEST" | "CONSULTATION" | "WALK_IN_SERVICE" | "OTHER";
+  paymentType:
+    | "DRUG_SALE"
+    | "LAB_TEST"
+    | "CONSULTATION"
+    | "WALK_IN_SERVICE"
+    | "OTHER";
 
   // Drug Sale Specific Fields (when paymentType === 'DRUG_SALE')
   items?: Array<{
@@ -143,6 +149,13 @@ export default function PaymentsPage() {
     notes: "",
   });
   const [errors, setErrors] = useState<any>({});
+
+  // Pagination (moved earlier to ensure stable hook order before any conditional return)
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, selectedStatus, selectedMethod]);
 
   // Enhanced stats calculation
   const calculateStats = (paymentsData: Payment[]): PaymentStats => {
@@ -315,6 +328,12 @@ export default function PaymentsPage() {
       payment.paymentMethod.toLowerCase().replace("_", "") === selectedMethod;
     return matchesSearch && matchesStatus && matchesMethod;
   });
+  // Pagination derived values
+  const totalFiltered = filteredPayments.length;
+  const paginatedPayments = filteredPayments.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
 
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
@@ -859,7 +878,7 @@ export default function PaymentsPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-background divide-y divide-border-color">
-                    {filteredPayments.map((payment) => (
+                    {paginatedPayments.map((payment) => (
                       <tr key={payment._id} className="hover:bg-card-bg">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
                           <div className="flex flex-col">
@@ -985,15 +1004,25 @@ export default function PaymentsPage() {
                     ))}
                   </tbody>
                 </table>
+                {totalFiltered > pageSize && (
+                  <div className="mt-4">
+                    <PaginationControls
+                      page={page}
+                      total={totalFiltered}
+                      pageSize={pageSize}
+                      onPageChange={setPage}
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3 overflow-x-hidden">
-                {filteredPayments.length === 0 && (
+                {paginatedPayments.length === 0 && (
                   <div className="text-center py-8 text-text-secondary">
                     No payments found.
                   </div>
                 )}
-                {filteredPayments.map((payment) => (
+                {paginatedPayments.map((payment) => (
                   <div
                     key={payment._id}
                     className="border border-border-color rounded-lg p-3 bg-card-bg overflow-hidden"
@@ -1007,6 +1036,12 @@ export default function PaymentsPage() {
                           Date:{" "}
                           {formatDate(payment.updatedAt || payment.createdAt)}
                         </div>
+                        <PaginationControls
+                          page={page}
+                          total={totalFiltered}
+                          pageSize={pageSize}
+                          onPageChange={setPage}
+                        />
                       </div>
                       <div className="shrink-0">
                         {userRole === "SUPER_ADMIN" ? (
@@ -1097,6 +1132,16 @@ export default function PaymentsPage() {
                     </div>
                   </div>
                 ))}
+                {totalFiltered > pageSize && (
+                  <div className="pt-2">
+                    <PaginationControls
+                      page={page}
+                      total={totalFiltered}
+                      pageSize={pageSize}
+                      onPageChange={setPage}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
