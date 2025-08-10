@@ -1,5 +1,5 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { LAB_TEST_STATUS, LAB_TEST_TYPES } from '@/constants/lab-test-types';
+import mongoose, { Schema, Document } from "mongoose";
+import { LAB_TEST_STATUS, LAB_TEST_TYPES } from "@/constants/lab-test-types";
 
 export interface ILabTestResult {
   parameter: string;
@@ -17,6 +17,7 @@ export interface ILabResult extends Document {
   testType: keyof typeof LAB_TEST_TYPES;
   testName?: string; // Now optional
   additionalTestTypes?: string[]; // Array of additional test types
+  customTestTypeLabel?: string; // For custom test type label
   status: keyof typeof LAB_TEST_STATUS;
   requestedBy: string; // Nurse ID
   requestedAt: Date;
@@ -37,28 +38,38 @@ const LabTestResultSchema = new Schema<ILabTestResult>({
   notes: { type: String },
 });
 
-const LabResultSchema = new Schema<ILabResult>({
-  labResultId: { type: String, unique: true, index: true }, // Temporarily not required
-  patientId: { type: String, required: true, index: true },
-  patientName: { type: String, required: true },
-  testType: { type: String, required: true, enum: Object.values(LAB_TEST_TYPES) },
-  testName: { type: String }, // Now optional
-  additionalTestTypes: [{ type: String, enum: Object.values(LAB_TEST_TYPES) }], // Array of additional test types
-  status: { 
-    type: String, 
-    required: true, 
-    enum: Object.values(LAB_TEST_STATUS),
-    default: 'PENDING'
+const LabResultSchema = new Schema<ILabResult>(
+  {
+    labResultId: { type: String, unique: true, index: true }, // Temporarily not required
+    patientId: { type: String, required: true, index: true },
+    patientName: { type: String, required: true },
+    testType: {
+      type: String,
+      required: true,
+      enum: Object.values(LAB_TEST_TYPES),
+    },
+    testName: { type: String }, // Now optional
+    additionalTestTypes: [
+      { type: String, enum: Object.values(LAB_TEST_TYPES) },
+    ], // Array of additional test types
+    customTestTypeLabel: { type: String }, // Label when testType is CUSTOM_OTHER
+    status: {
+      type: String,
+      required: true,
+      enum: Object.values(LAB_TEST_STATUS),
+      default: "PENDING",
+    },
+    requestedBy: { type: String, required: true }, // Nurse ID
+    requestedAt: { type: Date, required: true, default: Date.now },
+    completedBy: { type: String }, // Laboratorist ID
+    completedAt: { type: Date },
+    results: [LabTestResultSchema],
+    notes: { type: String },
   },
-  requestedBy: { type: String, required: true }, // Nurse ID
-  requestedAt: { type: Date, required: true, default: Date.now },
-  completedBy: { type: String }, // Laboratorist ID
-  completedAt: { type: Date },
-  results: [LabTestResultSchema],
-  notes: { type: String },
-}, {
-  timestamps: true,
-});
+  {
+    timestamps: true,
+  }
+);
 
 // Indexes for better query performance
 LabResultSchema.index({ labResultId: 1 });
@@ -73,4 +84,7 @@ if (mongoose.models.LabResult) {
   delete mongoose.models.LabResult;
 }
 
-export const LabResult = mongoose.model<ILabResult>('LabResult', LabResultSchema); 
+export const LabResult = mongoose.model<ILabResult>(
+  "LabResult",
+  LabResultSchema
+);

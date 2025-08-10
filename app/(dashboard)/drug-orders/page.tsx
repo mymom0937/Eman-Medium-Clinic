@@ -46,11 +46,25 @@ interface Drug {
   strength: string;
 }
 
+interface MinimalLabResult {
+  _id: string;
+  labResultId?: string;
+  patientId: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Local extension of DrugOrderItem supporting ad-hoc custom drug entries
+interface ExtendedDrugOrderItem extends DrugOrderItem {
+  isCustom?: boolean;
+  customDrugName?: string;
+}
+
 interface DrugOrderFormData {
   patientId: string;
   patientName: string;
   labResultId: string;
-  items: DrugOrderItem[];
+  items: ExtendedDrugOrderItem[];
   notes: string;
 }
 
@@ -59,6 +73,10 @@ export default function DrugOrdersPage() {
   const { userRole, userName, isLoaded } = useUserRole();
   const [drugOrders, setDrugOrders] = useState<DrugOrder[]>([]);
   const [drugs, setDrugs] = useState<Drug[]>([]);
+  // Patients list for dropdown selection (replaces manual patient ID & name inputs)
+  const [patients, setPatients] = useState<any[]>([]);
+  // Lab results for auto-filling latest lab result id by patient
+  const [labResults, setLabResults] = useState<MinimalLabResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -92,20 +110,37 @@ export default function DrugOrdersPage() {
       try {
         setInitialLoading(true);
 
-        // Fetch drug orders
-        const ordersResponse = await fetch("/api/drug-orders");
-        const ordersResult = await ordersResponse.json();
+        // Fetch drug orders, drugs, patients, and lab results concurrently
+        const [
+          ordersResponse,
+          drugsResponse,
+          patientsResponse,
+          labResultsResponse,
+        ] = await Promise.all([
+          fetch("/api/drug-orders"),
+          fetch("/api/drugs"),
+          fetch("/api/patients"),
+          fetch("/api/lab-results"),
+        ]);
+
+        const ordersResult = await ordersResponse.json().catch(() => ({}));
+        const drugsResult = await drugsResponse.json().catch(() => ({}));
+        const patientsResult = await patientsResponse.json().catch(() => ({}));
+        const labResultsResult = await labResultsResponse
+          .json()
+          .catch(() => ({}));
 
         if (ordersResponse.ok) {
           setDrugOrders(ordersResult);
         }
-
-        // Fetch drugs
-        const drugsResponse = await fetch("/api/drugs");
-        const drugsResult = await drugsResponse.json();
-
         if (drugsResponse.ok && drugsResult.success) {
           setDrugs(drugsResult.data);
+        }
+        if (patientsResponse.ok && patientsResult.success) {
+          setPatients(patientsResult.data || []);
+        }
+        if (labResultsResponse.ok && Array.isArray(labResultsResult)) {
+          setLabResults(labResultsResult);
         }
       } catch (error) {
         console.error("Error loading data:", error);
@@ -174,22 +209,30 @@ export default function DrugOrdersPage() {
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.patientId.trim())
-      newErrors.patientId = "Patient ID is required";
+    if (!formData.patientId.trim()) newErrors.patientId = "Patient is required";
     if (!formData.patientName.trim())
-      newErrors.patientName = "Patient name is required";
+      newErrors.patientName = "Patient is required";
+    if (!formData.labResultId.trim())
+      newErrors.labResultId = "Lab Result ID is required";
 
     if (!formData.items.length) {
       newErrors.items = "At least one drug item is required";
     }
 
-    formData.items.forEach((item, index) => {
-      if (!item.drugId) newErrors[`items.${index}.drugId`] = "Drug is required";
+    formData.items.forEach((item: any, index: number) => {
+      if (item.isCustom) {
+        if (!item.customDrugName?.trim())
+          newErrors[`items.${index}.customDrugName`] =
+            "Custom drug name is required";
+      } else if (!item.drugId) {
+        newErrors[`items.${index}.drugId`] = "Drug is required";
+      }
       if (!item.quantity || item.quantity <= 0)
         newErrors[`items.${index}.quantity`] =
           "Quantity must be greater than 0";
-      if (item.unitPrice == null || item.unitPrice < 0)
-        newErrors[`items.${index}.unitPrice`] = "Unit price must be 0 or more";
+      if (item.unitPrice == null || item.unitPrice <= 0)
+        newErrors[`items.${index}.unitPrice`] =
+          "Unit price must be greater than 0";
     });
 
     setErrors(newErrors);
@@ -204,10 +247,10 @@ export default function DrugOrdersPage() {
       const orderData = {
         patientId: formData.patientId,
         patientName: formData.patientName,
-        labResultId: formData.labResultId || undefined,
-        items: formData.items.map((i) => ({
-          drugId: i.drugId,
-          drugName: i.drugName,
+        labResultId: formData.labResultId,
+        items: formData.items.map((i: any, idx: number) => ({
+          drugId: i.isCustom ? `CUSTOM_${Date.now()}_${idx}` : i.drugId,
+          drugName: i.isCustom ? i.customDrugName || "Custom Drug" : i.drugName,
           quantity: i.quantity,
           unitPrice: i.unitPrice,
           totalPrice: i.quantity * i.unitPrice,
@@ -252,7 +295,13 @@ export default function DrugOrdersPage() {
       patientId: drugOrder.patientId,
       patientName: drugOrder.patientName,
       labResultId: drugOrder.labResultId || "",
-      items: drugOrder.items,
+      items: drugOrder.items.map((it) => ({
+        ...it,
+        isCustom:
+          it.drugId.startsWith("CUSTOM_") ||
+          !drugs.find((d) => d._id === it.drugId),
+        customDrugName: it.drugName,
+      })),
       notes: drugOrder.notes || "",
     });
     setIsEditModalOpen(true);
@@ -266,8 +315,12 @@ export default function DrugOrdersPage() {
       const orderData = {
         patientId: formData.patientId,
         patientName: formData.patientName,
-        labResultId: formData.labResultId || undefined,
-        items: formData.items,
+        labResultId: formData.labResultId,
+        items: formData.items.map((i: any, idx: number) => ({
+          ...i,
+          drugId: i.isCustom ? `CUSTOM_${Date.now()}_${idx}` : i.drugId,
+          drugName: i.isCustom ? i.customDrugName || "Custom Drug" : i.drugName,
+        })),
         notes: formData.notes,
       };
 
@@ -369,6 +422,8 @@ export default function DrugOrdersPage() {
           totalPrice: 0,
           dosage: "",
           instructions: "",
+          isCustom: false,
+          customDrugName: "",
         },
       ],
     }));
@@ -381,11 +436,7 @@ export default function DrugOrdersPage() {
     }));
   };
 
-  const updateDrugItem = (
-    index: number,
-    field: keyof DrugOrderItem,
-    value: any
-  ) => {
+  const updateDrugItem = (index: number, field: string, value: any) => {
     setFormData((prev) => {
       const updatedItems = [...prev.items];
       updatedItems[index] = { ...updatedItems[index], [field]: value };
@@ -622,7 +673,7 @@ export default function DrugOrdersPage() {
                     </div>
                   </TableCell>
                   <TableCell className="py-3 px-4 text-text-primary">
-                    ${order.totalAmount.toFixed(2)}
+                    EBR {order.totalAmount.toFixed(2)}
                   </TableCell>
                   <TableCell className="py-3 px-4">
                     {canUpdateStatus(order) ? (
@@ -759,7 +810,7 @@ export default function DrugOrdersPage() {
                   <div className="min-w-0">
                     <div className="text-xs text-text-muted">Total Amount</div>
                     <div className="text-sm text-text-primary break-words">
-                      ${order.totalAmount.toFixed(2)}
+                      EBR {order.totalAmount.toFixed(2)}
                     </div>
                   </div>
                 </div>
@@ -815,33 +866,64 @@ export default function DrugOrdersPage() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Patient ID" required error={errors.patientId}>
-              <Input
+            <FormField
+              label="Patient"
+              required
+              error={errors.patientId || errors.patientName}
+            >
+              <Select
                 value={formData.patientId}
-                onChange={(e) => handleInputChange("patientId", e.target.value)}
-                placeholder="Enter patient ID"
-                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
+                onChange={(e) => {
+                  const selected = patients.find(
+                    (p: any) => p.patientId === e.target.value
+                  );
+                  handleInputChange("patientId", e.target.value);
+                  handleInputChange(
+                    "patientName",
+                    selected ? `${selected.firstName} ${selected.lastName}` : ""
+                  );
+                  // Auto-fill latest lab result ID for this patient if available
+                  if (e.target.value) {
+                    const latest = labResults
+                      .filter(
+                        (lr) =>
+                          lr.patientId === e.target.value && lr.labResultId
+                      )
+                      .sort((a, b) => {
+                        const ad = new Date(
+                          a.updatedAt || a.createdAt || 0
+                        ).getTime();
+                        const bd = new Date(
+                          b.updatedAt || b.createdAt || 0
+                        ).getTime();
+                        return bd - ad;
+                      })[0];
+                    if (latest?.labResultId) {
+                      handleInputChange("labResultId", latest.labResultId);
+                    }
+                  }
+                }}
+                options={[
+                  { value: "", label: "Select Patient" },
+                  ...patients.map((p: any) => ({
+                    value: p.patientId,
+                    label: `${p.firstName} ${p.lastName} (${p.patientId})`,
+                  })),
+                ]}
               />
             </FormField>
 
-            <FormField label="Patient Name" required error={errors.patientName}>
-              <Input
-                value={formData.patientName}
-                onChange={(e) =>
-                  handleInputChange("patientName", e.target.value)
-                }
-                placeholder="Enter patient name"
-                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
-              />
-            </FormField>
-
-            <FormField label="Lab Result ID">
+            <FormField
+              label="Lab Result ID"
+              required
+              error={errors.labResultId}
+            >
               <Input
                 value={formData.labResultId}
                 onChange={(e) =>
                   handleInputChange("labResultId", e.target.value)
                 }
-                placeholder="Enter lab result ID (optional)"
+                placeholder="Enter related lab result ID"
                 className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
               />
             </FormField>
@@ -851,7 +933,7 @@ export default function DrugOrdersPage() {
             <label className="block text-sm font-medium text-text-primary mb-2">
               Drug Items
             </label>
-            {formData.items.map((item, index) => (
+            {formData.items.map((item: any, index) => (
               <div
                 key={index}
                 className="border border-border-color p-4 rounded-lg mb-4 bg-card-bg"
@@ -859,31 +941,81 @@ export default function DrugOrdersPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     label="Drug"
-                    error={errors[`items.${index}.drugId`]}
+                    error={
+                      errors[`items.${index}.drugId`] ||
+                      errors[`items.${index}.customDrugName`]
+                    }
                   >
-                    <Select
-                      value={item.drugId}
-                      onChange={(e) => {
-                        const drug = drugs.find(
-                          (d) => d._id === e.target.value
-                        );
-                        updateDrugItem(index, "drugId", e.target.value);
-                        updateDrugItem(index, "drugName", drug?.name || "");
-                        updateDrugItem(
-                          index,
-                          "unitPrice",
-                          drug?.sellingPrice || 0
-                        );
-                      }}
-                      options={[
-                        { value: "", label: "Select a drug..." },
-                        ...drugs.map((drug) => ({
-                          value: drug._id,
-                          label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
-                        })),
-                      ]}
-                      className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"
-                    />
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs">
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!item.isCustom}
+                            onChange={(e) => {
+                              updateDrugItem(
+                                index,
+                                "isCustom",
+                                e.target.checked
+                              );
+                              if (e.target.checked) {
+                                // Reset standard drug fields
+                                updateDrugItem(index, "drugId", "");
+                                updateDrugItem(index, "drugName", "");
+                                updateDrugItem(index, "unitPrice", 0);
+                              } else {
+                                updateDrugItem(index, "customDrugName", "");
+                              }
+                            }}
+                            className="rounded border-border-color"
+                          />
+                          <span>Custom Drug</span>
+                        </label>
+                      </div>
+                      {item.isCustom ? (
+                        <div className="grid grid-cols-1 gap-2">
+                          <Input
+                            value={item.customDrugName || ""}
+                            onChange={(e) =>
+                              updateDrugItem(
+                                index,
+                                "customDrugName",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Enter custom drug name"
+                            className="w-full border border-border-color rounded-md px-3 py-2 bg-background"
+                          />
+                          {/* Unit price now handled in dedicated Unit Price field below */}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Select
+                            value={item.drugId}
+                            onChange={(e) => {
+                              const drug = drugs.find(
+                                (d) => d._id === e.target.value
+                              );
+                              updateDrugItem(index, "drugId", e.target.value);
+                              updateDrugItem(
+                                index,
+                                "drugName",
+                                drug?.name || ""
+                              );
+                            }}
+                            options={[
+                              { value: "", label: "Select a drug..." },
+                              ...drugs.map((drug) => ({
+                                value: drug._id,
+                                label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
+                              })),
+                            ]}
+                            className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"
+                          />
+                          {/* Price input handled in Unit Price field below */}
+                        </div>
+                      )}
+                    </div>
                   </FormField>
 
                   <FormField
@@ -1022,33 +1154,64 @@ export default function DrugOrdersPage() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Patient ID" required error={errors.patientId}>
-              <Input
+            <FormField
+              label="Patient"
+              required
+              error={errors.patientId || errors.patientName}
+            >
+              <Select
                 value={formData.patientId}
-                onChange={(e) => handleInputChange("patientId", e.target.value)}
-                placeholder="Enter patient ID"
-                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
+                onChange={(e) => {
+                  const selected = patients.find(
+                    (p: any) => p.patientId === e.target.value
+                  );
+                  handleInputChange("patientId", e.target.value);
+                  handleInputChange(
+                    "patientName",
+                    selected ? `${selected.firstName} ${selected.lastName}` : ""
+                  );
+                  // Auto-fill latest lab result ID for this patient if available
+                  if (e.target.value) {
+                    const latest = labResults
+                      .filter(
+                        (lr) =>
+                          lr.patientId === e.target.value && lr.labResultId
+                      )
+                      .sort((a, b) => {
+                        const ad = new Date(
+                          a.updatedAt || a.createdAt || 0
+                        ).getTime();
+                        const bd = new Date(
+                          b.updatedAt || b.createdAt || 0
+                        ).getTime();
+                        return bd - ad;
+                      })[0];
+                    if (latest?.labResultId) {
+                      handleInputChange("labResultId", latest.labResultId);
+                    }
+                  }
+                }}
+                options={[
+                  { value: "", label: "Select Patient" },
+                  ...patients.map((p: any) => ({
+                    value: p.patientId,
+                    label: `${p.firstName} ${p.lastName} (${p.patientId})`,
+                  })),
+                ]}
               />
             </FormField>
 
-            <FormField label="Patient Name" required error={errors.patientName}>
-              <Input
-                value={formData.patientName}
-                onChange={(e) =>
-                  handleInputChange("patientName", e.target.value)
-                }
-                placeholder="Enter patient name"
-                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
-              />
-            </FormField>
-
-            <FormField label="Lab Result ID">
+            <FormField
+              label="Lab Result ID"
+              required
+              error={errors.labResultId}
+            >
               <Input
                 value={formData.labResultId}
                 onChange={(e) =>
                   handleInputChange("labResultId", e.target.value)
                 }
-                placeholder="Enter lab result ID (optional)"
+                placeholder="Enter related lab result ID"
                 className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
               />
             </FormField>
@@ -1099,7 +1262,7 @@ export default function DrugOrdersPage() {
             <label className="block text-sm font-medium text-text-primary mb-2">
               Drug Items
             </label>
-            {formData.items.map((item, index) => (
+            {formData.items.map((item: any, index) => (
               <div
                 key={index}
                 className="border border-border-color p-4 rounded-lg mb-4 bg-card-bg"
@@ -1107,31 +1270,80 @@ export default function DrugOrdersPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     label="Drug"
-                    error={errors[`items.${index}.drugId`]}
+                    error={
+                      errors[`items.${index}.drugId`] ||
+                      errors[`items.${index}.customDrugName`]
+                    }
                   >
-                    <Select
-                      value={item.drugId}
-                      onChange={(e) => {
-                        const drug = drugs.find(
-                          (d) => d._id === e.target.value
-                        );
-                        updateDrugItem(index, "drugId", e.target.value);
-                        updateDrugItem(index, "drugName", drug?.name || "");
-                        updateDrugItem(
-                          index,
-                          "unitPrice",
-                          drug?.sellingPrice || 0
-                        );
-                      }}
-                      options={[
-                        { value: "", label: "Select a drug..." },
-                        ...drugs.map((drug) => ({
-                          value: drug._id,
-                          label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
-                        })),
-                      ]}
-                      className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"
-                    />
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs">
+                        <label className="flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!item.isCustom}
+                            onChange={(e) => {
+                              updateDrugItem(
+                                index,
+                                "isCustom",
+                                e.target.checked
+                              );
+                              if (e.target.checked) {
+                                updateDrugItem(index, "drugId", "");
+                                updateDrugItem(index, "drugName", "");
+                                updateDrugItem(index, "unitPrice", 0);
+                              } else {
+                                updateDrugItem(index, "customDrugName", "");
+                              }
+                            }}
+                            className="rounded border-border-color"
+                          />
+                          <span>Custom Drug</span>
+                        </label>
+                      </div>
+                      {item.isCustom ? (
+                        <div className="grid grid-cols-1 gap-2">
+                          <Input
+                            value={item.customDrugName || ""}
+                            onChange={(e) =>
+                              updateDrugItem(
+                                index,
+                                "customDrugName",
+                                e.target.value
+                              )
+                            }
+                            placeholder="Enter custom drug name"
+                            className="w-full border border-border-color rounded-md px-3 py-2 bg-background"
+                          />
+                          {/* Unit price handled below */}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Select
+                            value={item.drugId}
+                            onChange={(e) => {
+                              const drug = drugs.find(
+                                (d) => d._id === e.target.value
+                              );
+                              updateDrugItem(index, "drugId", e.target.value);
+                              updateDrugItem(
+                                index,
+                                "drugName",
+                                drug?.name || ""
+                              );
+                            }}
+                            options={[
+                              { value: "", label: "Select a drug..." },
+                              ...drugs.map((drug) => ({
+                                value: drug._id,
+                                label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
+                              })),
+                            ]}
+                            className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"
+                          />
+                          {/* Price input handled in Unit Price field below */}
+                        </div>
+                      )}
+                    </div>
                   </FormField>
 
                   <FormField
@@ -1354,7 +1566,7 @@ export default function DrugOrdersPage() {
                   Total Amount
                 </label>
                 <p className="mt-1 text-sm text-text-primary">
-                  ${viewingDrugOrder.totalAmount.toFixed(2)}
+                  EBR {viewingDrugOrder.totalAmount.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -1385,13 +1597,13 @@ export default function DrugOrdersPage() {
                       <div>
                         <span className="text-text-muted">Unit Price:</span>
                         <p className="font-medium text-text-primary">
-                          ${item.unitPrice.toFixed(2)}
+                          EBR {item.unitPrice.toFixed(2)}
                         </p>
                       </div>
                       <div>
                         <span className="text-text-muted">Total Price:</span>
                         <p className="font-medium text-text-primary">
-                          ${item.totalPrice.toFixed(2)}
+                          EBR {item.totalPrice.toFixed(2)}
                         </p>
                       </div>
                       {item.dosage && (

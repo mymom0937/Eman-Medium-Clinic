@@ -776,7 +776,7 @@ export default function InventoryPage() {
                                 {drug.stockQuantity}
                               </td>
                               <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-text-primary">
-                                ETB {drug.sellingPrice.toFixed(2)}
+                                EBR {drug.sellingPrice.toFixed(2)}
                               </td>
                               <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-text-secondary">
                                 {drug.manufacturer.charAt(0).toUpperCase() +
@@ -892,7 +892,7 @@ export default function InventoryPage() {
                           Unit Price
                         </div>
                         <div className="text-sm text-text-primary break-words">
-                          ETB {drug.sellingPrice.toFixed(2)}
+                          EBR {drug.sellingPrice.toFixed(2)}
                         </div>
                       </div>
                       <div className="min-w-0">
@@ -1047,7 +1047,7 @@ export default function InventoryPage() {
               </FormField>
 
               <FormField
-                label="Unit Price (ETB)"
+                label="Unit Price (EBR)"
                 required
                 error={errors.unitPrice}
               >
@@ -1231,7 +1231,7 @@ export default function InventoryPage() {
               </FormField>
 
               <FormField
-                label="Unit Price (ETB)"
+                label="Unit Price (EBR)"
                 required
                 error={errors.unitPrice}
               >
@@ -1390,7 +1390,7 @@ export default function InventoryPage() {
                     Unit Price
                   </label>
                   <p className="mt-1 text-sm text-text-primary">
-                    ETB {viewingDrug.sellingPrice.toFixed(2)}
+                    EBR {viewingDrug.sellingPrice.toFixed(2)}
                   </p>
                 </div>
                 <div>

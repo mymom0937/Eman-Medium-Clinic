@@ -737,28 +737,28 @@ export default function PaymentsPage() {
   const displayStats = [
     {
       title: "Total Revenue",
-      value: `ETB ${stats.totalRevenue.toFixed(2)}`,
+      value: `EBR ${stats.totalRevenue.toFixed(2)}`,
       change: "+12% from last month",
       changeType: "positive" as const,
       icon: "💰",
     },
     {
       title: "Drug Sales",
-      value: `ETB ${stats.totalDrugSales.toFixed(2)}`,
+      value: `EBR ${stats.totalDrugSales.toFixed(2)}`,
       change: "+8% from last week",
       changeType: "positive" as const,
       icon: "💊",
     },
     {
       title: "Lab Payments",
-      value: `ETB ${stats.totalLabPayments.toFixed(2)}`,
+      value: `EBR ${stats.totalLabPayments.toFixed(2)}`,
       change: "+15% from last month",
       changeType: "positive" as const,
       icon: "🔬",
     },
     {
       title: "Walk-in Services",
-      value: `ETB ${stats.totalWalkInServices.toFixed(2)}`,
+      value: `EBR ${stats.totalWalkInServices.toFixed(2)}`,
       change: "+10% from last week",
       changeType: "positive" as const,
       icon: "🏥",
@@ -913,7 +913,7 @@ export default function PaymentsPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                          ETB {payment.amount.toFixed(2)}
+                          EBR {payment.amount.toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
                           <div className="flex items-center">
@@ -1095,7 +1095,7 @@ export default function PaymentsPage() {
                       <div className="min-w-0">
                         <div className="text-xs text-text-muted">Amount</div>
                         <div className="text-sm text-text-primary break-words">
-                          ETB {payment.amount.toFixed(2)}
+                          EBR {payment.amount.toFixed(2)}
                         </div>
                       </div>
                       <div className="min-w-0">
@@ -1199,7 +1199,7 @@ export default function PaymentsPage() {
                 />
               </FormField>
 
-              <FormField label="Amount (ETB)" required error={errors.amount}>
+              <FormField label="Amount (EBR)" required error={errors.amount}>
                 <Input
                   type="number"
                   step="0.01"
@@ -1348,7 +1348,7 @@ export default function PaymentsPage() {
                     Amount
                   </label>
                   <p className="mt-1 text-sm text-text-primary">
-                    ETB {viewingPayment.amount.toFixed(2)}
+                    EBR {viewingPayment.amount.toFixed(2)}
                   </p>
                 </div>
                 <div>
@@ -1482,7 +1482,7 @@ export default function PaymentsPage() {
                 />
               </FormField>
 
-              <FormField label="Amount (ETB)" required error={errors.amount}>
+              <FormField label="Amount (EBR)" required error={errors.amount}>
                 <Input
                   type="number"
                   step="0.01"

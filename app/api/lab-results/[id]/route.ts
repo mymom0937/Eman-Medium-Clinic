@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/config/database';
-import { auth, currentUser } from '@clerk/nextjs/server';
-import { LabResult } from '@/models/lab-result';
-import { UpdateLabResultRequest } from '@/types/lab-result';
-import { USER_ROLES } from '@/constants/user-roles';
+import { NextRequest, NextResponse } from "next/server";
+import { connectToDatabase } from "@/config/database";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { LabResult } from "@/models/lab-result";
+import { UpdateLabResultRequest } from "@/types/lab-result";
+import { USER_ROLES } from "@/constants/user-roles";
 
 // GET /api/lab-results/[id] - Get specific lab result
 export async function GET(
@@ -13,7 +13,7 @@ export async function GET(
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
@@ -21,13 +21,19 @@ export async function GET(
     const labResult = await LabResult.findById(id);
 
     if (!labResult) {
-      return NextResponse.json({ error: 'Lab result not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: "Lab result not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json(labResult);
   } catch (error) {
-    console.error('Error fetching lab result:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Error fetching lab result:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -39,32 +45,57 @@ export async function PUT(
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
     await connectToDatabase();
     const body = await request.json();
-    const { patientId, patientName, testType, testName, notes, selectedTestTypes } = body;
-
-    // Validate required fields
-    if (!patientId || !patientName || !testType) {
-      return NextResponse.json({ error: 'Missing required fields: patientId, patientName, testType' }, { status: 400 });
-    }
-    
-    if (!notes || !notes.trim()) {
-      return NextResponse.json({ error: 'Lab test description is required' }, { status: 400 });
-    }
-
-    const updateData = {
+    const {
       patientId,
       patientName,
       testType,
-      testName: testName || '',
+      testName,
+      notes,
+      selectedTestTypes,
+      customTestTypeLabel,
+    } = body;
+
+    // Validate required fields
+    if (!patientId || !patientName || !testType) {
+      return NextResponse.json(
+        { error: "Missing required fields: patientId, patientName, testType" },
+        { status: 400 }
+      );
+    }
+    if (testType === "CUSTOM_OTHER" && !customTestTypeLabel?.trim()) {
+      return NextResponse.json(
+        { error: "Custom test type label is required for CUSTOM_OTHER" },
+        { status: 400 }
+      );
+    }
+
+    if (!notes || !notes.trim()) {
+      return NextResponse.json(
+        { error: "Lab test description is required" },
+        { status: 400 }
+      );
+    }
+
+    const updateData: any = {
+      patientId,
+      patientName,
+      testType,
+      testName: testName || "",
       additionalTestTypes: selectedTestTypes || [],
       notes,
       updatedAt: new Date(),
     };
+    if (testType === "CUSTOM_OTHER") {
+      updateData.customTestTypeLabel = customTestTypeLabel?.trim();
+    } else {
+      updateData.customTestTypeLabel = undefined;
+    }
 
     const labResult = await LabResult.findByIdAndUpdate(
       id,
@@ -73,13 +104,19 @@ export async function PUT(
     );
 
     if (!labResult) {
-      return NextResponse.json({ error: 'Lab result not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: "Lab result not found" },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json({ message: 'Lab result updated successfully' });
+    return NextResponse.json({ message: "Lab result updated successfully" });
   } catch (error) {
-    console.error('Error updating lab result:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Error updating lab result:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -91,33 +128,33 @@ export async function PATCH(
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get current user from Clerk
     const user = await currentUser();
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Check user role from Clerk's public metadata or database
     let userRole = user.publicMetadata?.role as string;
-    
+
     // If role is not in metadata, check database
     if (!userRole) {
       await connectToDatabase();
-      const User = (await import('@/models/user')).default;
+      const User = (await import("@/models/user")).default;
       const dbUser = await User.findOne({ clerkId: userId });
-      
+
       if (dbUser) {
         userRole = dbUser.role;
       } else {
         // Create user in database if they don't exist
         const newUser = new User({
           clerkId: userId,
-          email: user.emailAddresses[0]?.emailAddress || '',
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
+          email: user.emailAddresses[0]?.emailAddress || "",
+          firstName: user.firstName || "",
+          lastName: user.lastName || "",
           role: USER_ROLES.SUPER_ADMIN, // Default to super admin for now
         });
         await newUser.save();
@@ -126,8 +163,14 @@ export async function PATCH(
     }
 
     // Check if user has permission to update lab results
-    if (userRole !== USER_ROLES.LABORATORIST && userRole !== USER_ROLES.SUPER_ADMIN) {
-      return NextResponse.json({ error: 'Forbidden - Insufficient permissions' }, { status: 403 });
+    if (
+      userRole !== USER_ROLES.LABORATORIST &&
+      userRole !== USER_ROLES.SUPER_ADMIN
+    ) {
+      return NextResponse.json(
+        { error: "Forbidden - Insufficient permissions" },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;
@@ -138,10 +181,10 @@ export async function PATCH(
 
     if (status) {
       updateData.status = status;
-      if (status === 'COMPLETED') {
+      if (status === "COMPLETED") {
         updateData.completedBy = userId;
         updateData.completedAt = new Date();
-      } else if (status === 'IN_PROGRESS') {
+      } else if (status === "IN_PROGRESS") {
         updateData.completedBy = userId;
       }
     }
@@ -161,13 +204,22 @@ export async function PATCH(
     );
 
     if (!labResult) {
-      return NextResponse.json({ error: 'Lab result not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: "Lab result not found" },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json({ message: 'Lab result updated successfully', labResult });
+    return NextResponse.json({
+      message: "Lab result updated successfully",
+      labResult,
+    });
   } catch (error) {
-    console.error('Error updating lab result:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Error updating lab result:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
 
@@ -179,33 +231,33 @@ export async function DELETE(
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get current user from Clerk
     const user = await currentUser();
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Check user role from Clerk's public metadata or database
     let userRole = user.publicMetadata?.role as string;
-    
+
     // If role is not in metadata, check database
     if (!userRole) {
       await connectToDatabase();
-      const User = (await import('@/models/user')).default;
+      const User = (await import("@/models/user")).default;
       const dbUser = await User.findOne({ clerkId: userId });
-      
+
       if (dbUser) {
         userRole = dbUser.role;
       } else {
         // Create user in database if they don't exist
         const newUser = new User({
           clerkId: userId,
-          email: user.emailAddresses[0]?.emailAddress || '',
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
+          email: user.emailAddresses[0]?.emailAddress || "",
+          firstName: user.firstName || "",
+          lastName: user.lastName || "",
           role: USER_ROLES.SUPER_ADMIN, // Default to super admin for now
         });
         await newUser.save();
@@ -215,19 +267,28 @@ export async function DELETE(
 
     // Check if user has permission to delete lab results
     if (userRole !== USER_ROLES.SUPER_ADMIN) {
-      return NextResponse.json({ error: 'Forbidden - Insufficient permissions' }, { status: 403 });
+      return NextResponse.json(
+        { error: "Forbidden - Insufficient permissions" },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;
     const labResult = await LabResult.findByIdAndDelete(id);
 
     if (!labResult) {
-      return NextResponse.json({ error: 'Lab result not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: "Lab result not found" },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json({ message: 'Lab result deleted successfully' });
+    return NextResponse.json({ message: "Lab result deleted successfully" });
   } catch (error) {
-    console.error('Error deleting lab result:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Error deleting lab result:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
-} 
+}

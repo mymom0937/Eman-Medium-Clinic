@@ -83,8 +83,13 @@ export default function LabResultsPage() {
     notes: "",
     selectedTestTypes: [],
   });
+  // Support a custom (one-off) test type entry
+  const [customTestType, setCustomTestType] = useState("");
+  const CUSTOM_TEST_TYPE_VALUE = "CUSTOM_OTHER";
   const [errors, setErrors] = useState<Partial<LabResultFormData>>({});
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  // Patients list for dropdown selection
+  const [patients, setPatients] = useState<any[]>([]);
   // Pagination
   const [page, setPage] = useState(1);
   const pageSize = 5; // Updated to show 5 lab results per page
@@ -122,11 +127,17 @@ export default function LabResultsPage() {
 
       try {
         setInitialLoading(true);
-        const response = await fetch("/api/lab-results");
-        const result = await response.json();
-
-        if (response.ok) {
-          setLabResults(result);
+        const [labRes, patientsRes] = await Promise.all([
+          fetch("/api/lab-results"),
+          fetch("/api/patients"),
+        ]);
+        const labData = await labRes.json();
+        const patientsData = await patientsRes.json();
+        if (labRes.ok) {
+          setLabResults(labData);
+        }
+        if (patientsRes.ok && patientsData.success) {
+          setPatients(patientsData.data || []);
         }
       } catch (error) {
         console.error("Error loading lab results:", error);
@@ -207,6 +218,12 @@ export default function LabResultsPage() {
     if (!formData.testType) {
       newErrors.testType = "Test type is required";
     }
+    if (
+      formData.testType === CUSTOM_TEST_TYPE_VALUE &&
+      !customTestType.trim()
+    ) {
+      newErrors.testType = "Custom test type name is required";
+    }
     // Test Name is now optional
     // Notes is now required
     if (!formData.notes.trim()) {
@@ -229,6 +246,10 @@ export default function LabResultsPage() {
         testName: formData.testName,
         selectedTestTypes: formData.selectedTestTypes,
         notes: formData.notes,
+        customTestTypeLabel:
+          formData.testType === CUSTOM_TEST_TYPE_VALUE
+            ? customTestType.trim()
+            : undefined,
       };
 
       const response = await fetch("/api/lab-results", {
@@ -269,11 +290,22 @@ export default function LabResultsPage() {
     setFormData({
       patientId: labResult.patientId,
       patientName: labResult.patientName,
-      testType: labResult.testType,
+      testType:
+        labResult.testType === CUSTOM_TEST_TYPE_VALUE
+          ? CUSTOM_TEST_TYPE_VALUE
+          : labResult.testType,
       testName: labResult.testName || "",
       notes: labResult.notes || "",
       selectedTestTypes: labResult.additionalTestTypes || [],
     });
+    if (
+      (labResult as any).customTestTypeLabel &&
+      labResult.testType === CUSTOM_TEST_TYPE_VALUE
+    ) {
+      setCustomTestType((labResult as any).customTestTypeLabel);
+    } else {
+      setCustomTestType("");
+    }
     setIsEditModalOpen(true);
   };
 
@@ -289,6 +321,10 @@ export default function LabResultsPage() {
         testName: formData.testName,
         selectedTestTypes: formData.selectedTestTypes,
         notes: formData.notes,
+        customTestTypeLabel:
+          formData.testType === CUSTOM_TEST_TYPE_VALUE
+            ? customTestType.trim()
+            : undefined,
       };
 
       const response = await fetch(`/api/lab-results/${editingLabResult._id}`, {
@@ -358,6 +394,7 @@ export default function LabResultsPage() {
       notes: "",
       selectedTestTypes: [],
     });
+    setCustomTestType("");
     setErrors({});
   };
 
@@ -585,7 +622,14 @@ export default function LabResultsPage() {
                               className="flex items-center space-x-2 text-left hover:bg-accent-color/10 px-2 py-1 rounded-md transition-colors"
                             >
                               <span className="font-medium">
-                                {LAB_TEST_LABELS[result.testType]}
+                                {result.testType === CUSTOM_TEST_TYPE_VALUE &&
+                                (result as any).customTestTypeLabel
+                                  ? (result as any).customTestTypeLabel
+                                  : LAB_TEST_LABELS[
+                                      result.testType as keyof typeof LAB_TEST_LABELS
+                                    ] ||
+                                    (result as any).customTestTypeLabel ||
+                                    result.testType}
                               </span>
                               {result.additionalTestTypes &&
                                 result.additionalTestTypes.length > 0 && (
@@ -622,7 +666,16 @@ export default function LabResultsPage() {
                                     <div className="flex items-center space-x-2">
                                       <span className="w-2 h-2 bg-accent-color rounded-full"></span>
                                       <span className="text-sm text-text-primary font-medium">
-                                        {LAB_TEST_LABELS[result.testType]}
+                                        {result.testType ===
+                                          CUSTOM_TEST_TYPE_VALUE &&
+                                        (result as any).customTestTypeLabel
+                                          ? (result as any).customTestTypeLabel
+                                          : LAB_TEST_LABELS[
+                                              result.testType as keyof typeof LAB_TEST_LABELS
+                                            ] ||
+                                            (result as any)
+                                              .customTestTypeLabel ||
+                                            result.testType}
                                       </span>
                                       <span className="text-xs text-text-muted">
                                         (Primary)
@@ -790,7 +843,14 @@ export default function LabResultsPage() {
                             Test Types
                           </div>
                           <div className="text-sm text-text-primary break-words">
-                            {LAB_TEST_LABELS[result.testType]}
+                            {result.testType === CUSTOM_TEST_TYPE_VALUE &&
+                            (result as any).customTestTypeLabel
+                              ? (result as any).customTestTypeLabel
+                              : LAB_TEST_LABELS[
+                                  result.testType as keyof typeof LAB_TEST_LABELS
+                                ] ||
+                                (result as any).customTestTypeLabel ||
+                                result.testType}
                             {result.additionalTestTypes &&
                             result.additionalTestTypes.length > 0
                               ? ` (+${result.additionalTestTypes.length})`
@@ -860,43 +920,64 @@ export default function LabResultsPage() {
         >
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Patient ID" required error={errors.patientId}>
-                <Input
-                  value={formData.patientId}
-                  onChange={(e) =>
-                    handleInputChange("patientId", e.target.value)
-                  }
-                  placeholder="Enter patient ID"
-                />
-              </FormField>
-
               <FormField
-                label="Patient Name"
+                label="Patient"
                 required
-                error={errors.patientName}
+                error={errors.patientId || errors.patientName}
               >
-                <Input
-                  value={formData.patientName}
-                  onChange={(e) =>
-                    handleInputChange("patientName", e.target.value)
-                  }
-                  placeholder="Enter patient name"
+                <Select
+                  value={formData.patientId}
+                  onChange={(e) => {
+                    const selected = patients.find(
+                      (p: any) => p.patientId === e.target.value
+                    );
+                    handleInputChange("patientId", e.target.value);
+                    handleInputChange(
+                      "patientName",
+                      selected
+                        ? `${selected.firstName} ${selected.lastName}`
+                        : ""
+                    );
+                  }}
+                  options={[
+                    { value: "", label: "Select Patient" },
+                    ...patients.map((p: any) => ({
+                      value: p.patientId,
+                      label: `${p.firstName} ${p.lastName} (${p.patientId})`,
+                    })),
+                  ]}
                 />
               </FormField>
 
               <FormField label="Test Type" required error={errors.testType}>
-                <Select
-                  value={formData.testType}
-                  onChange={(e) =>
-                    handleInputChange("testType", e.target.value)
-                  }
-                  options={Object.entries(LAB_TEST_TYPES).map(
-                    ([key, value]) => ({
-                      value,
-                      label: LAB_TEST_LABELS[value],
-                    })
+                <div className="space-y-2">
+                  <Select
+                    value={formData.testType}
+                    onChange={(e) => {
+                      handleInputChange("testType", e.target.value);
+                      if (e.target.value !== CUSTOM_TEST_TYPE_VALUE) {
+                        setCustomTestType("");
+                      }
+                    }}
+                    options={[
+                      ...Object.entries(LAB_TEST_TYPES).map(([key, value]) => ({
+                        value,
+                        label: LAB_TEST_LABELS[value],
+                      })),
+                      {
+                        value: CUSTOM_TEST_TYPE_VALUE,
+                        label: "Other (Add New)",
+                      },
+                    ]}
+                  />
+                  {formData.testType === CUSTOM_TEST_TYPE_VALUE && (
+                    <Input
+                      value={customTestType}
+                      onChange={(e) => setCustomTestType(e.target.value)}
+                      placeholder="Enter custom test type name"
+                    />
                   )}
-                />
+                </div>
               </FormField>
 
               <FormField label="Additional Test Types (Optional)">
@@ -1001,43 +1082,64 @@ export default function LabResultsPage() {
         >
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Patient ID" required error={errors.patientId}>
-                <Input
-                  value={formData.patientId}
-                  onChange={(e) =>
-                    handleInputChange("patientId", e.target.value)
-                  }
-                  placeholder="Enter patient ID"
-                />
-              </FormField>
-
               <FormField
-                label="Patient Name"
+                label="Patient"
                 required
-                error={errors.patientName}
+                error={errors.patientId || errors.patientName}
               >
-                <Input
-                  value={formData.patientName}
-                  onChange={(e) =>
-                    handleInputChange("patientName", e.target.value)
-                  }
-                  placeholder="Enter patient name"
+                <Select
+                  value={formData.patientId}
+                  onChange={(e) => {
+                    const selected = patients.find(
+                      (p: any) => p.patientId === e.target.value
+                    );
+                    handleInputChange("patientId", e.target.value);
+                    handleInputChange(
+                      "patientName",
+                      selected
+                        ? `${selected.firstName} ${selected.lastName}`
+                        : ""
+                    );
+                  }}
+                  options={[
+                    { value: "", label: "Select Patient" },
+                    ...patients.map((p: any) => ({
+                      value: p.patientId,
+                      label: `${p.firstName} ${p.lastName} (${p.patientId})`,
+                    })),
+                  ]}
                 />
               </FormField>
 
               <FormField label="Test Type" required error={errors.testType}>
-                <Select
-                  value={formData.testType}
-                  onChange={(e) =>
-                    handleInputChange("testType", e.target.value)
-                  }
-                  options={Object.entries(LAB_TEST_TYPES).map(
-                    ([key, value]) => ({
-                      value,
-                      label: LAB_TEST_LABELS[value],
-                    })
+                <div className="space-y-2">
+                  <Select
+                    value={formData.testType}
+                    onChange={(e) => {
+                      handleInputChange("testType", e.target.value);
+                      if (e.target.value !== CUSTOM_TEST_TYPE_VALUE) {
+                        setCustomTestType("");
+                      }
+                    }}
+                    options={[
+                      ...Object.entries(LAB_TEST_TYPES).map(([key, value]) => ({
+                        value,
+                        label: LAB_TEST_LABELS[value],
+                      })),
+                      {
+                        value: CUSTOM_TEST_TYPE_VALUE,
+                        label: "Other (Add New)",
+                      },
+                    ]}
+                  />
+                  {formData.testType === CUSTOM_TEST_TYPE_VALUE && (
+                    <Input
+                      value={customTestType}
+                      onChange={(e) => setCustomTestType(e.target.value)}
+                      placeholder="Enter custom test type name"
+                    />
                   )}
-                />
+                </div>
               </FormField>
 
               <FormField label="Additional Test Types (Optional)">
@@ -1217,7 +1319,14 @@ export default function LabResultsPage() {
                     <div className="flex items-center space-x-2">
                       <span className="w-2 h-2 bg-accent-color rounded-full"></span>
                       <span className="text-sm text-text-secondary font-medium">
-                        {LAB_TEST_LABELS[viewingLabResult.testType]}
+                        {viewingLabResult.testType === CUSTOM_TEST_TYPE_VALUE &&
+                        (viewingLabResult as any).customTestTypeLabel
+                          ? (viewingLabResult as any).customTestTypeLabel
+                          : LAB_TEST_LABELS[
+                              viewingLabResult.testType as keyof typeof LAB_TEST_LABELS
+                            ] ||
+                            (viewingLabResult as any).customTestTypeLabel ||
+                            viewingLabResult.testType}
                       </span>
                       <span className="text-xs text-text-muted">(Primary)</span>
                     </div>

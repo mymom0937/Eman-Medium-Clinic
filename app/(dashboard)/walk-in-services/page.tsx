@@ -627,7 +627,7 @@ export default function WalkInServicesPage() {
     },
     {
       title: "Total Revenue",
-      value: `ETB ${stats.totalRevenue.toFixed(2)}`,
+      value: `EBR ${stats.totalRevenue.toFixed(2)}`,
       change: "+12% from last week",
       changeType: "positive" as const,
       icon: "💰",
@@ -641,7 +641,7 @@ export default function WalkInServicesPage() {
     },
     {
       title: "Today's Revenue",
-      value: `ETB ${stats.todayRevenue.toFixed(2)}`,
+      value: `EBR ${stats.todayRevenue.toFixed(2)}`,
       change: "+8% from yesterday",
       changeType: "positive" as const,
       icon: "💵",
@@ -787,7 +787,7 @@ export default function WalkInServicesPage() {
                             {getServiceDetails(service)}
                           </td>
                           <td className="px-2 py-1 whitespace-nowrap text-sm font-medium text-text-primary">
-                            ETB {service.amount.toFixed(2)}
+                            EBR {service.amount.toFixed(2)}
                           </td>
                           <td className="px-2 py-1 whitespace-nowrap">
                             <span
@@ -871,7 +871,7 @@ export default function WalkInServicesPage() {
                     <div>
                       <span className="text-text-muted">Amount:</span>
                       <span className="ml-1 text-text-primary break-words">
-                        ETB {service.amount.toFixed(2)}
+                        EBR {service.amount.toFixed(2)}
                       </span>
                     </div>
                     <div>
@@ -1197,7 +1197,7 @@ export default function WalkInServicesPage() {
                     Amount
                   </label>
                   <p className="mt-1 text-sm text-text-primary">
-                    ETB {viewingService.amount.toFixed(2)}
+                    EBR {viewingService.amount.toFixed(2)}
                   </p>
                 </div>
                 <div>

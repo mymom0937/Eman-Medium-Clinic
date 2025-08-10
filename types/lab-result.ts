@@ -1,4 +1,4 @@
-import { LAB_TEST_STATUS, LAB_TEST_TYPES } from '@/constants/lab-test-types';
+import { LAB_TEST_STATUS, LAB_TEST_TYPES } from "@/constants/lab-test-types";
 
 export interface LabResult {
   _id: string;
@@ -15,6 +15,7 @@ export interface LabResult {
   completedAt?: Date;
   results?: LabTestResult[];
   notes?: string;
+  customTestTypeLabel?: string; // For CUSTOM_OTHER test type
   createdAt: Date;
   updatedAt: Date;
   showTestTypesDropdown?: boolean; // Frontend-only state for dropdown
@@ -36,6 +37,7 @@ export interface CreateLabResultRequest {
   testName?: string; // Now optional
   selectedTestTypes?: string[]; // Array of additional test types
   notes?: string;
+  customTestTypeLabel?: string;
 }
 
 export interface UpdateLabResultRequest {
@@ -47,6 +49,7 @@ export interface UpdateLabResultRequest {
   status?: keyof typeof LAB_TEST_STATUS;
   results?: LabTestResult[];
   notes?: string;
+  customTestTypeLabel?: string;
 }
 
 export interface LabResultFilters {
@@ -65,4 +68,4 @@ export interface LabResultStats {
   inProgress: number;
   completed: number;
   cancelled: number;
-} 
+}

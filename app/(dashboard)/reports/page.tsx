@@ -245,7 +245,7 @@ export default function ReportsPage() {
         },
         {
           title: "Inventory Value",
-          value: `ETB ${(reportData.financial?.inventoryValue || 0).toFixed(
+          value: `EBR ${(reportData.financial?.inventoryValue || 0).toFixed(
             2
           )}`,
           change: "+5% from last month",
@@ -301,14 +301,14 @@ export default function ReportsPage() {
             },
             {
               title: "Total Revenue",
-              value: `ETB ${(summary.totalRevenue || 0).toFixed(2)}`,
+              value: `EBR ${(summary.totalRevenue || 0).toFixed(2)}`,
               change: "+12% from last month",
               changeType: "positive" as const,
               icon: "📈",
             },
             {
               title: "Average Sale",
-              value: `ETB ${(summary.averageSale || 0).toFixed(2)}`,
+              value: `EBR ${(summary.averageSale || 0).toFixed(2)}`,
               change: "+3% from last month",
               changeType: "positive" as const,
               icon: "📊",
@@ -333,14 +333,14 @@ export default function ReportsPage() {
             },
             {
               title: "Total Revenue",
-              value: `ETB ${(summary.totalRevenue || 0).toFixed(2)}`,
+              value: `EBR ${(summary.totalRevenue || 0).toFixed(2)}`,
               change: "+18% from last month",
               changeType: "positive" as const,
               icon: "💰",
             },
             {
               title: "Average Service Price",
-              value: `ETB ${(summary.averageServicePrice || 0).toFixed(2)}`,
+              value: `EBR ${(summary.averageServicePrice || 0).toFixed(2)}`,
               change: "+5% from last month",
               changeType: "positive" as const,
               icon: "📊",
@@ -420,7 +420,7 @@ export default function ReportsPage() {
                         </span>
                         <span className="font-medium text-text-primary">
                           {key.includes("Value") || key.includes("Revenue")
-                            ? `ETB ${Number(value).toFixed(2)}`
+                            ? `EBR ${Number(value).toFixed(2)}`
                             : String(value)}
                         </span>
                       </div>
