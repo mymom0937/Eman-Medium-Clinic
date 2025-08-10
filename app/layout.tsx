@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from '@clerk/nextjs';
-import { clerkConfig } from '@/lib/config/clerk';
-import { ThemeProvider } from '@/context/ThemeContext';
-import { AppContextProvider } from '@/context/AppContext';
+import { ClerkProvider } from "@clerk/nextjs";
+import { clerkConfig } from "@/lib/config/clerk";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { AppContextProvider } from "@/context/AppContext";
+import SiteShell from "@/components/layout/SiteShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,7 +19,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Eman Clinic - Digital Clinic Management System",
-  description: "Comprehensive digital solution for managing drug inventory, patient records, sales transactions, and medical services.",
+  description:
+    "Comprehensive digital solution for managing drug inventory, patient records, sales transactions, and medical services.",
 };
 
 export default function RootLayout({
@@ -34,7 +36,7 @@ export default function RootLayout({
         >
           <ThemeProvider>
             <AppContextProvider>
-              {children}
+              <SiteShell>{children}</SiteShell>
             </AppContextProvider>
           </ThemeProvider>
         </body>

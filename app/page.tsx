@@ -5,8 +5,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUser } from "@clerk/nextjs";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { hasDashboardAccess } from "@/lib/client-auth";
 import { useUserRole } from "@/hooks/useUserRole";
 
@@ -87,8 +85,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background text-text-primary">
-      <Navbar />
-
       {/* Hero Section */}
       <section className="relative py-20 pt-24 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-card-bg via-background to-card-bg"></div>
@@ -357,8 +353,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 }
