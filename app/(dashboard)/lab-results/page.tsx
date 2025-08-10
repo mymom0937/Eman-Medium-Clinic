@@ -129,7 +129,8 @@ export default function LabResultsPage() {
         setInitialLoading(true);
         const [labRes, patientsRes] = await Promise.all([
           fetch("/api/lab-results"),
-          fetch("/api/patients"),
+          // Request larger limit so we consistently have full patient list like Patients page
+          fetch("/api/patients?limit=1000&page=1"),
         ]);
         const labData = await labRes.json();
         const patientsData = await patientsRes.json();
@@ -137,7 +138,10 @@ export default function LabResultsPage() {
           setLabResults(labData);
         }
         if (patientsRes.ok && patientsData.success) {
-          setPatients(patientsData.data || []);
+          const sorted = [...(patientsData.data || [])].sort((a:any,b:any)=>
+            (a.patientId||"").localeCompare(b.patientId||"")
+          );
+            setPatients(sorted);
         }
       } catch (error) {
         console.error("Error loading lab results:", error);

@@ -131,25 +131,30 @@ export default function PatientsPage() {
     const loadPatients = async () => {
       try {
         setInitialLoading(true);
-        const response = await fetch("/api/patients");
+        // Request a larger limit so we get all patients (API default limit=10 was hiding some)
+        const response = await fetch("/api/patients?limit=1000&page=1");
         const result = await response.json();
 
         if (response.ok && result.success) {
-          setPatients(result.data);
+          // Sort by patientId to keep ordering consistent for ID generation
+          const sorted = [...result.data].sort((a: Patient, b: Patient) =>
+            a.patientId.localeCompare(b.patientId)
+          );
+          setPatients(sorted);
 
           // Calculate stats from real data
-          const totalPatients = result.data.length;
-          const activePatients = result.data.filter(
+          const totalPatients = sorted.length;
+          const activePatients = sorted.filter(
             (patient: Patient) => patient.isActive
           ).length;
           const averageAge =
-            result.data.length > 0
+            sorted.length > 0
               ? Math.round(
-                  result.data.reduce(
+                  sorted.reduce(
                     (sum: number, patient: Patient) => sum + (patient.age || 0),
                     0
                   ) /
-                    (result.data.filter((patient: Patient) => patient.age)
+                    (sorted.filter((patient: Patient) => patient.age)
                       .length || 1)
                 )
               : 0;
@@ -157,7 +162,7 @@ export default function PatientsPage() {
           // Calculate new patients this month
           const currentMonth = new Date().getMonth();
           const currentYear = new Date().getFullYear();
-          const newThisMonth = result.data.filter((patient: Patient) => {
+          const newThisMonth = sorted.filter((patient: Patient) => {
             const createdAt = new Date(patient.createdAt);
             return (
               createdAt.getMonth() === currentMonth &&

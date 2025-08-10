@@ -119,7 +119,8 @@ export default function DrugOrdersPage() {
         ] = await Promise.all([
           fetch("/api/drug-orders"),
           fetch("/api/drugs"),
-          fetch("/api/patients"),
+          // High limit to retrieve full patient list
+          fetch("/api/patients?limit=1000&page=1"),
           fetch("/api/lab-results"),
         ]);
 
@@ -137,7 +138,10 @@ export default function DrugOrdersPage() {
           setDrugs(drugsResult.data);
         }
         if (patientsResponse.ok && patientsResult.success) {
-          setPatients(patientsResult.data || []);
+          const sorted = [...(patientsResult.data || [])].sort((a:any,b:any)=>
+            (a.patientId||"").localeCompare(b.patientId||"")
+          );
+          setPatients(sorted);
         }
         if (labResultsResponse.ok && Array.isArray(labResultsResult)) {
           setLabResults(labResultsResult);
