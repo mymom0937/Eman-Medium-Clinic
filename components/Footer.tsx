@@ -64,7 +64,10 @@ const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Left: Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
+          <Link
+            href="/"
+            className="flex items-center gap-3 group bg-[#3471D5] rounded-md p-2"
+          >
             <Image
               src={
                 theme === "dark"
@@ -72,7 +75,7 @@ const Footer: React.FC = () => {
                   : assets.ezcart_logo_dark
               }
               alt="Eman Clinic Logo"
-              className="h-8 w-auto object-contain"
+              className="h-7 w-auto object-contain"
               priority
             />
           </Link>

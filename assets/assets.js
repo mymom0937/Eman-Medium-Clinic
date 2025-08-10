@@ -1,8 +1,7 @@
-// import ezcart_logo_dark from "./ezcart_logo_dark.png";
-// import ezcart_logo_white from "./ezcart_logo_white.png";
 
-import ezcart_logo_dark from "./dark_logo.png";
-import ezcart_logo_white from "./light_logo.png";
+import ezcart_logo_dark from "./EMC_Dark.png";
+import ezcart_logo_white from "./EMC_Light.png";
+
 import search_icon from "./search_icon.svg";
 import user_icon from "./user_icon.svg";
 import add_icon from "./add_icon.svg";

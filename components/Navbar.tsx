@@ -143,13 +143,16 @@ const Navbar = () => {
           isScrolled ? "scale-95" : "scale-100"
         }`}
       >
-        <Link href="/">
+        <Link
+          href="/"
+          className="inline-flex items-center justify-center bg-[#3471D5] rounded-md p-1.5"
+        >
           <Image
-            className="cursor-pointer w-24 sm:w-28 md:w-28 lg:w-32"
+            className="cursor-pointer h-7 w-auto"
             src={
               isDarkMode ? assets.ezcart_logo_white : assets.ezcart_logo_dark
             }
-            alt="EzCart"
+            alt="Eman Clinic Logo"
             priority
             style={{ filter: "none" }}
           />
