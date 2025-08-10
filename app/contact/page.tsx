@@ -179,7 +179,7 @@ export default function ContactPage() {
                         Address
                       </h3>
                       <p className="text-text-secondary">
-                        123 Healthcare Street, Medical District, City
+                        Dalocha, Worabe, Ethiopia
                       </p>
                     </div>
                   </div>
@@ -200,23 +200,30 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-text-primary">Phone</h3>
-                      <p className="text-text-secondary">+1 (555) 123-4567</p>
+                      <p className="text-text-secondary">+251-922-901-689</p>
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-accent-color/10 rounded-lg flex items-center justify-center">
-                      <span className="text-accent-color text-xl">🕒</span>
+                      {/* Using a span for the clock icon; rewritten to avoid stray parsing issues */}
+                      <span
+                        className="text-accent-color text-xl"
+                        role="img"
+                        aria-label="business hours"
+                      >
+                        🕒
+                      </span>
                     </div>
                     <div>
                       <h3 className="font-semibold text-text-primary">
                         Business Hours
                       </h3>
                       <p className="text-text-secondary">
-                        Monday - Friday: 9:00 AM - 6:00 PM
+                        Monday - Friday: 8:00 AM - 6:00 PM
                       </p>
                       <p className="text-text-secondary">
-                        Saturday: 9:00 AM - 2:00 PM
+                        Saturday: 8:00 AM - 6:00 PM
                       </p>
                     </div>
                   </div>

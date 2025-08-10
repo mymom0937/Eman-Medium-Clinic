@@ -3,6 +3,7 @@
 import React from "react";
 import { Sidebar } from "./sidebar";
 import Navbar from "../Navbar";
+import Footer from "../Footer";
 import { ToastContainer } from "@/components/ui/toast";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
@@ -35,7 +36,11 @@ export function DashboardLayout({
             <div aria-hidden className="h-16 md:h-20" />
           </div>
           <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6">
-            <div className="max-w-full">{children}</div>
+            <div className="max-w-full space-y-8">
+              {children}
+              {/* Dashboard Footer (scrolls with content to avoid overlap) */}
+              <Footer />
+            </div>
           </main>
         </div>
 

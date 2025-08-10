@@ -10,6 +10,7 @@ import Footer from "../Footer";
  * Dashboard pages provide their own structural chrome via DashboardLayout.
  */
 const dashboardSegments = new Set([
+  "dashboard",
   "patients",
   "lab-results",
   "drug-orders",

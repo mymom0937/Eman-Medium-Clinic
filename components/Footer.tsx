@@ -51,7 +51,7 @@ const socialItems: SocialItem[] = [
 const Footer: React.FC = () => {
   const { theme } = useTheme();
   const currentYear = new Date().getFullYear();
-  const copyrightText = `© ${currentYear}, EzCart. All rights reserved.`;
+  const copyrightText = `© ${currentYear}, Eman Medium Clinic. All rights reserved.`;
 
   return (
     <footer
