@@ -87,6 +87,7 @@ const PAYMENT_STATUS_OPTIONS = [
   { value: "completed", label: "Completed" },
   { value: "pending", label: "Pending" },
   { value: "failed", label: "Failed" },
+  { value: "refunded", label: "Refunded" },
 ];
 
 const PAYMENT_METHOD_OPTIONS = [
@@ -248,11 +249,26 @@ export default function PaymentsPage() {
           setStats(stats);
         }
 
-        const patientsResponse = await fetch("/api/patients");
-        const patientsResult = await patientsResponse.json();
-        if (patientsResponse.ok && patientsResult.success) {
-          setPatients(patientsResult.data || []);
-        }
+        // Fetch all patients across pages to populate dropdown completely
+        const fetchAllPatients = async (): Promise<any[]> => {
+          const limit = 100;
+          let page = 1;
+          let all: any[] = [];
+          while (true) {
+            const res = await fetch(`/api/patients?page=${page}&limit=${limit}`);
+            const json = await res.json();
+            if (!res.ok || !json.success) break;
+            const batch: any[] = json.data || [];
+            all = all.concat(batch);
+            const total = json.pagination?.total ?? batch.length;
+            if (all.length >= total || batch.length < limit) break;
+            page += 1;
+          }
+          return all;
+        };
+
+        const allPatients = await fetchAllPatients();
+        setPatients(allPatients);
 
         // TODO: Uncomment when API is ready
         // // Fetch payments and patients in parallel
@@ -462,7 +478,7 @@ export default function PaymentsPage() {
     }
 
     try {
-      // First, try to fetch all orders for the patient without status filter
+      // Fetch all orders for the patient (any status)
       const allOrdersResponse = await fetch(
         `/api/drug-orders?patientId=${patientId}`
       );
@@ -471,14 +487,8 @@ export default function PaymentsPage() {
       if (allOrdersResponse.ok) {
         // The API returns the data directly, not wrapped in success/data
         const orders = Array.isArray(allOrdersResult) ? allOrdersResult : [];
-
-        // Filter to show only approved and dispensed orders
-        const validOrders =
-          orders.filter(
-            (order: any) =>
-              order.status === "APPROVED" || order.status === "DISPENSED"
-          ) || [];
-        setDrugOrders(validOrders);
+        // Show all orders and let the user choose; include status in label below
+        setDrugOrders(orders);
       } else {
         setDrugOrders([]);
       }
@@ -703,13 +713,16 @@ export default function PaymentsPage() {
     }
 
     try {
-      const response = await fetch(`/api/payments/${paymentId}`, {
+      // Use the payments collection-level endpoint which supports status-only updates
+      const response = await fetch(`/api/payments`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          paymentStatus: newStatus,
+          paymentId,
+          status: newStatus,
+          processedBy: userName || "System",
         }),
       });
 
@@ -1238,6 +1251,7 @@ export default function PaymentsPage() {
                     { value: "completed", label: "Completed" },
                     { value: "pending", label: "Pending" },
                     { value: "failed", label: "Failed" },
+                    { value: "refunded", label: "Refunded" },
                   ]}
                 />
               </FormField>
@@ -1274,7 +1288,7 @@ export default function PaymentsPage() {
                     value: order._id,
                     label: `${order.drugOrderId || order._id} - ${
                       order.patientName || "Unknown Patient"
-                    }`,
+                    } (${(order.status || "").toString().toUpperCase()})`,
                   })),
                 ]}
                 disabled={!formData.patientId || drugOrders.length === 0}
@@ -1521,6 +1535,7 @@ export default function PaymentsPage() {
                     { value: "completed", label: "Completed" },
                     { value: "pending", label: "Pending" },
                     { value: "failed", label: "Failed" },
+                    { value: "refunded", label: "Refunded" },
                   ]}
                 />
               </FormField>

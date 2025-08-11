@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/config/connection';
 import { PaymentStatus } from '@/types/payment';
+import { ObjectId } from 'mongodb';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
@@ -14,7 +15,10 @@ export async function GET(
       throw new Error('Database connection not available');
     }
 
-    const payment = await db.collection('payments').findOne({ _id: params.id });
+    const { id } = await params;
+    const payment = await db
+      .collection('payments')
+      .findOne({ _id: new ObjectId(id) });
 
     if (!payment) {
       return NextResponse.json(
@@ -38,7 +42,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
@@ -49,6 +53,29 @@ export async function PUT(
     }
 
     const body = await request.json();
+  // If this is a status-only update (e.g., dropdown in table), allow minimal payload
+  if (
+    body &&
+    (body.status || body.paymentStatus) &&
+    !body.patientId &&
+    !body.patientName &&
+    !body.amount &&
+    !body.paymentMethod
+  ) {
+    const newStatus = (body.paymentStatus || body.status).toString().toUpperCase();
+    const { id } = await params;
+    const result = await db.collection('payments').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { paymentStatus: newStatus, updatedAt: new Date() } }
+    );
+    if (result.matchedCount === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Payment not found' },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json({ success: true, data: { message: 'Payment status updated' } });
+  }
 
     // Validate required fields
     const requiredFields = ['patientId', 'patientName', 'amount', 'paymentMethod', 'paymentStatus'];
@@ -89,8 +116,9 @@ export async function PUT(
       updatedAt: new Date(),
     };
 
+    const { id } = await params;
     const result = await db.collection('payments').updateOne(
-      { _id: params.id },
+      { _id: new ObjectId(id) },
       { $set: updateData }
     );
 
@@ -116,7 +144,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
@@ -126,7 +154,10 @@ export async function DELETE(
       throw new Error('Database connection not available');
     }
 
-    const result = await db.collection('payments').deleteOne({ _id: params.id });
+    const { id } = await params;
+    const result = await db
+      .collection('payments')
+      .deleteOne({ _id: new ObjectId(id) });
 
     if (result.deletedCount === 0) {
       return NextResponse.json(
