@@ -77,10 +77,83 @@ export async function PUT(
     return NextResponse.json({ success: true, data: { message: 'Payment status updated' } });
   }
 
-    // Validate required fields
+    // Merge with existing doc to allow partial updates from the client
+    const { id } = await params;
+    const existing = await db.collection('payments').findOne({ _id: new ObjectId(id) });
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: 'Payment not found' },
+        { status: 404 }
+      );
+    }
+
+    const updateData = {
+      patientId: body.patientId ?? existing.patientId,
+      patientName: body.patientName ?? existing.patientName,
+
+      // Order Integration
+      orderId: body.orderId ?? existing.orderId ?? null,
+      orderType: body.orderType ?? existing.orderType ?? null,
+      orderReference: body.orderReference ?? existing.orderReference ?? null,
+      drugOrderId: body.drugOrderId ?? existing.drugOrderId ?? null,
+
+      // Payment Details
+      amount:
+        body.amount !== undefined && body.amount !== null
+          ? parseFloat(body.amount)
+          : existing.amount,
+      paymentMethod: body.paymentMethod ?? existing.paymentMethod,
+      paymentStatus: body.paymentStatus ?? existing.paymentStatus,
+      paymentType: body.paymentType ?? existing.paymentType ?? 'OTHER',
+
+      // Drug Sale Specific
+      items: body.items !== undefined ? body.items : existing.items || [],
+      discount:
+        body.discount !== undefined && body.discount !== null
+          ? parseFloat(body.discount)
+          : existing.discount || 0,
+      finalAmount:
+        body.finalAmount !== undefined && body.finalAmount !== null
+          ? parseFloat(body.finalAmount)
+          : existing.finalAmount ?? existing.amount,
+
+      // General Fields
+      transactionReference:
+        body.transactionReference !== undefined
+          ? body.transactionReference
+          : existing.transactionReference || '',
+      notes: body.notes !== undefined ? body.notes : existing.notes || '',
+      recordedBy: body.recordedBy ?? existing.recordedBy ?? 'System',
+      updatedAt: new Date(),
+    } as any;
+
+    // If patientName is missing/empty but we have patientId, try to backfill from patients collection
+    if (
+      (!updateData.patientName ||
+        (typeof updateData.patientName === 'string' && updateData.patientName.trim() === '')) &&
+      updateData.patientId
+    ) {
+      try {
+        const patient = await db.collection('patients').findOne({ patientId: updateData.patientId });
+        if (patient) {
+          const fullName = [patient.firstName, patient.lastName].filter(Boolean).join(' ').trim();
+          if (fullName) {
+            updateData.patientName = fullName;
+          }
+        }
+      } catch (e) {
+        // ignore lookup failure; validation below will handle if still missing
+      }
+    }
+
+    // Validate required fields after merge
     const requiredFields = ['patientId', 'patientName', 'amount', 'paymentMethod', 'paymentStatus'];
     for (const field of requiredFields) {
-      if (!body[field]) {
+      if (
+        updateData[field] === undefined ||
+        updateData[field] === null ||
+        (typeof updateData[field] === 'string' && updateData[field].trim() === '')
+      ) {
         return NextResponse.json(
           { success: false, error: `Missing required field: ${field}` },
           { status: 400 }
@@ -88,35 +161,6 @@ export async function PUT(
       }
     }
 
-    const updateData = {
-      patientId: body.patientId,
-      patientName: body.patientName,
-      
-      // Order Integration
-      orderId: body.orderId || null,
-      orderType: body.orderType || null,
-      orderReference: body.orderReference || null,
-      drugOrderId: body.drugOrderId || null,
-      
-      // Payment Details
-      amount: parseFloat(body.amount),
-      paymentMethod: body.paymentMethod,
-      paymentStatus: body.paymentStatus,
-      paymentType: body.paymentType || 'OTHER',
-      
-      // Drug Sale Specific
-      items: body.items || [],
-      discount: parseFloat(body.discount) || 0,
-      finalAmount: parseFloat(body.finalAmount) || parseFloat(body.amount),
-      
-      // General Fields
-      transactionReference: body.transactionReference || '',
-      notes: body.notes || '',
-      recordedBy: body.recordedBy || 'System',
-      updatedAt: new Date(),
-    };
-
-    const { id } = await params;
     const result = await db.collection('payments').updateOne(
       { _id: new ObjectId(id) },
       { $set: updateData }

@@ -180,6 +180,11 @@ export default function LabResultsPage() {
     page * pageSize
   );
 
+  // Currently selected patient derived from dropdown selection
+  const selectedPatient: any | undefined = patients.find(
+    (p: any) => p.patientId === formData.patientId
+  );
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "COMPLETED":
@@ -951,6 +956,14 @@ export default function LabResultsPage() {
                     })),
                   ]}
                 />
+                {selectedPatient && (
+                  <div className="mt-2 text-xs text-text-secondary bg-card-bg border border-border-color rounded p-2">
+                    <div className="font-medium text-text-primary mb-1">Current Illness / Symptoms</div>
+                    <div className="whitespace-pre-wrap">
+                      {(selectedPatient.medicalHistory || selectedPatient.notes || "No symptoms recorded by nurse.")}
+                    </div>
+                  </div>
+                )}
               </FormField>
 
               <FormField label="Test Type" required error={errors.testType}>
@@ -1113,6 +1126,14 @@ export default function LabResultsPage() {
                     })),
                   ]}
                 />
+                {selectedPatient && (
+                  <div className="mt-2 text-xs text-text-secondary bg-card-bg border border-border-color rounded p-2">
+                    <div className="font-medium text-text-primary mb-1">Current Illness / Symptoms</div>
+                    <div className="whitespace-pre-wrap">
+                      {(selectedPatient.medicalHistory || selectedPatient.notes || "No symptoms recorded by nurse.")}
+                    </div>
+                  </div>
+                )}
               </FormField>
 
               <FormField label="Test Type" required error={errors.testType}>

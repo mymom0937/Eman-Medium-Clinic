@@ -12,11 +12,47 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const isSummary = (searchParams.get('summary') || 'false') === 'true';
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
     const method = searchParams.get('method') || '';
+
+    // Summary branch: aggregate totals across the entire collection
+    if (isSummary) {
+      const match: any = {};
+      if (status) {
+        // Case-insensitive exact match for paymentStatus
+        match.paymentStatus = { $regex: `^${status}$`, $options: 'i' };
+      }
+      if (method) {
+        // Case-insensitive exact match for paymentMethod
+        match.paymentMethod = { $regex: `^${method}$`, $options: 'i' };
+      }
+
+      const cursor = db.collection('payments').aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: null,
+            totalAmount: { $sum: { $ifNull: ['$finalAmount', '$amount'] } },
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      const results = await cursor.toArray();
+      const summary = results[0] || { totalAmount: 0, count: 0 };
+
+      return NextResponse.json({
+        success: true,
+        summary: {
+          totalAmount: summary.totalAmount || 0,
+          count: summary.count || 0,
+        },
+      });
+    }
 
     const skip = (page - 1) * limit;
 
@@ -31,10 +67,11 @@ export async function GET(request: NextRequest) {
       ];
     }
     if (status) {
-      query.status = status;
+      // Correct field names for filtering
+      query.paymentStatus = status.toUpperCase();
     }
     if (method) {
-      query.method = method;
+      query.paymentMethod = method.toUpperCase();
     }
 
     const payments = await db

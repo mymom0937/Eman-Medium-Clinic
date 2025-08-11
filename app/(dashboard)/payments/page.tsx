@@ -233,6 +233,45 @@ export default function PaymentsPage() {
     };
   };
 
+  // Helper: fetch walk-in services and merge into stats
+  const computeAndSetStats = async (paymentsData: Payment[]) => {
+    const baseStats = calculateStats(paymentsData);
+    let walkInTotal = 0;
+    let completedPaymentsTotal = 0;
+    try {
+      const res = await fetch("/api/walk-in-services");
+      const json = await res.json();
+      if (res.ok && json.success) {
+        const services = Array.isArray(json.data) ? json.data : [];
+        // Match Walk-in Services page: sum all amounts
+        walkInTotal = services.reduce(
+          (sum: number, s: any) => sum + (Number(s.amount) || 0),
+          0
+        );
+      }
+    } catch (err) {
+      console.error("Failed to fetch walk-in services for stats:", err);
+    }
+
+    try {
+      // Fetch server-side summary for COMPLETED payments across entire collection
+      const res = await fetch("/api/payments?summary=true&status=COMPLETED");
+      const json = await res.json();
+      if (res.ok && json.success && json.summary) {
+        completedPaymentsTotal = Number(json.summary.totalAmount) || 0;
+      }
+    } catch (err) {
+      console.error("Failed to fetch payments summary for stats:", err);
+    }
+
+    setStats({
+      ...baseStats,
+      // Override Total Revenue with the server-side aggregate of COMPLETED payments only
+      totalRevenue: completedPaymentsTotal,
+      totalWalkInServices: walkInTotal,
+    });
+  };
+
   // Load payments and patients data on component mount
   useEffect(() => {
     const loadData = async () => {
@@ -244,9 +283,9 @@ export default function PaymentsPage() {
         const paymentsResponse = await fetch("/api/payments");
         const paymentsResult = await paymentsResponse.json();
         if (paymentsResponse.ok && paymentsResult.success) {
-          setPayments(paymentsResult.data || []);
-          const stats = calculateStats(paymentsResult.data || []);
-          setStats(stats);
+          const paymentsData: Payment[] = paymentsResult.data || [];
+          setPayments(paymentsData);
+          await computeAndSetStats(paymentsData);
         }
 
         // Fetch all patients across pages to populate dropdown completely
@@ -453,9 +492,9 @@ export default function PaymentsPage() {
           const paymentsResponse = await fetch("/api/payments");
           const paymentsResult = await paymentsResponse.json();
           if (paymentsResponse.ok && paymentsResult.success) {
-            setPayments(paymentsResult.data || []);
-            const stats = calculateStats(paymentsResult.data || []);
-            setStats(stats);
+            const paymentsData: Payment[] = paymentsResult.data || [];
+            setPayments(paymentsData);
+            await computeAndSetStats(paymentsData);
           }
         };
         loadData();
@@ -609,9 +648,9 @@ export default function PaymentsPage() {
         const paymentsResponse = await fetch("/api/payments");
         const paymentsResult = await paymentsResponse.json();
         if (paymentsResponse.ok && paymentsResult.success) {
-          setPayments(paymentsResult.data || []);
-          const stats = calculateStats(paymentsResult.data || []);
-          setStats(stats);
+          const paymentsData: Payment[] = paymentsResult.data || [];
+          setPayments(paymentsData);
+          await computeAndSetStats(paymentsData);
         }
       } else {
         toastManager.error(result.message || "Failed to delete payment");
@@ -691,9 +730,9 @@ export default function PaymentsPage() {
         const paymentsResponse = await fetch("/api/payments");
         const paymentsResult = await paymentsResponse.json();
         if (paymentsResponse.ok && paymentsResult.success) {
-          setPayments(paymentsResult.data || []);
-          const stats = calculateStats(paymentsResult.data || []);
-          setStats(stats);
+          const paymentsData: Payment[] = paymentsResult.data || [];
+          setPayments(paymentsData);
+          await computeAndSetStats(paymentsData);
         }
       } else {
         toastManager.error(result.message || "Failed to update payment");
@@ -733,9 +772,9 @@ export default function PaymentsPage() {
         const paymentsResponse = await fetch("/api/payments");
         const paymentsResult = await paymentsResponse.json();
         if (paymentsResponse.ok && paymentsResult.success) {
-          setPayments(paymentsResult.data || []);
-          const stats = calculateStats(paymentsResult.data || []);
-          setStats(stats);
+          const paymentsData: Payment[] = paymentsResult.data || [];
+          setPayments(paymentsData);
+          await computeAndSetStats(paymentsData);
         }
       } else {
         toastManager.error(result.message || "Failed to update payment status");
