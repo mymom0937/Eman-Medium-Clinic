@@ -4,6 +4,7 @@ export const REPORT_TYPES = [
   { value: 'lab-results', label: 'Lab Results Report', description: 'Laboratory test results and completion rates' },
   { value: 'drug-orders', label: 'Drug Orders Report', description: 'Prescription and dispensing statistics' },
   { value: 'inventories', label: 'Inventory Report', description: 'Drug inventory levels and stock management' },
+  { value: 'sales', label: 'Sales Report', description: 'Pharmacy sales and revenue statistics' },
   { value: 'payments', label: 'Payments Report', description: 'Payment processing and financial transactions' },
   { value: 'walk-in-services', label: 'Walk-in Services Report', description: 'Quick services and direct patient care' },
 ];

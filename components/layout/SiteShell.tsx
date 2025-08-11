@@ -20,6 +20,7 @@ const dashboardSegments = new Set([
   "feedback",
   "profile",
   "walk-in-services",
+  "sales",
 ]);
 
 export const SiteShell: React.FC<React.PropsWithChildren> = ({ children }) => {

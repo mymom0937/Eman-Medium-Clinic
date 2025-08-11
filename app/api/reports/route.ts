@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         reportData = await generateInventoryReport(db, queryStartDate, queryEndDate);
         break;
       case 'sales':
-        reportData = await generatePaymentsReport(db, queryStartDate, queryEndDate);
+        reportData = await generateSalesReport(db, queryStartDate, queryEndDate);
         break;
       case 'payments':
         reportData = await generatePaymentsReport(db, queryStartDate, queryEndDate);
@@ -103,6 +103,42 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Sales Report
+async function generateSalesReport(db: any, startDate: Date, endDate: Date) {
+  const sales = await db.collection('sales').find({
+    createdAt: { $gte: startDate, $lte: endDate }
+  }).toArray();
+
+  const totalSales = sales.length;
+  const totalRevenue = sales.reduce((sum: number, s: any) => sum + Number(s.total || 0), 0);
+  const itemsCount = sales.reduce((sum: number, s: any) => sum + (Array.isArray(s.items) ? s.items.reduce((a: number, it: any) => a + Number(it.quantity || 0), 0) : 0), 0);
+
+  const paymentMethodDistribution = sales.reduce((acc: any, s: any) => {
+    const method = s.paymentMethod || 'UNKNOWN';
+    acc[method] = (acc[method] || 0) + 1;
+    return acc;
+  }, {});
+
+  return {
+    summary: {
+      totalSales,
+      totalRevenue,
+      averageSale: totalSales > 0 ? totalRevenue / totalSales : 0,
+      totalItems: itemsCount,
+    },
+    paymentMethodDistribution,
+    sales: sales.map((s: any) => ({
+      saleId: s.saleId,
+      patientName: s.patientName,
+      total: Number(s.total || 0),
+      paymentMethod: s.paymentMethod,
+      paymentStatus: s.paymentStatus,
+      createdAt: s.createdAt,
+      items: (s.items || []).map((i: any) => ({ drugName: i.drugName, quantity: i.quantity, unitPrice: i.unitPrice, totalPrice: i.totalPrice }))
+    }))
+  };
 }
 
 async function generatePatientReport(db: any, startDate: Date, endDate: Date) {
@@ -358,11 +394,12 @@ async function generateWalkInServicesReport(db: any, startDate: Date, endDate: D
 }
 
 async function generateComprehensiveReport(db: any, startDate: Date, endDate: Date) {
-  const [patients, labResults, drugOrders, drugs, payments, walkInServices] = await Promise.all([
+  const [patients, labResults, drugOrders, drugs, sales, payments, walkInServices] = await Promise.all([
     db.collection('patients').find({}).toArray(),
     db.collection('labresults').find({}).toArray(),
     db.collection('drugorders').find({}).toArray(),
     db.collection('drugs').find({}).toArray(),
+    db.collection('sales').find({}).toArray(),
     db.collection('payments').find({}).toArray(),
     db.collection('walkinservices').find({}).toArray()
   ]);
@@ -373,7 +410,7 @@ async function generateComprehensiveReport(db: any, startDate: Date, endDate: Da
       totalLabTests: labResults.length,
       totalDrugOrders: drugOrders.length,
       totalDrugs: drugs.length,
-      totalSales: payments.length, // Use payments as sales
+      totalSales: sales.length,
       totalPayments: payments.length,
       totalWalkInServices: walkInServices.length
     },

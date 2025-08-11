@@ -21,8 +21,29 @@ export async function generatePatientId(): Promise<string> {
  * Generate sale ID (S001, S002, etc.)
  */
 export async function generateSaleId(): Promise<string> {
-  // This will be implemented in the Sale model
-  return 'S001'; // Placeholder
+  try {
+    const { connectToDatabase } = await import('@/config/database');
+    const { Sale } = await import('@/models/sale');
+
+    await connectToDatabase();
+
+    const latest = await Sale.findOne().sort({ saleId: -1 });
+
+    let nextNumber = 1;
+    if (latest && latest.saleId) {
+      const lastNumber = parseInt(latest.saleId.replace('SAL', ''));
+      if (!isNaN(lastNumber)) {
+        nextNumber = lastNumber + 1;
+      }
+    }
+
+    const formattedNumber = nextNumber.toString().padStart(6, '0');
+    return `SAL${formattedNumber}`;
+  } catch (error) {
+    console.error('Error generating sale ID:', error);
+    const timestamp = Date.now().toString().slice(-6);
+    return `SAL${timestamp}`;
+  }
 }
 
 /**

@@ -122,7 +122,7 @@ export default function DrugOrdersPage() {
           labResultsResponse,
         ] = await Promise.all([
           fetch("/api/drug-orders"),
-          fetch("/api/drugs"),
+          fetch("/api/drugs?limit=1000&page=1"),
           // High limit to retrieve full patient list
           fetch("/api/patients?limit=1000&page=1"),
           fetch("/api/lab-results"),
@@ -449,6 +449,29 @@ export default function DrugOrdersPage() {
     setFormData((prev) => {
       const updatedItems = [...prev.items];
       updatedItems[index] = { ...updatedItems[index], [field]: value };
+
+      // When changing drug selection, ensure name sync and clamp quantity to stock
+      if (field === "drugId" && value) {
+        const drug = drugs.find((d) => d._id === value);
+        if (drug) {
+          updatedItems[index].drugName = drug.name;
+          const qty = Number(updatedItems[index].quantity || 0);
+          if (qty > (drug.stockQuantity ?? 0)) {
+            toastManager.info("Quantity reduced to available stock");
+            updatedItems[index].quantity = drug.stockQuantity ?? 0;
+          }
+        }
+      }
+
+      // Guard: do not exceed available stock
+      if (field === "quantity") {
+        const drugId = updatedItems[index].drugId;
+        const drug = drugs.find((d) => d._id === drugId);
+        if (drug && typeof value === "number" && value > (drug.stockQuantity ?? 0)) {
+          toastManager.error("Requested quantity exceeds available stock");
+          updatedItems[index].quantity = drug.stockQuantity ?? 0;
+        }
+      }
 
       // Recalculate total price
       if (field === "quantity" || field === "unitPrice") {
@@ -1034,7 +1057,7 @@ export default function DrugOrdersPage() {
                               { value: "", label: "Select a drug..." },
                               ...drugs.map((drug) => ({
                                 value: drug._id,
-                                label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
+                                label: `${drug.name} - ${drug.strength} (${drug.dosageForm})${(userRole === USER_ROLES.PHARMACIST || userRole === USER_ROLES.SUPER_ADMIN) ? ` | Stock: ${drug.stockQuantity}` : ''}`,
                               })),
                             ]}
                             className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"
@@ -1379,7 +1402,7 @@ export default function DrugOrdersPage() {
                               { value: "", label: "Select a drug..." },
                               ...drugs.map((drug) => ({
                                 value: drug._id,
-                                label: `${drug.name} - ${drug.strength} (${drug.dosageForm})`,
+                                label: `${drug.name} - ${drug.strength} (${drug.dosageForm})${(userRole === USER_ROLES.PHARMACIST || userRole === USER_ROLES.SUPER_ADMIN) ? ` | Stock: ${drug.stockQuantity}` : ''}`,
                               })),
                             ]}
                             className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary bg-background"

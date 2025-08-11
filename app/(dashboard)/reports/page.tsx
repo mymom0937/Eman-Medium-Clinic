@@ -79,11 +79,11 @@ export default function ReportsPage() {
   // Viewport-based rendering toggle (lg breakpoint: 1024px)
   const [isLgUp, setIsLgUp] = useState<boolean>(true);
 
-  // Load initial report data
+  // Stop auto-generation: clear existing report when filters change; user must click Generate
   useEffect(() => {
-    if (isLoaded) {
-      generateReport();
-    }
+    if (!isLoaded) return;
+    setReportData(null);
+    setReportMeta(null);
   }, [isLoaded, selectedReport, selectedDateRange, startDate, endDate]);
 
   // Setup viewport listener

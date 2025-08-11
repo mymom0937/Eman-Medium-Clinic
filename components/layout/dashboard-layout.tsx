@@ -36,10 +36,12 @@ export function DashboardLayout({
             <div aria-hidden className="h-16 md:h-20" />
           </div>
           <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6">
-            <div className="max-w-full space-y-8">
+            <div className="max-w-full min-h-full flex flex-col">
               {children}
-              {/* Dashboard Footer (scrolls with content to avoid overlap) */}
-              <Footer />
+              {/* Stick footer to bottom of viewport when content is short */}
+              <div className="mt-auto">
+                <Footer />
+              </div>
             </div>
           </main>
         </div>
