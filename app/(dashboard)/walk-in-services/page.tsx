@@ -167,46 +167,6 @@ export default function WalkInServicesPage() {
 
         if (response.ok && result.success) {
           setServices(result.data || []);
-
-          // Calculate stats
-          const totalServices = result.data.length;
-          const totalRevenue = result.data.reduce(
-            (sum: number, service: WalkInService) => sum + service.amount,
-            0
-          );
-
-          const today = new Date();
-          const todayServices = result.data.filter((service: WalkInService) => {
-            const serviceDate = new Date(service.createdAt);
-            return serviceDate.toDateString() === today.toDateString();
-          }).length;
-
-          const todayRevenue = result.data
-            .filter((service: WalkInService) => {
-              const serviceDate = new Date(service.createdAt);
-              return serviceDate.toDateString() === today.toDateString();
-            })
-            .reduce(
-              (sum: number, service: WalkInService) => sum + service.amount,
-              0
-            );
-
-          const pendingPayments = result.data.filter(
-            (service: WalkInService) => service.paymentStatus === "PENDING"
-          ).length;
-
-          const completedServices = result.data.filter(
-            (service: WalkInService) => service.paymentStatus === "COMPLETED"
-          ).length;
-
-          setStats({
-            totalServices,
-            totalRevenue,
-            todayServices,
-            todayRevenue,
-            pendingPayments,
-            completedServices,
-          });
         }
       } catch (error) {
         console.error("Error loading services:", error);
@@ -219,6 +179,51 @@ export default function WalkInServicesPage() {
       loadServices();
     }
   }, [isLoaded]);
+
+  // Recalculate stats any time the services list changes
+  useEffect(() => {
+    if (!services) return;
+    try {
+      const totalServices = services.length;
+      const totalRevenue = services.reduce(
+        (sum: number, service: WalkInService) => sum + (Number(service.amount) || 0),
+        0
+      );
+
+      const today = new Date();
+      const todayServices = services.filter((service: WalkInService) => {
+        const serviceDate = new Date(service.createdAt);
+        return serviceDate.toDateString() === today.toDateString();
+      }).length;
+
+      const todayRevenue = services
+        .filter((service: WalkInService) => {
+          const serviceDate = new Date(service.createdAt);
+          return serviceDate.toDateString() === today.toDateString();
+        })
+        .reduce((sum: number, service: WalkInService) => sum + (Number(service.amount) || 0), 0);
+
+      const pendingPayments = services.filter(
+        (service: WalkInService) => service.paymentStatus === "PENDING"
+      ).length;
+
+      const completedServices = services.filter(
+        (service: WalkInService) => service.paymentStatus === "COMPLETED"
+      ).length;
+
+      setStats({
+        totalServices,
+        totalRevenue,
+        todayServices,
+        todayRevenue,
+        pendingPayments,
+        completedServices,
+      });
+    } catch (err) {
+      // fail-safe: don't crash UI if a bad record slips in
+      console.error("Failed to recompute walk-in services stats:", err);
+    }
+  }, [services]);
 
   // Ensure this hook is declared before any conditional return to maintain stable hook order
   useEffect(() => {
@@ -642,7 +647,7 @@ export default function WalkInServicesPage() {
     }
   };
 
-  // Prepare display stats
+  // Prepare display stats (remove duplicate/secondary set)
   const displayStats = [
     {
       title: "Total Services",
@@ -657,20 +662,6 @@ export default function WalkInServicesPage() {
       change: "+12% from last week",
       changeType: "positive" as const,
       icon: "💰",
-    },
-    {
-      title: "Today's Services",
-      value: stats.todayServices.toString(),
-      change: "+3 from yesterday",
-      changeType: "positive" as const,
-      icon: "📅",
-    },
-    {
-      title: "Today's Revenue",
-      value: `EBR ${stats.todayRevenue.toFixed(2)}`,
-      change: "+8% from yesterday",
-      changeType: "positive" as const,
-      icon: "💵",
     },
   ];
 

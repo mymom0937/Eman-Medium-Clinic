@@ -77,6 +77,11 @@ export default function InventoryPage() {
   // Image upload state
   const [drugImages, setDrugImages] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  // Custom entry states for category and manufacturer
+  const CUSTOM_CATEGORY_VALUE = "__CUSTOM_CATEGORY__";
+  const CUSTOM_SUPPLIER_VALUE = "__CUSTOM_SUPPLIER__";
+  const [customCategory, setCustomCategory] = useState<string>("");
+  const [customSupplier, setCustomSupplier] = useState<string>("");
 
   // Pagination (moved above conditional return to preserve hook order)
   const [page, setPage] = useState(1);
@@ -272,6 +277,10 @@ export default function InventoryPage() {
     }
     if (!formData.category) {
       newErrors.category = "Category is required";
+    } else if (
+      formData.category === CUSTOM_CATEGORY_VALUE && !customCategory.trim()
+    ) {
+      newErrors.category = "Please enter a custom category";
     }
     if (!formData.quantity || parseInt(formData.quantity) < 0) {
       newErrors.quantity = "Valid quantity is required";
@@ -283,7 +292,11 @@ export default function InventoryPage() {
       newErrors.expiryDate = "Expiry date is required";
     }
     if (!formData.supplier) {
-      newErrors.supplier = "Supplier is required";
+      newErrors.supplier = "Manufacturer is required";
+    } else if (
+      formData.supplier === CUSTOM_SUPPLIER_VALUE && !customSupplier.trim()
+    ) {
+      newErrors.supplier = "Please enter a custom manufacturer";
     }
     // Status is now optional - no validation needed
 
@@ -299,13 +312,18 @@ export default function InventoryPage() {
       const formDataToSend = new FormData();
       formDataToSend.append("name", formData.name);
       formDataToSend.append("description", formData.description);
-      formDataToSend.append("category", formData.category.replace("_", " "));
+      const categoryForSubmit =
+        formData.category === CUSTOM_CATEGORY_VALUE
+          ? customCategory.trim()
+          : formData.category.replace("_", " ");
+      formDataToSend.append("category", categoryForSubmit);
       formDataToSend.append("price", formData.unitPrice);
       formDataToSend.append("quantity", formData.quantity);
-      formDataToSend.append(
-        "manufacturer",
-        formData.supplier.replace("_", " ")
-      );
+      const manufacturerForSubmit =
+        formData.supplier === CUSTOM_SUPPLIER_VALUE
+          ? customSupplier.trim()
+          : formData.supplier.replace("_", " ");
+      formDataToSend.append("manufacturer", manufacturerForSubmit);
       formDataToSend.append("expiryDate", formData.expiryDate);
 
       // Add images to form data
@@ -369,16 +387,49 @@ export default function InventoryPage() {
 
   const handleEditDrug = (drug: Drug) => {
     setEditingDrug(drug);
+    // Determine whether category/manufacturer are from presets or custom
+    const normalized = (s: string) => s.toLowerCase();
+
+    // Category handling
+    const presetCategoryValues = [
+      "pain relief",
+      "antibiotics",
+      "vitamins",
+      "diabetes",
+      "hypertension",
+      "respiratory",
+      "gastrointestinal",
+      "other",
+    ];
+    const incomingCategory = normalized(drug.category);
+    const isKnownCategory = presetCategoryValues.includes(incomingCategory);
+
+    // Supplier handling presets (values use underscores in options)
+    const presetSupplierValues = [
+      "pharmacorp",
+      "medsupply",
+      "healthcare_plus",
+      "medical_express",
+      "other",
+    ];
+    const incomingSupplier = drug.manufacturer
+      ? drug.manufacturer.toLowerCase().replace(/\s+/g, "_")
+      : "";
+    const isKnownSupplier = presetSupplierValues.includes(incomingSupplier);
+
     setFormData({
       name: drug.name,
-      category: drug.category.toLowerCase().replace(" ", "_"),
+      category: isKnownCategory ? incomingCategory : CUSTOM_CATEGORY_VALUE,
       quantity: drug.stockQuantity.toString(),
       unitPrice: drug.sellingPrice.toString(),
       expiryDate: drug.expiryDate || "",
-      supplier: drug.manufacturer.toLowerCase().replace(" ", "_"),
+      supplier: isKnownSupplier ? incomingSupplier : CUSTOM_SUPPLIER_VALUE,
       status: getDrugStatus(drug.stockQuantity).toLowerCase(),
       description: drug.description || "",
     });
+
+    setCustomCategory(isKnownCategory ? "" : drug.category);
+    setCustomSupplier(isKnownSupplier ? "" : drug.manufacturer);
 
     // Set existing image if available
     if (drug.imageUrl) {
@@ -399,13 +450,18 @@ export default function InventoryPage() {
       const formDataToSend = new FormData();
       formDataToSend.append("name", formData.name);
       formDataToSend.append("description", formData.description);
-      formDataToSend.append("category", formData.category.replace("_", " "));
+      const categoryForSubmit =
+        formData.category === CUSTOM_CATEGORY_VALUE
+          ? customCategory.trim()
+          : formData.category.replace("_", " ");
+      formDataToSend.append("category", categoryForSubmit);
       formDataToSend.append("price", formData.unitPrice);
       formDataToSend.append("quantity", formData.quantity);
-      formDataToSend.append(
-        "manufacturer",
-        formData.supplier.replace("_", " ")
-      );
+      const manufacturerForSubmit =
+        formData.supplier === CUSTOM_SUPPLIER_VALUE
+          ? customSupplier.trim()
+          : formData.supplier.replace("_", " ");
+      formDataToSend.append("manufacturer", manufacturerForSubmit);
       formDataToSend.append("expiryDate", formData.expiryDate);
 
       // Add new images to form data
@@ -526,6 +582,8 @@ export default function InventoryPage() {
       description: "",
     });
     setErrors({});
+    setCustomCategory("");
+    setCustomSupplier("");
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -600,7 +658,8 @@ export default function InventoryPage() {
     },
   ];
 
-  const DRUG_CATEGORIES = [
+  // Category options for filtering (includes All)
+  const DRUG_CATEGORY_FILTER_OPTIONS = [
     { value: "all", label: "All Categories" },
     { value: "pain relief", label: "Pain Relief" },
     { value: "antibiotics", label: "Antibiotics" },
@@ -609,7 +668,20 @@ export default function InventoryPage() {
     { value: "hypertension", label: "Hypertension" },
     { value: "respiratory", label: "Respiratory" },
     { value: "gastrointestinal", label: "Gastrointestinal" },
-    { value: "other", label: "Other" },
+    // { value: "other", label: "Other" },
+  ];
+
+  // Category options for forms (no All, includes custom option)
+  const DRUG_CATEGORIES_FORM = [
+    { value: "pain relief", label: "Pain Relief" },
+    { value: "antibiotics", label: "Antibiotics" },
+    { value: "vitamins", label: "Vitamins" },
+    { value: "diabetes", label: "Diabetes" },
+    { value: "hypertension", label: "Hypertension" },
+    { value: "respiratory", label: "Respiratory" },
+    { value: "gastrointestinal", label: "Gastrointestinal" },
+    // { value: "other", label: "Other" },
+    { value: CUSTOM_CATEGORY_VALUE, label: "Other (Add New)" },
   ];
 
   const DRUG_STATUS_OPTIONS = [
@@ -632,6 +704,12 @@ export default function InventoryPage() {
     { value: "healthcare_plus", label: "Healthcare Plus" },
     { value: "medical_express", label: "Medical Express" },
     { value: "other", label: "Other" },
+  ];
+
+  // Supplier options for forms (replace generic Other with custom input option)
+  const SUPPLIERS_FORM = [
+    ...SUPPLIERS.filter((s) => s.value !== "other"),
+    { value: CUSTOM_SUPPLIER_VALUE, label: "Other (Add New)" },
   ];
 
   return (
@@ -684,7 +762,7 @@ export default function InventoryPage() {
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background text-sm"
               >
-                {DRUG_CATEGORIES.map((option) => (
+                {DRUG_CATEGORY_FILTER_OPTIONS.map((option) => (
                   <option
                     key={option.value}
                     value={option.value}
@@ -1025,13 +1103,25 @@ export default function InventoryPage() {
               </FormField>
 
               <FormField label="Category" required error={errors.category}>
-                <Select
-                  value={formData.category}
-                  onChange={(e) =>
-                    handleInputChange("category", e.target.value)
-                  }
-                  options={DRUG_CATEGORIES}
-                />
+                <div className="space-y-2">
+                  <Select
+                    value={formData.category}
+                    onChange={(e) => {
+                      handleInputChange("category", e.target.value);
+                      if (e.target.value !== CUSTOM_CATEGORY_VALUE) {
+                        setCustomCategory("");
+                      }
+                    }}
+                    options={DRUG_CATEGORIES_FORM}
+                  />
+                  {formData.category === CUSTOM_CATEGORY_VALUE && (
+                    <Input
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      placeholder="Enter custom category"
+                    />
+                  )}
+                </div>
               </FormField>
 
               <FormField label="Quantity" required error={errors.quantity}>
@@ -1074,13 +1164,25 @@ export default function InventoryPage() {
               </FormField>
 
               <FormField label="Manufacturer" required error={errors.supplier}>
-                <Select
-                  value={formData.supplier}
-                  onChange={(e) =>
-                    handleInputChange("supplier", e.target.value)
-                  }
-                  options={SUPPLIERS}
-                />
+                <div className="space-y-2">
+                  <Select
+                    value={formData.supplier}
+                    onChange={(e) => {
+                      handleInputChange("supplier", e.target.value);
+                      if (e.target.value !== CUSTOM_SUPPLIER_VALUE) {
+                        setCustomSupplier("");
+                      }
+                    }}
+                    options={SUPPLIERS_FORM}
+                  />
+                  {formData.supplier === CUSTOM_SUPPLIER_VALUE && (
+                    <Input
+                      value={customSupplier}
+                      onChange={(e) => setCustomSupplier(e.target.value)}
+                      placeholder="Enter custom manufacturer"
+                    />
+                  )}
+                </div>
               </FormField>
 
               <FormField label="Status" error={errors.status}>
@@ -1209,13 +1311,25 @@ export default function InventoryPage() {
               </FormField>
 
               <FormField label="Category" required error={errors.category}>
-                <Select
-                  value={formData.category}
-                  onChange={(e) =>
-                    handleInputChange("category", e.target.value)
-                  }
-                  options={DRUG_CATEGORIES}
-                />
+                <div className="space-y-2">
+                  <Select
+                    value={formData.category}
+                    onChange={(e) => {
+                      handleInputChange("category", e.target.value);
+                      if (e.target.value !== CUSTOM_CATEGORY_VALUE) {
+                        setCustomCategory("");
+                      }
+                    }}
+                    options={DRUG_CATEGORIES_FORM}
+                  />
+                  {formData.category === CUSTOM_CATEGORY_VALUE && (
+                    <Input
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      placeholder="Enter custom category"
+                    />
+                  )}
+                </div>
               </FormField>
 
               <FormField label="Quantity" required error={errors.quantity}>
@@ -1258,13 +1372,25 @@ export default function InventoryPage() {
               </FormField>
 
               <FormField label="Manufacturer" required error={errors.supplier}>
-                <Select
-                  value={formData.supplier}
-                  onChange={(e) =>
-                    handleInputChange("supplier", e.target.value)
-                  }
-                  options={SUPPLIERS}
-                />
+                <div className="space-y-2">
+                  <Select
+                    value={formData.supplier}
+                    onChange={(e) => {
+                      handleInputChange("supplier", e.target.value);
+                      if (e.target.value !== CUSTOM_SUPPLIER_VALUE) {
+                        setCustomSupplier("");
+                      }
+                    }}
+                    options={SUPPLIERS_FORM}
+                  />
+                  {formData.supplier === CUSTOM_SUPPLIER_VALUE && (
+                    <Input
+                      value={customSupplier}
+                      onChange={(e) => setCustomSupplier(e.target.value)}
+                      placeholder="Enter custom manufacturer"
+                    />
+                  )}
+                </div>
               </FormField>
 
               <FormField label="Status" error={errors.status}>
