@@ -50,6 +50,7 @@ interface MinimalLabResult {
   _id: string;
   labResultId?: string;
   patientId: string;
+  notes?: string; // Lab Test Description captured on the lab request
   createdAt?: string;
   updatedAt?: string;
 }
@@ -92,6 +93,9 @@ export default function DrugOrdersPage() {
   const [viewingDrugOrder, setViewingDrugOrder] = useState<DrugOrder | null>(
     null
   );
+  // Holds the most recent lab result for the currently selected patient
+  const [latestLabResultForPatient, setLatestLabResultForPatient] =
+    useState<MinimalLabResult | null>(null);
   const [formData, setFormData] = useState<DrugOrderFormData>({
     patientId: "",
     patientName: "",
@@ -395,6 +399,7 @@ export default function DrugOrdersPage() {
       notes: "",
     });
     setErrors({});
+    setLatestLabResultForPatient(null);
   };
 
   const handleInputChange = (field: keyof DrugOrderFormData, value: string) => {
@@ -905,6 +910,11 @@ export default function DrugOrdersPage() {
                     if (latest?.labResultId) {
                       handleInputChange("labResultId", latest.labResultId);
                     }
+                    setLatestLabResultForPatient(latest || null);
+                    // If no user-provided notes yet, prefill with latest lab description
+                    if (latest?.notes && !formData.notes) {
+                      handleInputChange("notes", latest.notes);
+                    }
                   }
                 }}
                 options={[
@@ -915,6 +925,19 @@ export default function DrugOrdersPage() {
                   })),
                 ]}
               />
+              {latestLabResultForPatient && (
+                <div className="mt-2 text-xs text-text-secondary bg-card-bg border border-border-color rounded p-2">
+                  <div className="font-medium text-text-primary mb-1">Latest Lab Test Description</div>
+                  <div className="whitespace-pre-wrap">
+                    {latestLabResultForPatient.notes || "No lab test description available."}
+                  </div>
+                  {latestLabResultForPatient.labResultId && (
+                    <div className="mt-1 text-[11px] text-text-muted">
+                      ID: {latestLabResultForPatient.labResultId}
+                    </div>
+                  )}
+                </div>
+              )}
             </FormField>
 
             <FormField
@@ -1193,6 +1216,10 @@ export default function DrugOrdersPage() {
                     if (latest?.labResultId) {
                       handleInputChange("labResultId", latest.labResultId);
                     }
+                    setLatestLabResultForPatient(latest || null);
+                    if (latest?.notes && !formData.notes) {
+                      handleInputChange("notes", latest.notes);
+                    }
                   }
                 }}
                 options={[
@@ -1203,6 +1230,19 @@ export default function DrugOrdersPage() {
                   })),
                 ]}
               />
+              {latestLabResultForPatient && (
+                <div className="mt-2 text-xs text-text-secondary bg-card-bg border border-border-color rounded p-2">
+                  <div className="font-medium text-text-primary mb-1">Latest Lab Test Description</div>
+                  <div className="whitespace-pre-wrap">
+                    {latestLabResultForPatient.notes || "No lab test description available."}
+                  </div>
+                  {latestLabResultForPatient.labResultId && (
+                    <div className="mt-1 text-[11px] text-text-muted">
+                      ID: {latestLabResultForPatient.labResultId}
+                    </div>
+                  )}
+                </div>
+              )}
             </FormField>
 
             <FormField
