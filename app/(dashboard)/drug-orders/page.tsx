@@ -50,7 +50,9 @@ interface MinimalLabResult {
   _id: string;
   labResultId?: string;
   patientId: string;
-  notes?: string; // Lab Test Description captured on the lab request
+  notes?: string; // Nurse Lab Test Description
+  resultSummary?: string; // Laboratorist summary/interpretation
+  status?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -971,22 +973,16 @@ export default function DrugOrdersPage() {
                     "patientName",
                     selected ? `${selected.firstName} ${selected.lastName}` : ""
                   );
-                  // Auto-fill latest lab result ID for this patient if available
+                  // Auto-fill latest COMPLETED lab result (fallback to latest any) for this patient if available
                   if (e.target.value) {
-                    const latest = labResults
-                      .filter(
-                        (lr) =>
-                          lr.patientId === e.target.value && lr.labResultId
-                      )
+                    const forPatient = labResults
+                      .filter((lr) => lr.patientId === e.target.value && lr.labResultId)
                       .sort((a, b) => {
-                        const ad = new Date(
-                          a.updatedAt || a.createdAt || 0
-                        ).getTime();
-                        const bd = new Date(
-                          b.updatedAt || b.createdAt || 0
-                        ).getTime();
+                        const ad = new Date(a.updatedAt || a.createdAt || 0).getTime();
+                        const bd = new Date(b.updatedAt || b.createdAt || 0).getTime();
                         return bd - ad;
-                      })[0];
+                      });
+                    const latest = forPatient.find((lr:any)=> lr.status === 'COMPLETED') || forPatient[0];
                     if (latest?.labResultId) {
                       handleInputChange("labResultId", latest.labResultId);
                     }
@@ -1006,10 +1002,18 @@ export default function DrugOrdersPage() {
                 ]}
               />
               {latestLabResultForPatient && (
-                <div className="mt-2 text-xs text-text-secondary bg-card-bg border border-border-color rounded p-2">
-                  <div className="font-medium text-text-primary mb-1">Latest Lab Test Description</div>
-                  <div className="whitespace-pre-wrap">
-                    {latestLabResultForPatient.notes || "No lab test description available."}
+                <div className="mt-2 text-xs text-text-secondary bg-card-bg border border-border-color rounded p-2 space-y-2">
+                  <div>
+                    <div className="font-medium text-text-primary mb-1">Nurse Notes (Lab Test Description)</div>
+                    <div className="whitespace-pre-wrap">
+                      {latestLabResultForPatient.notes || "No nurse description recorded."}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-medium text-text-primary mb-1">Result Summary/Interpretation</div>
+                    <div className="whitespace-pre-wrap">
+                      {latestLabResultForPatient.resultSummary || "Awaiting results"}
+                    </div>
                   </div>
                   {latestLabResultForPatient.labResultId && (
                     <div className="mt-1 text-[11px] text-text-muted">
@@ -1277,22 +1281,16 @@ export default function DrugOrdersPage() {
                     "patientName",
                     selected ? `${selected.firstName} ${selected.lastName}` : ""
                   );
-                  // Auto-fill latest lab result ID for this patient if available
+                  // Auto-fill latest COMPLETED lab result (fallback to latest any) for this patient if available
                   if (e.target.value) {
-                    const latest = labResults
-                      .filter(
-                        (lr) =>
-                          lr.patientId === e.target.value && lr.labResultId
-                      )
+                    const forPatient = labResults
+                      .filter((lr) => lr.patientId === e.target.value && lr.labResultId)
                       .sort((a, b) => {
-                        const ad = new Date(
-                          a.updatedAt || a.createdAt || 0
-                        ).getTime();
-                        const bd = new Date(
-                          b.updatedAt || b.createdAt || 0
-                        ).getTime();
+                        const ad = new Date(a.updatedAt || a.createdAt || 0).getTime();
+                        const bd = new Date(b.updatedAt || b.createdAt || 0).getTime();
                         return bd - ad;
-                      })[0];
+                      });
+                    const latest = forPatient.find((lr:any)=> lr.status === 'COMPLETED') || forPatient[0];
                     if (latest?.labResultId) {
                       handleInputChange("labResultId", latest.labResultId);
                     }
@@ -1311,10 +1309,18 @@ export default function DrugOrdersPage() {
                 ]}
               />
               {latestLabResultForPatient && (
-                <div className="mt-2 text-xs text-text-secondary bg-card-bg border border-border-color rounded p-2">
-                  <div className="font-medium text-text-primary mb-1">Latest Lab Test Description</div>
-                  <div className="whitespace-pre-wrap">
-                    {latestLabResultForPatient.notes || "No lab test description available."}
+                <div className="mt-2 text-xs text-text-secondary bg-card-bg border border-border-color rounded p-2 space-y-2">
+                  <div>
+                    <div className="font-medium text-text-primary mb-1">Nurse Notes (Lab Test Description)</div>
+                    <div className="whitespace-pre-wrap">
+                      {latestLabResultForPatient.notes || "No nurse description recorded."}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-medium text-text-primary mb-1">Result Summary/Interpretation</div>
+                    <div className="whitespace-pre-wrap">
+                      {latestLabResultForPatient.resultSummary || "Awaiting results"}
+                    </div>
                   </div>
                   {latestLabResultForPatient.labResultId && (
                     <div className="mt-1 text-[11px] text-text-muted">

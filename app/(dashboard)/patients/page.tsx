@@ -6,7 +6,6 @@ import Footer from "@/components/Footer";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { useUserRole } from "@/hooks/useUserRole";
 import { PageLoader } from "@/components/common/loading-spinner";
-import { Modal } from "@/components/ui/modal";
 import {
   FormField,
   Input,
@@ -17,6 +16,8 @@ import {
 import { toastManager } from "@/lib/utils/toast";
 import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
 import { CountryCodeSelector } from "@/components/ui/country-code-selector";
+import { Modal } from "@/components/ui/modal";
+import { LAB_TEST_TYPES, LAB_TEST_LABELS } from "@/constants/lab-test-types";
 import { PaginationControls } from "@/components/ui/pagination";
 import { COUNTRY_CODES, CountryCode } from "@/constants/country-codes";
 
@@ -90,6 +91,8 @@ export default function PatientsPage() {
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [patientLatestTests, setPatientLatestTests] = useState<Record<string, { testType: string; additionalTestTypes: string[] }>>({});
+  const [openTestTypesFor, setOpenTestTypesFor] = useState<string | null>(null);
   const [stats, setStats] = useState<PatientStats>({
     totalPatients: 0,
     newThisMonth: 0,
@@ -115,6 +118,15 @@ export default function PatientsPage() {
   const [errors, setErrors] = useState<Partial<PatientFormData>>({});
   // Explicitly track viewport width to control desktop vs mobile rendering
   const [isLgUp, setIsLgUp] = useState(false);
+  // Lab request modal state (Nurse initiates lab tests from Patients page)
+  const [isLabModalOpen, setIsLabModalOpen] = useState(false);
+  const [labPatientId, setLabPatientId] = useState("");
+  const [labPatientName, setLabPatientName] = useState("");
+  const [labTestType, setLabTestType] = useState<string>(LAB_TEST_TYPES.COMPLETE_BLOOD_COUNT);
+  const [labAdditionalTests, setLabAdditionalTests] = useState<string[]>([]);
+  const [labTestName, setLabTestName] = useState("");
+  const [labNotes, setLabNotes] = useState("");
+  const [labEditingId, setLabEditingId] = useState<string | null>(null);
   // Pagination
   const [page, setPage] = useState(1);
   const pageSize = 5; // Updated to show 5 patients per page
@@ -128,6 +140,18 @@ export default function PatientsPage() {
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Close test types dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('[data-pt-test-types]')) {
+        setOpenTestTypesFor(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Load patients from API on component mount
@@ -144,7 +168,27 @@ export default function PatientsPage() {
           const sorted = [...result.data].sort((a: Patient, b: Patient) =>
             a.patientId.localeCompare(b.patientId)
           );
-          setPatients(sorted);
+           setPatients(sorted);
+
+           // Fetch latest lab test per patient for quick glance column
+           try {
+             const labRes = await fetch('/api/lab-results');
+             const labItems = await labRes.json();
+             if (labRes.ok && Array.isArray(labItems)) {
+               const map: Record<string, { testType: string; additionalTestTypes: string[] }> = {};
+               for (const r of labItems as any[]) {
+                 if (!map[r.patientId]) {
+                   map[r.patientId] = {
+                     testType: r.testType,
+                     additionalTestTypes: r.additionalTestTypes || [],
+                   };
+                 }
+               }
+               setPatientLatestTests(map);
+             }
+           } catch (e) {
+             console.error('Failed to load lab results for patients column', e);
+           }
 
           // Range-based stats
           const now = new Date();
@@ -286,6 +330,71 @@ export default function PatientsPage() {
       ? parseInt(lastPatient.patientId.replace("PAT", ""))
       : 0;
     return `PAT${String(lastNumber + 1).padStart(6, "0")}`;
+  };
+
+  const openLabRequestFor = (p: Patient) => {
+    setLabPatientId(p.patientId);
+    setLabPatientName(`${p.firstName} ${p.lastName}`);
+    setLabNotes(p.medicalHistory || "");
+    setLabTestType(LAB_TEST_TYPES.COMPLETE_BLOOD_COUNT);
+    setLabAdditionalTests([]);
+    setLabTestName("");
+    setLabEditingId(null);
+    setIsLabModalOpen(true);
+  };
+
+  const openEditLabRequestFor = async (p: Patient) => {
+    try {
+      setLabPatientId(p.patientId);
+      setLabPatientName(`${p.firstName} ${p.lastName}`);
+      // fetch patient's lab results; prefer most recent non-final
+      const res = await fetch(`/api/lab-results?patientId=${encodeURIComponent(p.patientId)}`);
+      const items = await res.json();
+      if (!res.ok || !Array.isArray(items) || items.length === 0) {
+        toastManager.error('No lab test requests found for this patient.');
+        return;
+      }
+      const sorted = [...items].sort((a:any,b:any)=> new Date(b.requestedAt||b.createdAt).getTime() - new Date(a.requestedAt||a.createdAt).getTime());
+      const candidate = sorted.find((r:any)=> r.status !== 'COMPLETED' && r.status !== 'CANCELLED') || sorted[0];
+      setLabEditingId(candidate._id);
+      setLabTestType(candidate.testType || LAB_TEST_TYPES.COMPLETE_BLOOD_COUNT);
+      setLabAdditionalTests(candidate.additionalTestTypes || []);
+      setLabTestName(candidate.testName || '');
+      setLabNotes(candidate.notes || (p.medicalHistory || ''));
+      setIsLabModalOpen(true);
+    } catch (e) {
+      console.error(e);
+      toastManager.error('Failed to load lab request for editing.');
+    }
+  };
+
+  const handleSubmitLabRequest = async () => {
+    try {
+      const body:any = {
+        patientId: labPatientId,
+        patientName: labPatientName,
+        testType: labTestType,
+        testName: labTestName,
+        selectedTestTypes: labAdditionalTests,
+        notes: labNotes,
+      };
+      let res: Response;
+      if (labEditingId) {
+        res = await fetch(`/api/lab-results/${labEditingId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      } else {
+        res = await fetch('/api/lab-results', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      }
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'Failed to submit lab request');
+      setIsLabModalOpen(false);
+      setLabAdditionalTests([]);
+      setLabTestName('');
+      setLabEditingId(null);
+      toastManager.success(labEditingId ? 'Lab test request updated.' : 'Lab test requested.');
+    } catch (e:any) {
+      console.error(e);
+      toastManager.error(e.message || 'Failed to submit request');
+    }
   };
 
   // Create display stats from real data
@@ -714,10 +823,13 @@ export default function PatientsPage() {
                         <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
                           Age/Gender
                         </th>
-                        <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
+                         <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
                           Blood Type
                         </th>
-                        <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
+                         <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase w-52">
+                           Test Types
+                         </th>
+                         <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase w-32">
                           Date
                         </th>
                         <th className="px-2 py-2 text-left text-xs font-medium text-text-muted uppercase">
@@ -762,9 +874,58 @@ export default function PatientsPage() {
                               </span>
                             </td>
 
-                            <td className="px-2 py-1 whitespace-nowrap text-sm text-text-primary">
+                             <td className="px-2 py-1 whitespace-nowrap text-sm text-text-primary">
                               {patient.bloodType || "-"}
                             </td>
+                             <td className="px-2 py-1 text-sm text-text-primary">
+                               {(() => {
+                                 const t = patientLatestTests[patient.patientId];
+                                 if (!t) return <span className="text-text-secondary">-</span>;
+                                 const label = LAB_TEST_LABELS[t.testType as keyof typeof LAB_TEST_LABELS] || t.testType;
+                                 const extra = t.additionalTestTypes?.length || 0;
+                                 return (
+                                   <div className="relative max-w-[220px]" data-pt-test-types>
+                                     <button
+                                       type="button"
+                                       data-pt-test-types
+                                       onClick={() => setOpenTestTypesFor(prev => prev === patient.patientId ? null : patient.patientId)}
+                                       className="flex items-center space-x-2 text-left hover:bg-accent-color/10 px-2 py-1 rounded-md transition-colors whitespace-nowrap truncate border border-transparent focus:border-accent-color"
+                                     >
+                                       <span className="font-medium">{label}</span>
+                                       {extra > 0 && (
+                                         <span className="bg-accent-color text-white text-xs px-2 py-0.5 rounded-full">+{extra}</span>
+                                       )}
+                                       <svg className="w-4 h-4 ml-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                       </svg>
+                                     </button>
+                                     {openTestTypesFor === patient.patientId && (
+                                       <div
+                                         data-pt-test-types
+                                         className="absolute top-full left-0 z-50 mt-1 bg-card-bg border border-border-color rounded-md shadow-lg min-w-[200px] max-w-[300px]"
+                                       >
+                                         <div className="p-3 border-b border-border-color">
+                                           <h4 className="text-sm font-medium text-text-primary mb-2">All Test Types</h4>
+                                           <div className="space-y-1">
+                                             <div className="flex items-center space-x-2">
+                                               <span className="w-2 h-2 bg-accent-color rounded-full"></span>
+                                               <span className="text-sm text-text-primary font-medium">{label}</span>
+                                               <span className="text-xs text-text-muted">(Primary)</span>
+                                             </div>
+                                             {t.additionalTestTypes && t.additionalTestTypes.map((tt, idx) => (
+                                               <div key={idx} className="flex items-center space-x-2">
+                                                 <span className="w-2 h-2 bg-text-muted rounded-full"></span>
+                                                 <span className="text-sm text-text-primary">{LAB_TEST_LABELS[tt as keyof typeof LAB_TEST_LABELS] || tt}</span>
+                                               </div>
+                                             ))}
+                                           </div>
+                                         </div>
+                                       </div>
+                                     )}
+                                   </div>
+                                 );
+                               })()}
+                             </td>
                             <td className="px-2 py-1 whitespace-nowrap text-sm text-text-secondary">
                               {formatDate(patient.createdAt)}
                             </td>
@@ -792,6 +953,24 @@ export default function PatientsPage() {
                               >
                                 <FaEdit size={16} />
                               </button>
+                            {(userRole === "NURSE" || userRole === "SUPER_ADMIN") && (
+                              <>
+                                <button
+                                  onClick={() => openLabRequestFor(patient)}
+                                  className="text-blue-600 hover:text-blue-400 mr-2 p-1 rounded hover:bg-blue-900/20 transition-colors cursor-pointer"
+                                  title="Request Lab Test"
+                                >
+                                  🧪
+                                </button>
+                                <button
+                                  onClick={() => openEditLabRequestFor(patient)}
+                                  className="text-blue-500 hover:text-blue-300 mr-2 p-1 rounded hover:bg-blue-900/20 transition-colors cursor-pointer"
+                                  title="Edit Lab Test Request"
+                                >
+                                  ✏️
+                                </button>
+                              </>
+                            )}
                               <button
                                 onClick={() => handleDeletePatient(patient._id)}
                                 className="text-error hover:text-error/80 p-1 rounded hover:bg-error/10 transition-colors cursor-pointer"
@@ -846,12 +1025,62 @@ export default function PatientsPage() {
                           {toShortGender(patient.gender)}
                         </span>
                       </div>
-                      <div>
+                       <div>
                         <span className="text-text-muted">Blood Type:</span>
                         <span className="ml-1 text-text-primary break-words">
                           {patient.bloodType || "-"}
                         </span>
                       </div>
+                       <div data-pt-test-types className="relative">
+                         <span className="text-text-muted">Test Types:</span>
+                         {(() => {
+                           const t = patientLatestTests[patient.patientId];
+                           if (!t) return <span className="ml-1 text-text-secondary">-</span>;
+                           const label = LAB_TEST_LABELS[t.testType as keyof typeof LAB_TEST_LABELS] || t.testType;
+                           const extra = t.additionalTestTypes?.length || 0;
+                           return (
+                             <>
+                               <button
+                                 type="button"
+                                 data-pt-test-types
+                                 onClick={() => setOpenTestTypesFor(prev => prev === patient.patientId ? null : patient.patientId)}
+                                 className="ml-2 inline-flex items-center gap-2 text-left hover:bg-accent-color/10 px-2 py-1 rounded-md transition-colors whitespace-nowrap"
+                               >
+                                 <span className="text-text-primary">{label}</span>
+                                 {extra > 0 && (
+                                   <span className="bg-accent-color text-white text-xs px-2 py-0.5 rounded-full">+{extra}</span>
+                                 )}
+                                 <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                 </svg>
+                               </button>
+                               {openTestTypesFor === patient.patientId && (
+                                 <div
+                                   data-pt-test-types
+                                   className="absolute top-full left-0 z-50 mt-1 bg-card-bg border border-border-color rounded-md shadow-lg min-w-[200px] max-w-[300px]"
+                                 >
+                                   <div className="p-3 border-b border-border-color">
+                                     <h4 className="text-sm font-medium text-text-primary mb-2">All Test Types</h4>
+                                     <div className="space-y-1">
+                                       <div className="flex items-center space-x-2">
+                                         <span className="w-2 h-2 bg-accent-color rounded-full"></span>
+                                         <span className="text-sm text-text-primary font-medium">{label}</span>
+                                         <span className="text-xs text-text-muted">(Primary)</span>
+                                       </div>
+                                       {t.additionalTestTypes && t.additionalTestTypes.map((tt, idx) => (
+                                         <div key={idx} className="flex items-center space-x-2">
+                                           <span className="w-2 h-2 bg-text-muted rounded-full"></span>
+                                           <span className="text-sm text-text-primary">{LAB_TEST_LABELS[tt as keyof typeof LAB_TEST_LABELS] || tt}</span>
+                                         </div>
+                                       ))}
+                                     </div>
+                                   </div>
+                                 </div>
+                               )}
+                             </>
+                           );
+                         })()}
+                       </div>
                       <div>
                         <span className="text-text-muted">Date:</span>
                         <span className="ml-1 text-text-primary break-words">
@@ -885,13 +1114,31 @@ export default function PatientsPage() {
                       >
                         <FaEdit size={16} />
                       </button>
-                      <button
-                        onClick={() => handleDeletePatient(patient._id)}
-                        className="text-error hover:text-error/80 p-2 rounded hover:bg-error/10 transition-colors"
-                        title="Delete Patient"
-                      >
-                        <FaTrash size={16} />
-                      </button>
+                       {(userRole === "NURSE" || userRole === "SUPER_ADMIN") && (
+                         <>
+                           <button
+                             onClick={() => openLabRequestFor(patient)}
+                             className="text-blue-600 hover:text-blue-400 p-2 rounded hover:bg-blue-900/20 transition-colors"
+                             title="Request Lab Test"
+                           >
+                             🧪
+                           </button>
+                           <button
+                             onClick={() => openEditLabRequestFor(patient)}
+                             className="text-blue-500 hover:text-blue-300 p-2 rounded hover:bg-blue-900/20 transition-colors"
+                             title="Edit Lab Test Request"
+                           >
+                             ✏️
+                           </button>
+                         </>
+                       )}
+                       <button
+                         onClick={() => handleDeletePatient(patient._id)}
+                         className="text-error hover:text-error/80 p-2 rounded hover:bg-error/10 transition-colors"
+                         title="Delete Patient"
+                       >
+                         <FaTrash size={16} />
+                       </button>
                     </div>
                   </div>
                 ))}
@@ -1327,6 +1574,66 @@ export default function PatientsPage() {
           )}
         </Modal>
       </DashboardLayout>
+      {/* Request Lab Test Modal */}
+        <Modal
+        isOpen={isLabModalOpen}
+          onClose={() => { setIsLabModalOpen(false); setLabEditingId(null); }}
+          title={labEditingId ? "Edit Lab Test Request" : "Request New Lab Test"}
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Patient" required>
+              <Input value={`${labPatientName} (${labPatientId})`} disabled />
+            </FormField>
+            <FormField label="Test Type" required>
+              <select
+                value={labTestType}
+                onChange={(e) => setLabTestType(e.target.value)}
+                className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+              >
+                {Object.values(LAB_TEST_TYPES).map((t) => (
+                  <option key={t} value={t}>{LAB_TEST_LABELS[t as keyof typeof LAB_TEST_LABELS]}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Test Name (optional)">
+              <Input value={labTestName} onChange={(e)=>setLabTestName(e.target.value)} placeholder="Enter test name" />
+            </FormField>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">Additional Test Types (optional)</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+              {Object.values(LAB_TEST_TYPES).map((t) => (
+                <label key={t} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={labAdditionalTests.includes(t)}
+                    onChange={(e)=>{
+                      if (e.target.checked) setLabAdditionalTests((prev)=>[...prev, t]);
+                      else setLabAdditionalTests((prev)=>prev.filter((x)=>x!==t));
+                    }}
+                    className="rounded border-border-color"
+                  />
+                  <span>{LAB_TEST_LABELS[t as keyof typeof LAB_TEST_LABELS]}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <FormField label="Lab Test Description" required>
+            <TextArea value={labNotes} onChange={(e)=>setLabNotes(e.target.value)} rows={4} placeholder="Describe the lab test requirements, symptoms, or specific conditions..." />
+          </FormField>
+          <div className="flex justify-end gap-3">
+            <Button variant="secondary" onClick={()=>{ setIsLabModalOpen(false); setLabEditingId(null); }}>Cancel</Button>
+            <Button
+              className="hover:bg-gray-700 cursor-pointer bg-[#1447E6]"
+              onClick={handleSubmitLabRequest}
+            >
+              {labEditingId ? 'Update Request' : 'Request Test'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
       {/* <Footer /> */}
     </>
   );

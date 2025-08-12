@@ -175,7 +175,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body: UpdateLabResultRequest = await request.json();
-    const { status, results, notes } = body;
+    const { status, results, notes, resultSummary } = body;
 
     const updateData: any = {};
 
@@ -194,7 +194,10 @@ export async function PATCH(
     }
 
     if (notes !== undefined) {
-      updateData.notes = notes;
+      updateData.notes = notes; // still allow changing the nurse description if needed
+    }
+    if (resultSummary !== undefined) {
+      updateData.resultSummary = resultSummary;
     }
 
     const labResult = await LabResult.findByIdAndUpdate(

@@ -14,7 +14,8 @@ export interface LabResult {
   completedBy?: string; // Laboratorist ID
   completedAt?: Date;
   results?: LabTestResult[];
-  notes?: string;
+  notes?: string; // Nurse description when requesting
+  resultSummary?: string; // Laboratorist recorded summary/interpretation
   customTestTypeLabel?: string; // For CUSTOM_OTHER test type
   createdAt: Date;
   updatedAt: Date;

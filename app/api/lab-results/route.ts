@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       status: "PENDING",
       requestedBy: userId,
       requestedAt: new Date(),
-      notes,
+      notes, // nurse description
     };
     if (testType === "CUSTOM_OTHER") {
       labResultData.customTestTypeLabel = customTestTypeLabel?.trim();

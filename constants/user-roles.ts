@@ -19,6 +19,8 @@ export const ROLE_PERMISSIONS = {
     'dashboard:read',
     'inventory:read',
     'inventory:write',
+    'sales:read',
+    'sales:write',
     'patients:read',
     'patients:write',
     'payments:read',
@@ -52,6 +54,9 @@ export const ROLE_PERMISSIONS = {
     'dashboard:read',
     'inventory:read',
     'inventory:write',
+    // Pharmacist can process direct pharmacy sales for external patients
+    'sales:read',
+    'sales:write',
     'payments:read',
     'payments:write',
     'drug-orders:read',

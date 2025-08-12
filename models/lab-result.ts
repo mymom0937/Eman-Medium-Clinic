@@ -24,7 +24,8 @@ export interface ILabResult extends Document {
   completedBy?: string; // Laboratorist ID
   completedAt?: Date;
   results?: ILabTestResult[];
-  notes?: string;
+  notes?: string; // description from Nurse when requesting
+  resultSummary?: string; // laboratorist summary/interpretation
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +66,7 @@ const LabResultSchema = new Schema<ILabResult>(
     completedAt: { type: Date },
     results: [LabTestResultSchema],
     notes: { type: String },
+    resultSummary: { type: String },
   },
   {
     timestamps: true,

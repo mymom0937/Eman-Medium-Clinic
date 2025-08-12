@@ -26,7 +26,7 @@ import {
 import { USER_ROLES } from "@/constants/user-roles";
 import { useUserRole } from "@/hooks/useUserRole";
 import { PageLoader } from "@/components/common/loading-spinner";
-import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
+import { FaEye, FaEdit, FaTrash, FaFlask } from "react-icons/fa";
 import { PaginationControls } from "@/components/ui/pagination";
 import { toastManager } from "@/lib/utils/toast";
 
@@ -75,6 +75,13 @@ export default function LabResultsPage() {
   const [viewingLabResult, setViewingLabResult] = useState<LabResult | null>(
     null
   );
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+  const [recordingLabResult, setRecordingLabResult] = useState<LabResult | null>(null);
+  const [resultRows, setResultRows] = useState<LabTestResult[]>([
+    { parameter: "", value: "", unit: "", referenceRange: "", isAbnormal: false, notes: "" },
+  ]);
+  const [recordSummary, setRecordSummary] = useState<string>("");
+  const [recordSummaryError, setRecordSummaryError] = useState<string | undefined>(undefined);
   const [formData, setFormData] = useState<LabResultFormData>({
     patientId: "",
     patientName: "",
@@ -354,6 +361,59 @@ export default function LabResultsPage() {
     setIsEditModalOpen(true);
   };
 
+  const openRecordResults = (labResult: LabResult) => {
+    setRecordingLabResult(labResult);
+    const rows = (labResult.results && labResult.results.length > 0)
+      ? labResult.results
+      : [{ parameter: "", value: "", unit: "", referenceRange: "", isAbnormal: false, notes: "" }];
+    setResultRows(rows);
+    // preload prior recorded summary (not nurse notes)
+    setRecordSummary(((labResult as any).resultSummary as string) || "");
+    setRecordSummaryError(undefined);
+    setIsRecordModalOpen(true);
+  };
+
+  const updateResultRow = (index: number, field: keyof LabTestResult, value: any) => {
+    setResultRows(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
+  };
+
+  const addResultRow = () => {
+    setResultRows(prev => [...prev, { parameter: "", value: "", unit: "", referenceRange: "", isAbnormal: false, notes: "" }]);
+  };
+
+  const removeResultRow = (index: number) => {
+    setResultRows(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const submitResults = async (markCompleted: boolean) => {
+    if (!recordingLabResult) return;
+    try {
+      if (!recordSummary || !recordSummary.trim()) {
+        setRecordSummaryError("Result Summary/Interpretation is required");
+        return;
+      }
+      const response = await fetch(`/api/lab-results/${recordingLabResult._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          results: resultRows,
+          resultSummary: recordSummary.trim(),
+          status: markCompleted ? "COMPLETED" : undefined,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to save results");
+      const labResultsResponse = await fetch("/api/lab-results");
+      const labResultsResult = await labResultsResponse.json();
+      if (labResultsResponse.ok) setLabResults(labResultsResult);
+      setIsRecordModalOpen(false);
+      setRecordingLabResult(null);
+      toastManager.success(markCompleted ? "Results recorded and marked completed" : "Results saved");
+    } catch (e) {
+      console.error(e);
+      toastManager.error("Failed to save results");
+    }
+  };
+
   const handleUpdateLabResult = async () => {
     if (!validateForm() || !editingLabResult) return;
 
@@ -535,15 +595,7 @@ export default function LabResultsPage() {
             <h1 className="text-3xl font-bold text-text-primary">
               Lab Results
             </h1>
-            {(userRole === USER_ROLES.NURSE ||
-              userRole === USER_ROLES.SUPER_ADMIN) && (
-              <Button
-                onClick={() => setIsAddModalOpen(true)}
-                className="cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
-              >
-                Request New Test
-              </Button>
-            )}
+            {/* Requesting new tests is now done on the Patients page */}
           </div>
 
             <Card>
@@ -823,9 +875,19 @@ export default function LabResultsPage() {
                             <button
                               onClick={() => handleEditLabResult(result)}
                               className="text-success hover:text-success/80 mr-3 p-1 rounded hover:bg-success/10 transition-colors cursor-pointer"
-                              title="Edit Lab Result"
+                              title="Edit Lab Test Request"
                             >
                               <FaEdit size={16} />
+                            </button>
+                          )}
+                          {(userRole === USER_ROLES.LABORATORIST ||
+                            userRole === USER_ROLES.SUPER_ADMIN) && (
+                            <button
+                              onClick={() => openRecordResults(result)}
+                              className="text-blue-500 hover:text-blue-300 mr-3 p-1 rounded hover:bg-blue-900/20 transition-colors cursor-pointer"
+                              title="Record Lab Results"
+                            >
+                              <FaFlask size={16} />
                             </button>
                           )}
                           {userRole === USER_ROLES.SUPER_ADMIN && (
@@ -941,9 +1003,19 @@ export default function LabResultsPage() {
                           <button
                             onClick={() => handleEditLabResult(result)}
                             className="text-success hover:text-success/80 p-1 rounded hover:bg-success/10 transition-colors cursor-pointer"
-                            title="Edit Lab Result"
+                            title="Edit Lab Test Request"
                           >
                             <FaEdit size={16} />
+                          </button>
+                        )}
+                        {(userRole === USER_ROLES.LABORATORIST ||
+                          userRole === USER_ROLES.SUPER_ADMIN) && (
+                          <button
+                            onClick={() => openRecordResults(result)}
+                            className="text-blue-500 hover:text-blue-300 p-1 rounded hover:bg-blue-900/20 transition-colors cursor-pointer"
+                            title="Record Lab Results"
+                          >
+                            <FaFlask size={16} />
                           </button>
                         )}
                         {userRole === USER_ROLES.SUPER_ADMIN && (
@@ -1103,20 +1175,29 @@ export default function LabResultsPage() {
                   placeholder="Enter test name (optional)"
                 />
               </FormField>
+
+              <FormField label="Result Parameters (optional)">
+                <TextArea
+                  value={formData.notes}
+                  onChange={(e)=>handleInputChange('notes', e.target.value)}
+                  placeholder="Laboratorist notes about what to test/observe (will also be visible to Nurse)"
+                  rows={3}
+                />
+              </FormField>
             </div>
 
-            <FormField
-              label="Lab Test Description"
-              required
-              error={errors.notes}
-            >
-              <TextArea
-                value={formData.notes}
-                onChange={(e) => handleInputChange("notes", e.target.value)}
-                placeholder="Describe the lab test requirements, symptoms, or specific conditions to be tested..."
-                rows={4}
-              />
-            </FormField>
+             <FormField
+               label="Lab Test Description"
+               required
+               error={errors.notes}
+             >
+               <TextArea
+                 value={formData.notes}
+                 onChange={(e) => handleInputChange("notes", e.target.value)}
+                 placeholder="Describe the lab test requirements, symptoms, or specific conditions to be tested..."
+                 rows={4}
+               />
+             </FormField>
 
             <div className="flex justify-end space-x-3 pt-4">
               <Button
@@ -1574,6 +1655,58 @@ export default function LabResultsPage() {
         </Modal>
       </DashboardLayout>
       {/* <Footer /> */}
+      {/* Record Lab Results Modal */}
+      <Modal
+        isOpen={isRecordModalOpen}
+        onClose={() => { setIsRecordModalOpen(false); setRecordingLabResult(null); }}
+        title="Record Lab Results"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="text-sm text-text-secondary">
+            {recordingLabResult && (
+              <>
+                <div><span className="font-medium text-text-primary">Patient:</span> {recordingLabResult.patientName} ({recordingLabResult.patientId})</div>
+                <div><span className="font-medium text-text-primary">Test:</span> {LAB_TEST_LABELS[recordingLabResult.testType as keyof typeof LAB_TEST_LABELS] || recordingLabResult.testType}</div>
+              </>
+            )}
+          </div>
+          <div className="space-y-3">
+            {resultRows.map((row, idx) => (
+              <div key={idx} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <Input placeholder="Parameter" value={row.parameter} onChange={(e)=>updateResultRow(idx,'parameter',e.target.value)} />
+                <Input placeholder="Value" value={String(row.value||"")} onChange={(e)=>updateResultRow(idx,'value',e.target.value)} />
+                <Input placeholder="Unit" value={row.unit||""} onChange={(e)=>updateResultRow(idx,'unit',e.target.value)} />
+                <Input placeholder="Reference Range" value={row.referenceRange||""} onChange={(e)=>updateResultRow(idx,'referenceRange',e.target.value)} />
+                <select value={row.isAbnormal? 'true':'false'} onChange={(e)=>updateResultRow(idx,'isAbnormal', e.target.value==='true')} className="border border-border-color rounded-md px-3 py-2 bg-background text-text-primary">
+                  <option value="false">Normal</option>
+                  <option value="true">Abnormal</option>
+                </select>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={()=>removeResultRow(idx)}>Remove</Button>
+                </div>
+                <div className="md:col-span-6">
+                  <TextArea placeholder="Parameter Notes (optional)" value={row.notes||""} onChange={(e)=>updateResultRow(idx,'notes',e.target.value)} rows={2} />
+                </div>
+              </div>
+            ))}
+            <Button className="hover:bg-gray-700 cursor-pointer bg-[#1447E6]" onClick={addResultRow}>Add Parameter</Button>
+          </div>
+          <FormField label="Result Summary/Interpretation" required error={recordSummaryError}>
+            <TextArea
+              value={recordSummary}
+              onChange={(e)=>{ setRecordSummary(e.target.value); if (recordSummaryError) setRecordSummaryError(undefined); }}
+              placeholder="Summarize findings, interpretation, and remarks for the nurse"
+              rows={4}
+            />
+          </FormField>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="secondary" onClick={()=>{ setIsRecordModalOpen(false); setRecordingLabResult(null); }}>Cancel</Button>
+            <Button className="hover:bg-gray-700 cursor-pointer bg-[#1447E6]" onClick={()=>submitResults(false)}>Save Draft</Button>
+            <Button className="hover:bg-green-700 bg-green-600" onClick={()=>submitResults(true)}>Save & Mark Completed</Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
