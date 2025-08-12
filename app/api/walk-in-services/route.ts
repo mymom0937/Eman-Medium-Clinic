@@ -2,11 +2,40 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/config/database";
 import { WalkInService } from "../../../models/walk-in-service";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
-    
-    const services = await WalkInService.find({})
+    const { searchParams } = new URL(request.url);
+    const isSummary = (searchParams.get('summary') || 'false') === 'true';
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+
+    const match: any = {};
+    if (startDate || endDate) {
+      match.createdAt = {} as any;
+      if (startDate) match.createdAt.$gte = new Date(startDate);
+      if (endDate) match.createdAt.$lte = new Date(endDate);
+    }
+
+    if (isSummary) {
+      const cursor = WalkInService.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: null,
+            totalServices: { $sum: 1 },
+            totalRevenue: { $sum: { $toDouble: { $ifNull: ['$amount', 0] } } },
+            pendingPayments: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'PENDING'] }, 1, 0] } },
+            completedServices: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'COMPLETED'] }, 1, 0] } },
+          },
+        },
+      ]);
+      const agg = await cursor.exec();
+      const s = agg[0] || { totalServices: 0, totalRevenue: 0, pendingPayments: 0, completedServices: 0 };
+      return NextResponse.json({ success: true, summary: s });
+    }
+
+    const services = await WalkInService.find(match)
       .sort({ createdAt: -1 })
       .lean();
 

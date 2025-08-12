@@ -15,8 +15,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const isSummary = (searchParams.get('summary') || 'false') === 'true';
     const patientId = searchParams.get('patientId');
     const status = searchParams.get('status');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     await connectToDatabase();
 
@@ -27,6 +30,32 @@ export async function GET(request: NextRequest) {
     }
     if (status) {
       query.status = status;
+    }
+    if (startDate || endDate) {
+      query.orderedAt = {} as any;
+      if (startDate) (query.orderedAt as any).$gte = new Date(startDate);
+      if (endDate) (query.orderedAt as any).$lte = new Date(endDate);
+    }
+
+    if (isSummary) {
+      const db = (await import('mongoose')).connection.db;
+      const cursor = db.collection('drugorders').aggregate([
+        { $match: query },
+        {
+          $group: {
+            _id: null,
+            totalOrders: { $sum: 1 },
+            pending: { $sum: { $cond: [{ $eq: ['$status', 'PENDING'] }, 1, 0] } },
+            approved: { $sum: { $cond: [{ $eq: ['$status', 'APPROVED'] }, 1, 0] } },
+            dispensed: { $sum: { $cond: [{ $eq: ['$status', 'DISPENSED'] }, 1, 0] } },
+            cancelled: { $sum: { $cond: [{ $eq: ['$status', 'CANCELLED'] }, 1, 0] } },
+            totalValue: { $sum: { $ifNull: ['$totalAmount', 0] } },
+          }
+        }
+      ]);
+      const res = await cursor.toArray();
+      const s = res[0] || { totalOrders: 0, pending: 0, approved: 0, dispensed: 0, cancelled: 0, totalValue: 0 };
+      return NextResponse.json({ success: true, summary: s });
     }
 
     const drugOrders = await DrugOrder.find(query).sort({ createdAt: -1 });

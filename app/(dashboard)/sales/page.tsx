@@ -32,6 +32,10 @@ export default function SalesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
+  // Date range controls for stats
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
+  const [rangeStart, setRangeStart] = useState<string>('');
+  const [rangeEnd, setRangeEnd] = useState<string>('');
 
   const [source, setSource] = useState<'EXTERNAL_PRESCRIPTION' | 'OTC' | 'ORDER'>('EXTERNAL_PRESCRIPTION');
   const [patientName, setPatientName] = useState("");
@@ -118,20 +122,56 @@ export default function SalesPage() {
     return filteredSales.slice(start, start + pageSize);
   }, [filteredSales, page]);
 
-  // Stats
+  // Helper for date bounds
+  const rangeBounds = useMemo(() => {
+    const now = new Date();
+    let start: Date | null = null;
+    let end: Date | null = null;
+    switch (dateRange) {
+      case 'today':
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      case 'week': {
+        const ws = new Date(now);
+        ws.setDate(now.getDate() - now.getDay());
+        start = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      }
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        break;
+      case 'year':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        break;
+      case 'custom':
+        if (rangeStart) start = new Date(rangeStart);
+        if (rangeEnd) end = new Date(rangeEnd);
+        break;
+    }
+    return { start, end };
+  }, [dateRange, rangeStart, rangeEnd]);
+
+  // Stats based on range
   const stats = useMemo(() => {
-    const totalSales = sales.length;
-    const todayStr = new Date().toDateString();
-    const todaySales = sales.filter((s:any) => new Date(s.createdAt || 0).toDateString() === todayStr);
-    const totalRevenue = sales.reduce((sum:any, s:any) => sum + Number(s.total || 0), 0);
-    const todayRevenue = todaySales.reduce((sum:any, s:any) => sum + Number(s.total || 0), 0);
+    const { start, end } = rangeBounds;
+    const within = (d: any) => {
+      const dt = new Date(d);
+      return (!start || dt >= start) && (!end || dt <= end);
+    };
+    const inRange = sales.filter((s:any) => within(s.createdAt));
+    const totalSales = inRange.length;
+    const totalRevenue = inRange.reduce((sum:any, s:any) => sum + Number(s.total || 0), 0);
     return {
       totalSales,
-      todaySales: todaySales.length,
+      todaySales: totalSales,
       totalRevenue,
-      todayRevenue,
+      todayRevenue: totalRevenue,
     };
-  }, [sales]);
+  }, [sales, rangeBounds]);
 
   const resetForm = () => {
     setSource('OTC');
@@ -188,12 +228,36 @@ export default function SalesPage() {
           )}
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-          <StatsCard title="Total Sales" value={String(stats.totalSales)} change="" changeType="neutral" icon="🧾" />
-          <StatsCard title="Today Sales" value={String(stats.todaySales)} change="" changeType="neutral" icon="📅" />
-          <StatsCard title="Revenue" value={`EBR ${stats.totalRevenue.toFixed(2)}`} change="" changeType="positive" icon="💰" />
-          <StatsCard title="Today Revenue" value={`EBR ${stats.todayRevenue.toFixed(2)}`} change="" changeType="positive" icon="📈" />
+        {/* Stats Controls + Cards */}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="text-sm text-text-secondary">Summary</div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <select
+                value={dateRange}
+                onChange={(e)=>setDateRange(e.target.value as any)}
+                className="w-full sm:w-auto border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+              >
+                <option value="today">Today</option>
+                <option value="week">This week</option>
+                <option value="month">This month</option>
+                <option value="year">This year</option>
+                <option value="custom">Custom</option>
+              </select>
+              {dateRange === 'custom' && (
+                <div className="flex gap-3">
+                  <input type="date" value={rangeStart} onChange={(e)=>setRangeStart(e.target.value)} className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background" />
+                  <input type="date" value={rangeEnd} onChange={(e)=>setRangeEnd(e.target.value)} className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background" />
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+            <StatsCard title="Total Sales" value={String(stats.totalSales)} change={dateRange==='custom'?undefined:'compared to last '+dateRange} changeType="neutral" icon="🧾" />
+            <StatsCard title="Range Sales" value={String(stats.todaySales)} change={dateRange==='custom'?undefined:'compared to last '+dateRange} changeType="neutral" icon="📅" />
+            <StatsCard title="Revenue" value={`EBR ${stats.totalRevenue.toFixed(2)}`} change={dateRange==='custom'?undefined:'compared to last '+dateRange} changeType="positive" icon="💰" />
+            <StatsCard title="Range Revenue" value={`EBR ${stats.todayRevenue.toFixed(2)}`} change={dateRange==='custom'?undefined:'compared to last '+dateRange} changeType="positive" icon="📈" />
+          </div>
         </div>
 
         {/* Search */}

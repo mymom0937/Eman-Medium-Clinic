@@ -93,6 +93,10 @@ export default function LabResultsPage() {
   // Pagination
   const [page, setPage] = useState(1);
   const pageSize = 5; // Updated to show 5 lab results per page
+  // Date range controls for overview
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
+  const [rangeStart, setRangeStart] = useState<string>('');
+  const [rangeEnd, setRangeEnd] = useState<string>('');
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -153,8 +157,40 @@ export default function LabResultsPage() {
     loadLabResults();
   }, [isLoaded]);
 
-  // Filter lab results based on search and filters
+  // Filter lab results based on search, filters and date range
   const filteredLabResults = labResults.filter((result) => {
+    const now = new Date();
+    let start: Date | null = null;
+    let end: Date | null = null;
+    switch (dateRange) {
+      case 'today':
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      case 'week': {
+        const ws = new Date(now);
+        ws.setDate(now.getDate() - now.getDay());
+        start = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      }
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        break;
+      case 'year':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        break;
+      case 'custom':
+        if (rangeStart) start = new Date(rangeStart);
+        if (rangeEnd) end = new Date(rangeEnd);
+        break;
+    }
+    const isInRange = (() => {
+      const d = new Date((result as any).requestedAt || (result as any).createdAt);
+      return (!start || d >= start) && (!end || d <= end);
+    })();
     const matchesSearch =
       (result.labResultId?.toLowerCase() || "").includes(
         searchTerm.toLowerCase()
@@ -166,7 +202,7 @@ export default function LabResultsPage() {
       selectedStatus === "all" || result.status === selectedStatus;
     const matchesTestType =
       selectedTestType === "all" || result.testType === selectedTestType;
-    return matchesSearch && matchesStatus && matchesTestType;
+    return isInRange && matchesSearch && matchesStatus && matchesTestType;
   });
 
   // Reset page when filters change
@@ -510,9 +546,26 @@ export default function LabResultsPage() {
             )}
           </div>
 
-          <Card>
+            <Card>
             <CardHeader>
-              <CardTitle>Lab Results Overview</CardTitle>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <CardTitle>Lab Results Overview</CardTitle>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <select value={dateRange} onChange={(e)=>setDateRange(e.target.value as any)} className="w-full sm:w-auto border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background">
+                    <option value="today">Today</option>
+                    <option value="week">This week</option>
+                    <option value="month">This month</option>
+                    <option value="year">This year</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                  {dateRange==='custom' && (
+                    <div className="flex gap-3">
+                      <input type="date" value={rangeStart} onChange={(e)=>setRangeStart(e.target.value)} className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background" />
+                      <input type="date" value={rangeEnd} onChange={(e)=>setRangeEnd(e.target.value)} className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background" />
+                    </div>
+                  )}
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

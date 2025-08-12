@@ -14,9 +14,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const isSummary = (searchParams.get('summary') || 'false') === 'true';
     const patientId = searchParams.get("patientId");
     const status = searchParams.get("status");
     const testType = searchParams.get("testType");
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     await connectToDatabase();
 
@@ -33,6 +36,30 @@ export async function GET(request: NextRequest) {
     }
     if (testType) {
       query.testType = testType;
+    }
+    if (startDate || endDate) {
+      query.requestedAt = {} as any;
+      if (startDate) (query.requestedAt as any).$gte = new Date(startDate);
+      if (endDate) (query.requestedAt as any).$lte = new Date(endDate);
+    }
+
+    if (isSummary) {
+      const db = (await import('mongoose')).connection.db;
+      const cursor = db.collection('labresults').aggregate([
+        { $match: query },
+        {
+          $group: {
+            _id: null,
+            pending: { $sum: { $cond: [{ $eq: ['$status', 'PENDING'] }, 1, 0] } },
+            inProgress: { $sum: { $cond: [{ $eq: ['$status', 'IN_PROGRESS'] }, 1, 0] } },
+            completed: { $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] } },
+            cancelled: { $sum: { $cond: [{ $eq: ['$status', 'CANCELLED'] }, 1, 0] } },
+          },
+        },
+      ]);
+      const res = await cursor.toArray();
+      const s = res[0] || { pending: 0, inProgress: 0, completed: 0, cancelled: 0 };
+      return NextResponse.json({ success: true, summary: s });
     }
 
     const labResults = await LabResult.find(query).sort({ createdAt: -1 });

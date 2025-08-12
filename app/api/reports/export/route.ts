@@ -128,9 +128,11 @@ function generateCSV(reportData: any, reportMeta: any): string {
 
   if (reportData.sales) {
     csvContent += 'Sales\n';
-    csvContent += 'Sale ID,Patient Name,Total Amount,Final Amount,Payment Method,Status,Sold At\n';
+    csvContent += 'Sale ID,Patient Name,Amount,Payment Method,Status,Sold At\n';
     reportData.sales.forEach((sale: any) => {
-      csvContent += `${sale.saleId || 'N/A'},"${sale.patientName || 'N/A'}",${sale.totalAmount || 'N/A'},${sale.finalAmount || 'N/A'},${sale.paymentMethod || 'N/A'},${sale.status || 'N/A'},${sale.soldAt || 'N/A'}\n`;
+      const amount = sale.total ?? sale.finalAmount ?? sale.totalAmount ?? 'N/A';
+      const status = sale.paymentStatus ?? sale.status ?? 'N/A';
+      csvContent += `${sale.saleId || 'N/A'},"${sale.patientName || 'N/A'}",${amount},${sale.paymentMethod || 'N/A'},${status},${sale.soldAt || sale.createdAt || 'N/A'}\n`;
     });
     csvContent += '\n';
   }
@@ -229,18 +231,19 @@ function generateExcel(reportData: any, reportMeta: any): Buffer {
 
   if (reportData.sales && reportData.sales.length > 0) {
     const salesData = [
-      ['Sale ID', 'Patient Name', 'Total Amount', 'Final Amount', 'Payment Method', 'Status', 'Sold At']
+      ['Sale ID', 'Patient Name', 'Amount', 'Payment Method', 'Status', 'Sold At']
     ];
     
     reportData.sales.forEach((sale: any) => {
+      const amount = sale.total ?? sale.finalAmount ?? sale.totalAmount ?? null;
+      const status = sale.paymentStatus ?? sale.status ?? null;
       salesData.push([
         sale.saleId,
         sale.patientName,
-        sale.totalAmount,
-        sale.finalAmount,
+        amount,
         sale.paymentMethod,
-        sale.status,
-        sale.soldAt
+        status,
+        sale.soldAt || sale.createdAt
       ]);
     });
 
@@ -450,9 +453,11 @@ function generatePDF(reportData: any, reportMeta: any): Buffer {
       xPos += colWidths[0];
       doc.text(sale.patientName || 'N/A', xPos, yPosition);
       xPos += colWidths[1];
-      doc.text((sale.finalAmount || 'N/A').toString(), xPos, yPosition);
+      const amount = sale.total ?? sale.finalAmount ?? sale.totalAmount;
+      doc.text((amount != null ? amount : 'N/A').toString(), xPos, yPosition);
       xPos += colWidths[2];
-      doc.text(sale.status || 'N/A', xPos, yPosition);
+      const status = sale.paymentStatus ?? sale.status;
+      doc.text((status || 'N/A').toString(), xPos, yPosition);
       
       yPosition += 5;
     });

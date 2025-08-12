@@ -60,6 +60,10 @@ export default function InventoryPage() {
     outOfStockItems: 0,
     totalValue: 0,
   });
+  // Date range controls for stats
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
+  const [rangeStart, setRangeStart] = useState<string>('');
+  const [rangeEnd, setRangeEnd] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -116,26 +120,30 @@ export default function InventoryPage() {
 
           setDrugs(transformedDrugs);
 
-          // Calculate stats
-          const totalDrugs = transformedDrugs.length;
-          const lowStockItems = transformedDrugs.filter(
-            (drug: Drug) => drug.stockQuantity <= 10 && drug.stockQuantity > 0
-          ).length;
-          const outOfStockItems = transformedDrugs.filter(
-            (drug: Drug) => drug.stockQuantity === 0
-          ).length;
-          const totalValue = transformedDrugs.reduce(
-            (sum: number, drug: Drug) =>
-              sum + drug.sellingPrice * drug.stockQuantity,
-            0
-          );
+          // Calculate stats (initially with whole dataset; will be recomputed below as well)
+          const computeStats = (source: Drug[]) => {
+            const totalDrugs = source.length;
+            const lowStockItems = source.filter(
+              (drug: Drug) => drug.stockQuantity <= 10 && drug.stockQuantity > 0
+            ).length;
+            const outOfStockItems = source.filter(
+              (drug: Drug) => drug.stockQuantity === 0
+            ).length;
+            const totalValue = source.reduce(
+              (sum: number, drug: Drug) =>
+                sum + drug.sellingPrice * drug.stockQuantity,
+              0
+            );
+            setStats({ totalDrugs, lowStockItems, outOfStockItems, totalValue });
+          };
 
-          setStats({
-            totalDrugs,
-            lowStockItems,
-            outOfStockItems,
-            totalValue,
+          // Apply current date range filter
+          const { start, end } = getRangeBounds();
+          const inRange = transformedDrugs.filter((d: Drug) => {
+            const created = new Date(d.createdAt || d.updatedAt || Date.now());
+            return (!start || created >= start) && (!end || created <= end);
           });
+          computeStats(inRange);
         }
       } catch (error) {
         console.error("Error loading drugs:", error);
@@ -159,6 +167,54 @@ export default function InventoryPage() {
     window.addEventListener("resize", compute);
     return () => window.removeEventListener("resize", compute);
   }, []);
+
+  // Helper: compute date range bounds from selection
+  const getRangeBounds = () => {
+    const now = new Date();
+    let start: Date | null = null;
+    let end: Date | null = null;
+    switch (dateRange) {
+      case 'today':
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      case 'week': {
+        const ws = new Date(now);
+        ws.setDate(now.getDate() - now.getDay());
+        start = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      }
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        break;
+      case 'year':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        break;
+      case 'custom':
+        if (rangeStart) start = new Date(rangeStart);
+        if (rangeEnd) end = new Date(rangeEnd);
+        break;
+    }
+    return { start, end };
+  };
+
+  // Recompute stats when date range or drugs change
+  useEffect(() => {
+    if (!drugs.length) return;
+    const { start, end } = getRangeBounds();
+    const inRange = drugs.filter((d) => {
+      const created = new Date(d.createdAt || d.updatedAt || Date.now());
+      return (!start || created >= start) && (!end || created <= end);
+    });
+    const totalDrugs = inRange.length;
+    const lowStockItems = inRange.filter((drug: Drug) => drug.stockQuantity <= 10 && drug.stockQuantity > 0).length;
+    const outOfStockItems = inRange.filter((drug: Drug) => drug.stockQuantity === 0).length;
+    const totalValue = inRange.reduce((sum: number, drug: Drug) => sum + drug.sellingPrice * drug.stockQuantity, 0);
+    setStats({ totalDrugs, lowStockItems, outOfStockItems, totalValue });
+  }, [dateRange, rangeStart, rangeEnd, drugs]);
 
   if (!isLoaded || initialLoading) {
     return (
@@ -627,32 +683,33 @@ export default function InventoryPage() {
   };
 
   // Prepare stats for display
+  const comparisonLabel = dateRange === 'today' ? 'vs yesterday' : dateRange === 'custom' ? '' : `compared to last ${dateRange}`;
   const displayStats = [
     {
       title: "Total Drugs",
       value: stats.totalDrugs.toString(),
-      change: "+12% from last month",
+      change: dateRange === 'custom' ? undefined : comparisonLabel,
       changeType: "positive" as const,
       icon: "💊",
     },
     {
       title: "Low Stock Items",
       value: stats.lowStockItems.toString(),
-      change: "-5% from last week",
+      change: dateRange === 'custom' ? undefined : comparisonLabel,
       changeType: "negative" as const,
       icon: "⚠️",
     },
     {
       title: "Out of Stock",
       value: stats.outOfStockItems.toString(),
-      change: "+2 from yesterday",
+      change: dateRange === 'custom' ? undefined : comparisonLabel,
       changeType: "negative" as const,
       icon: "❌",
     },
     {
       title: "Total Value",
-      value: `$${stats.totalValue.toFixed(2)}`,
-      change: "+8% from last month",
+      value: `EBR ${stats.totalValue.toFixed(2)}`,
+      change: dateRange === 'custom' ? undefined : comparisonLabel,
       changeType: "positive" as const,
       icon: "💰",
     },
@@ -720,8 +777,41 @@ export default function InventoryPage() {
         userName={userName}
       >
         <div className="space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+          {/* Stats Controls + Cards */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="text-sm text-text-secondary">Summary</div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <select
+                  value={dateRange}
+                  onChange={(e) => setDateRange(e.target.value as any)}
+                  className="w-full sm:w-auto border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+                >
+                  <option value="today">Today</option>
+                  <option value="week">This week</option>
+                  <option value="month">This month</option>
+                  <option value="year">This year</option>
+                  <option value="custom">Custom</option>
+                </select>
+                {dateRange === 'custom' && (
+                  <div className="flex gap-3">
+                    <input
+                      type="date"
+                      value={rangeStart}
+                      onChange={(e) => setRangeStart(e.target.value)}
+                      className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+                    />
+                    <input
+                      type="date"
+                      value={rangeEnd}
+                      onChange={(e) => setRangeEnd(e.target.value)}
+                      className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {displayStats.map((stat, index) => (
               <StatsCard
                 key={index}
@@ -732,6 +822,7 @@ export default function InventoryPage() {
                 icon={stat.icon}
               />
             ))}
+            </div>
           </div>
 
           {/* Drug Inventory Section */}

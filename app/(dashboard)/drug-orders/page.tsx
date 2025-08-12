@@ -105,6 +105,10 @@ export default function DrugOrdersPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  // Date range controls for stats and list
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
+  const [rangeStart, setRangeStart] = useState<string>('');
+  const [rangeEnd, setRangeEnd] = useState<string>('');
 
   // Load drug orders and drugs data on component mount
   useEffect(() => {
@@ -171,8 +175,40 @@ export default function DrugOrdersPage() {
     return () => window.removeEventListener("resize", compute);
   }, []);
 
-  // Filter drug orders based on search and filters
+  // Filter drug orders based on search, filters, and date range
   const filteredDrugOrders = drugOrders.filter((order) => {
+    const now = new Date();
+    let start: Date | null = null;
+    let end: Date | null = null;
+    switch (dateRange) {
+      case 'today':
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      case 'week': {
+        const ws = new Date(now);
+        ws.setDate(now.getDate() - now.getDay());
+        start = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      }
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        break;
+      case 'year':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        break;
+      case 'custom':
+        if (rangeStart) start = new Date(rangeStart);
+        if (rangeEnd) end = new Date(rangeEnd);
+        break;
+    }
+    const inRange = (() => {
+      const d = new Date((order as any).orderedAt || (order as any).createdAt);
+      return (!start || d >= start) && (!end || d <= end);
+    })();
     const matchesSearch =
       (order.drugOrderId?.toLowerCase() || "").includes(
         searchTerm.toLowerCase()
@@ -184,7 +220,7 @@ export default function DrugOrdersPage() {
       );
     const matchesStatus =
       selectedStatus === "all" || order.status === selectedStatus;
-    return matchesSearch && matchesStatus;
+    return inRange && matchesSearch && matchesStatus;
   });
 
   // Pagination
@@ -525,39 +561,40 @@ export default function DrugOrdersPage() {
     }
   };
 
-  // Prepare stats for display
+  // Prepare stats for display (respect date range via filteredDrugOrders)
+  const comparisonLabel = dateRange === 'custom' ? '' : `compared to last ${dateRange}`;
   const displayStats = [
     {
       title: "Pending",
-      value: drugOrders.filter((o) => o.status === "PENDING").length.toString(),
-      change: "+2 from yesterday",
+      value: filteredDrugOrders.filter((o) => o.status === "PENDING").length.toString(),
+      change: dateRange==='custom'? undefined : comparisonLabel,
       changeType: "negative" as const,
       icon: "⏳",
     },
     {
       title: "Approved",
-      value: drugOrders
+      value: filteredDrugOrders
         .filter((o) => o.status === "APPROVED")
         .length.toString(),
-      change: "+1 from yesterday",
+      change: dateRange==='custom'? undefined : comparisonLabel,
       changeType: "positive" as const,
       icon: "✅",
     },
     {
       title: "Dispensed",
-      value: drugOrders
+      value: filteredDrugOrders
         .filter((o) => o.status === "DISPENSED")
         .length.toString(),
-      change: "+1 from yesterday",
+      change: dateRange==='custom'? undefined : comparisonLabel,
       changeType: "positive" as const,
       icon: "💊",
     },
     {
       title: "Cancelled",
-      value: drugOrders
+      value: filteredDrugOrders
         .filter((o) => o.status === "CANCELLED")
         .length.toString(),
-      change: "0 from yesterday",
+      change: dateRange==='custom'? undefined : comparisonLabel,
       changeType: "neutral" as const,
       icon: "❌",
     },
@@ -611,8 +648,27 @@ export default function DrugOrdersPage() {
           )}
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+        {/* Stats Controls + Cards */}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="text-sm text-text-secondary">Summary</div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <select value={dateRange} onChange={(e)=>setDateRange(e.target.value as any)} className="w-full sm:w-auto border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background">
+                <option value="today">Today</option>
+                <option value="week">This week</option>
+                <option value="month">This month</option>
+                <option value="year">This year</option>
+                <option value="custom">Custom</option>
+              </select>
+              {dateRange==='custom' && (
+                <div className="flex gap-3">
+                  <input type="date" value={rangeStart} onChange={(e)=>setRangeStart(e.target.value)} className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background" />
+                  <input type="date" value={rangeEnd} onChange={(e)=>setRangeEnd(e.target.value)} className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background" />
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           {displayStats.map((stat, index) => (
             <StatsCard
               key={index}
@@ -623,6 +679,7 @@ export default function DrugOrdersPage() {
               icon={stat.icon}
             />
           ))}
+          </div>
         </div>
 
         {/* Search and Filters */}

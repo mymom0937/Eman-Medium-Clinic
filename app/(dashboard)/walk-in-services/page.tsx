@@ -121,6 +121,10 @@ export default function WalkInServicesPage() {
     pendingPayments: 0,
     completedServices: 0,
   });
+  // Date range controls for stats
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
+  const [rangeStart, setRangeStart] = useState<string>('');
+  const [rangeEnd, setRangeEnd] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [isLgUp, setIsLgUp] = useState(false);
@@ -180,50 +184,58 @@ export default function WalkInServicesPage() {
     }
   }, [isLoaded]);
 
-  // Recalculate stats any time the services list changes
+  // Recalculate stats when services or range change
   useEffect(() => {
     if (!services) return;
     try {
-      const totalServices = services.length;
-      const totalRevenue = services.reduce(
-        (sum: number, service: WalkInService) => sum + (Number(service.amount) || 0),
-        0
-      );
-
-      const today = new Date();
-      const todayServices = services.filter((service: WalkInService) => {
-        const serviceDate = new Date(service.createdAt);
-        return serviceDate.toDateString() === today.toDateString();
-      }).length;
-
-      const todayRevenue = services
-        .filter((service: WalkInService) => {
-          const serviceDate = new Date(service.createdAt);
-          return serviceDate.toDateString() === today.toDateString();
-        })
-        .reduce((sum: number, service: WalkInService) => sum + (Number(service.amount) || 0), 0);
-
-      const pendingPayments = services.filter(
-        (service: WalkInService) => service.paymentStatus === "PENDING"
-      ).length;
-
-      const completedServices = services.filter(
-        (service: WalkInService) => service.paymentStatus === "COMPLETED"
-      ).length;
-
+      const now = new Date();
+      let start: Date | null = null;
+      let end: Date | null = null;
+      switch (dateRange) {
+        case 'today':
+          start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+          break;
+        case 'week': {
+          const ws = new Date(now);
+          ws.setDate(now.getDate() - now.getDay());
+          start = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate());
+          end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+          break;
+        }
+        case 'month':
+          start = new Date(now.getFullYear(), now.getMonth(), 1);
+          end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+          break;
+        case 'year':
+          start = new Date(now.getFullYear(), 0, 1);
+          end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+          break;
+        case 'custom':
+          if (rangeStart) start = new Date(rangeStart);
+          if (rangeEnd) end = new Date(rangeEnd);
+          break;
+      }
+      const inRange = services.filter((s: WalkInService) => {
+        const d = new Date(s.createdAt);
+        return (!start || d >= start) && (!end || d <= end);
+      });
+      const totalServices = inRange.length;
+      const totalRevenue = inRange.reduce((sum: number, s: WalkInService) => sum + (Number(s.amount) || 0), 0);
+      const pendingPayments = inRange.filter((s) => s.paymentStatus === 'PENDING').length;
+      const completedServices = inRange.filter((s) => s.paymentStatus === 'COMPLETED').length;
       setStats({
         totalServices,
         totalRevenue,
-        todayServices,
-        todayRevenue,
+        todayServices: totalServices,
+        todayRevenue: totalRevenue,
         pendingPayments,
         completedServices,
       });
     } catch (err) {
-      // fail-safe: don't crash UI if a bad record slips in
       console.error("Failed to recompute walk-in services stats:", err);
     }
-  }, [services]);
+  }, [services, dateRange, rangeStart, rangeEnd]);
 
   // Ensure this hook is declared before any conditional return to maintain stable hook order
   useEffect(() => {
@@ -652,14 +664,14 @@ export default function WalkInServicesPage() {
     {
       title: "Total Services",
       value: stats.totalServices.toString(),
-      change: "+15% from last week",
+      change: dateRange==='custom'? undefined : `compared to last ${dateRange}`,
       changeType: "positive" as const,
       icon: "🏥",
     },
     {
       title: "Total Revenue",
       value: `EBR ${stats.totalRevenue.toFixed(2)}`,
-      change: "+12% from last week",
+      change: dateRange==='custom'? undefined : `compared to last ${dateRange}`,
       changeType: "positive" as const,
       icon: "💰",
     },
@@ -672,8 +684,27 @@ export default function WalkInServicesPage() {
       userName={userName}
     >
       <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        {/* Stats Controls + Cards */}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="text-sm text-text-secondary">Summary</div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <select value={dateRange} onChange={(e)=>setDateRange(e.target.value as any)} className="w-full sm:w-auto border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background">
+                <option value="today">Today</option>
+                <option value="week">This week</option>
+                <option value="month">This month</option>
+                <option value="year">This year</option>
+                <option value="custom">Custom</option>
+              </select>
+              {dateRange==='custom' && (
+                <div className="flex gap-3">
+                  <input type="date" value={rangeStart} onChange={(e)=>setRangeStart(e.target.value)} className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background" />
+                  <input type="date" value={rangeEnd} onChange={(e)=>setRangeEnd(e.target.value)} className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background" />
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {displayStats.map((stat, index) => (
             <StatsCard
               key={index}
@@ -684,6 +715,7 @@ export default function WalkInServicesPage() {
               icon={stat.icon}
             />
           ))}
+          </div>
         </div>
 
         {/* Services Section */}

@@ -104,6 +104,10 @@ export default function PaymentsPage() {
   const [selectedMethod, setSelectedMethod] = useState("all");
   // Viewport-based rendering toggle (lg breakpoint: 1024px)
   const [isLgUp, setIsLgUp] = useState<boolean>(true);
+  // Date range controls for stats cards
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
+  const [rangeStart, setRangeStart] = useState<string>('');
+  const [rangeEnd, setRangeEnd] = useState<string>('');
   const [isNewPaymentModalOpen, setIsNewPaymentModalOpen] = useState(false);
   const [isViewPaymentModalOpen, setIsViewPaymentModalOpen] = useState(false);
   const [isEditPaymentModalOpen, setIsEditPaymentModalOpen] = useState(false);
@@ -238,16 +242,52 @@ export default function PaymentsPage() {
     const baseStats = calculateStats(paymentsData);
     let walkInTotal = 0;
     let completedPaymentsTotal = 0;
+    let salesTotal = 0;
+    // build date range
+    const params = new URLSearchParams();
+    const now = new Date();
+    let start: Date | null = null;
+    let end: Date | null = null;
+    switch (dateRange) {
+      case 'today':
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      case 'week': {
+        const ws = new Date(now);
+        ws.setDate(now.getDate() - now.getDay());
+        start = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      }
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        break;
+      case 'year':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+        break;
+      case 'custom':
+        if (rangeStart) start = new Date(rangeStart);
+        if (rangeEnd) end = new Date(rangeEnd);
+        break;
+    }
+    if (start) params.set('startDate', start.toISOString());
+    if (end) params.set('endDate', end.toISOString());
     try {
       const res = await fetch("/api/walk-in-services");
       const json = await res.json();
       if (res.ok && json.success) {
         const services = Array.isArray(json.data) ? json.data : [];
         // Match Walk-in Services page: sum all amounts
-        walkInTotal = services.reduce(
-          (sum: number, s: any) => sum + (Number(s.amount) || 0),
-          0
-        );
+        walkInTotal = services
+          .filter((s: any) => {
+            if (!start && !end) return true;
+            const d = new Date(s.createdAt);
+            return (!start || d >= start) && (!end || d <= end);
+          })
+          .reduce((sum: number, s: any) => sum + (Number(s.amount) || 0), 0);
       }
     } catch (err) {
       console.error("Failed to fetch walk-in services for stats:", err);
@@ -255,7 +295,7 @@ export default function PaymentsPage() {
 
     try {
       // Fetch server-side summary for COMPLETED payments across entire collection
-      const res = await fetch("/api/payments?summary=true&status=COMPLETED");
+      const res = await fetch(`/api/payments?summary=true&status=COMPLETED${params.toString() ? `&${params.toString()}` : ''}`);
       const json = await res.json();
       if (res.ok && json.success && json.summary) {
         completedPaymentsTotal = Number(json.summary.totalAmount) || 0;
@@ -264,11 +304,32 @@ export default function PaymentsPage() {
       console.error("Failed to fetch payments summary for stats:", err);
     }
 
+    try {
+      // Prefer server-side summary to ensure consistency with Sales page
+      const res = await fetch(`/api/sales?summary=true${params.toString() ? `&${params.toString()}` : ''}`);
+      const json = await res.json();
+      if (res.ok && json.success && json.summary) {
+        salesTotal = Number(json.summary.totalRevenue) || 0;
+      } else {
+        // Fallback: fetch list and sum client-side
+        const listRes = await fetch("/api/sales");
+        const listJson = await listRes.json();
+        if (listRes.ok && listJson.success) {
+          const sales: any[] = Array.isArray(listJson.data) ? listJson.data : [];
+          salesTotal = sales.reduce((sum: number, s: any) => sum + (Number(s.total ?? s.finalAmount ?? s.totalAmount) || 0), 0);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch sales for stats:", err);
+    }
+
     setStats({
       ...baseStats,
       // Override Total Revenue with the server-side aggregate of COMPLETED payments only
       totalRevenue: completedPaymentsTotal,
       totalWalkInServices: walkInTotal,
+      // Override Drug Sales with actual Sales collection total
+      totalDrugSales: salesTotal,
     });
   };
 
@@ -786,32 +847,26 @@ export default function PaymentsPage() {
   };
 
   // Prepare enhanced stats for display
+  const comparisonLabel = dateRange === 'today' ? 'vs yesterday' : dateRange === 'custom' ? '' : `compared to last ${dateRange}`;
   const displayStats = [
     {
       title: "Total Revenue",
       value: `EBR ${stats.totalRevenue.toFixed(2)}`,
-      change: "+12% from last month",
+      change: dateRange === 'custom' ? undefined : comparisonLabel,
       changeType: "positive" as const,
       icon: "💰",
     },
     {
       title: "Drug Sales",
       value: `EBR ${stats.totalDrugSales.toFixed(2)}`,
-      change: "+8% from last week",
+      change: dateRange === 'custom' ? undefined : comparisonLabel,
       changeType: "positive" as const,
       icon: "💊",
     },
     {
-      title: "Lab Payments",
-      value: `EBR ${stats.totalLabPayments.toFixed(2)}`,
-      change: "+15% from last month",
-      changeType: "positive" as const,
-      icon: "🔬",
-    },
-    {
       title: "Walk-in Services",
       value: `EBR ${stats.totalWalkInServices.toFixed(2)}`,
-      change: "+10% from last week",
+      change: dateRange === 'custom' ? undefined : comparisonLabel,
       changeType: "positive" as const,
       icon: "🏥",
     },
@@ -826,7 +881,44 @@ export default function PaymentsPage() {
       >
         <div className="space-y-6 overflow-x-hidden">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="text-sm text-text-secondary">Summary</div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <select
+                  value={dateRange}
+                  onChange={async (e) => {
+                    const val = e.target.value as any;
+                    setDateRange(val);
+                    await computeAndSetStats(payments);
+                  }}
+                  className="w-full sm:w-auto border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+                >
+                  <option value="today">Today</option>
+                  <option value="week">This week</option>
+                  <option value="month">This month</option>
+                  <option value="year">This year</option>
+                  <option value="custom">Custom</option>
+                </select>
+                {dateRange === 'custom' && (
+                  <div className="flex gap-3">
+                    <input
+                      type="date"
+                      value={rangeStart}
+                      onChange={async (e) => { setRangeStart(e.target.value); await computeAndSetStats(payments); }}
+                      className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+                    />
+                    <input
+                      type="date"
+                      value={rangeEnd}
+                      onChange={async (e) => { setRangeEnd(e.target.value); await computeAndSetStats(payments); }}
+                      className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {displayStats.map((stat, index) => (
               <StatsCard
                 key={index}
@@ -837,6 +929,7 @@ export default function PaymentsPage() {
                 icon={stat.icon}
               />
             ))}
+            </div>
           </div>
 
           {/* Payment Records Section */}

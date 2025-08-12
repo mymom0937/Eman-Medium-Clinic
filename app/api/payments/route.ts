@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
     const method = searchParams.get('method') || '';
+    const orderType = searchParams.get('orderType') || '';
+    const paymentType = searchParams.get('paymentType') || '';
 
     // Summary branch: aggregate totals across the entire collection
     if (isSummary) {
@@ -29,6 +31,23 @@ export async function GET(request: NextRequest) {
       if (method) {
         // Case-insensitive exact match for paymentMethod
         match.paymentMethod = { $regex: `^${method}$`, $options: 'i' };
+      }
+      if (orderType) {
+        // Filter by linked clinical workflow (e.g., DRUG_ORDER)
+        match.orderType = { $regex: `^${orderType}$`, $options: 'i' };
+      }
+      if (paymentType) {
+        // Filter by paymentType (e.g., DRUG_SALE, WALK_IN_SERVICE)
+        match.paymentType = { $regex: `^${paymentType}$`, $options: 'i' };
+      }
+
+      // Optional date range
+      const startDate = searchParams.get('startDate');
+      const endDate = searchParams.get('endDate');
+      if (startDate || endDate) {
+        match.createdAt = {} as any;
+        if (startDate) (match.createdAt as any).$gte = new Date(startDate);
+        if (endDate) (match.createdAt as any).$lte = new Date(endDate);
       }
 
       const cursor = db.collection('payments').aggregate([

@@ -14,7 +14,42 @@ export async function GET(request: NextRequest) {
     const { Sale } = await import('@/models/sale');
 
     const { searchParams } = new URL(request.url);
+    const isSummary = (searchParams.get('summary') || 'false') === 'true';
     const q = searchParams.get('q') || '';
+
+    if (isSummary) {
+      const startDate = searchParams.get('startDate');
+      const endDate = searchParams.get('endDate');
+      const match: any = {};
+      if (startDate || endDate) {
+        match.createdAt = {} as any;
+        if (startDate) (match.createdAt as any).$gte = new Date(startDate);
+        if (endDate) (match.createdAt as any).$lte = new Date(endDate);
+      }
+      // Server-side authoritative total revenue for sales
+      const cursor = (await import('mongoose')).connection.db
+        .collection('sales')
+        .aggregate([
+          { $match: match },
+          {
+            $group: {
+              _id: null,
+              totalRevenue: {
+                $sum: {
+                  $toDouble: {
+                    $ifNull: ['$total', { $ifNull: ['$finalAmount', { $ifNull: ['$totalAmount', 0] }] }],
+                  },
+                },
+              },
+              count: { $sum: 1 },
+            },
+          },
+        ]);
+      const agg = await cursor.toArray();
+      const summary = agg[0] || { totalRevenue: 0, count: 0 };
+      return NextResponse.json({ success: true, summary });
+    }
+
     const query: any = {};
     if (q) {
       query.$or = [

@@ -118,6 +118,10 @@ export default function PatientsPage() {
   // Pagination
   const [page, setPage] = useState(1);
   const pageSize = 5; // Updated to show 5 patients per page
+  // Date range controls for stats
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
+  const [rangeStart, setRangeStart] = useState<string>('');
+  const [rangeEnd, setRangeEnd] = useState<string>('');
 
   useEffect(() => {
     const handleResize = () => setIsLgUp(window.innerWidth >= 1024);
@@ -142,40 +146,47 @@ export default function PatientsPage() {
           );
           setPatients(sorted);
 
-          // Calculate stats from real data
-          const totalPatients = sorted.length;
-          const activePatients = sorted.filter(
-            (patient: Patient) => patient.isActive
-          ).length;
-          const averageAge =
-            sorted.length > 0
-              ? Math.round(
-                  sorted.reduce(
-                    (sum: number, patient: Patient) => sum + (patient.age || 0),
-                    0
-                  ) /
-                    (sorted.filter((patient: Patient) => patient.age)
-                      .length || 1)
-                )
-              : 0;
-
-          // Calculate new patients this month
-          const currentMonth = new Date().getMonth();
-          const currentYear = new Date().getFullYear();
-          const newThisMonth = sorted.filter((patient: Patient) => {
-            const createdAt = new Date(patient.createdAt);
-            return (
-              createdAt.getMonth() === currentMonth &&
-              createdAt.getFullYear() === currentYear
-            );
-          }).length;
-
-          setStats({
-            totalPatients,
-            newThisMonth,
-            activePatients,
-            averageAge,
+          // Range-based stats
+          const now = new Date();
+          let start: Date | null = null;
+          let end: Date | null = null;
+          switch (dateRange) {
+            case 'today':
+              start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+              break;
+            case 'week': {
+              const ws = new Date(now);
+              ws.setDate(now.getDate() - now.getDay());
+              start = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate());
+              end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+              break;
+            }
+            case 'month':
+              start = new Date(now.getFullYear(), now.getMonth(), 1);
+              end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+              break;
+            case 'year':
+              start = new Date(now.getFullYear(), 0, 1);
+              end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+              break;
+            case 'custom':
+              if (rangeStart) start = new Date(rangeStart);
+              if (rangeEnd) end = new Date(rangeEnd);
+              break;
+          }
+          const inRange = sorted.filter((p: Patient) => {
+            const d = new Date(p.createdAt);
+            return (!start || d >= start) && (!end || d <= end);
           });
+          const totalPatients = inRange.length;
+          const activePatients = inRange.filter((p) => p.isActive).length;
+          const averageAge = inRange.length > 0
+            ? Math.round(inRange.reduce((s, p) => s + (p.age || 0), 0) / (inRange.filter((p) => p.age).length || 1))
+            : 0;
+          const newThisMonth = totalPatients; // within range
+
+          setStats({ totalPatients, newThisMonth, activePatients, averageAge });
         }
       } catch (error) {
         console.error("Error loading patients:", error);
@@ -278,25 +289,26 @@ export default function PatientsPage() {
   };
 
   // Create display stats from real data
+  const comparisonLabel = dateRange==='custom' ? '' : `compared to last ${dateRange}`;
   const displayStats = [
     {
       title: "Total Patients",
       value: stats.totalPatients.toString(),
-      change: "+12% from last month",
+      change: dateRange==='custom'? undefined : comparisonLabel,
       changeType: "positive" as const,
       icon: "👥",
     },
     {
       title: "New This Month",
       value: stats.newThisMonth.toString(),
-      change: "+5 from last month",
+      change: dateRange==='custom'? undefined : comparisonLabel,
       changeType: "positive" as const,
       icon: "🆕",
     },
     {
       title: "Active Patients",
       value: stats.activePatients.toString(),
-      change: "+8% from last month",
+      change: dateRange==='custom'? undefined : comparisonLabel,
       changeType: "positive" as const,
       icon: "✅",
     },
@@ -593,8 +605,27 @@ export default function PatientsPage() {
         userName={userName}
       >
         <div className="space-y-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {/* Stats Controls + Cards */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="text-sm text-text-secondary">Summary</div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <select value={dateRange} onChange={(e)=>setDateRange(e.target.value as any)} className="w-full sm:w-auto border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background">
+                  <option value="today">Today</option>
+                  <option value="week">This week</option>
+                  <option value="month">This month</option>
+                  <option value="year">This year</option>
+                  <option value="custom">Custom</option>
+                </select>
+                {dateRange==='custom' && (
+                  <div className="flex gap-3">
+                    <input type="date" value={rangeStart} onChange={(e)=>setRangeStart(e.target.value)} className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background" />
+                    <input type="date" value={rangeEnd} onChange={(e)=>setRangeEnd(e.target.value)} className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background" />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {displayStats.map((stat, index) => (
               <StatsCard
                 key={index}
@@ -605,6 +636,7 @@ export default function PatientsPage() {
                 icon={stat.icon}
               />
             ))}
+            </div>
           </div>
 
           {/* Patient Records Section */}

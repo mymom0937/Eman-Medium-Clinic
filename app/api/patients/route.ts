@@ -12,9 +12,12 @@ export async function GET(request: NextRequest) {
     }
     
     const { searchParams } = new URL(request.url);
+    const isSummary = (searchParams.get('summary') || 'false') === 'true';
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
     
     const skip = (page - 1) * limit;
     
@@ -27,6 +30,28 @@ export async function GET(request: NextRequest) {
         { lastName: { $regex: search, $options: 'i' } },
         { phone: { $regex: search, $options: 'i' } },
       ];
+    }
+    if (startDate || endDate) {
+      query.createdAt = {} as any;
+      if (startDate) (query.createdAt as any).$gte = new Date(startDate);
+      if (endDate) (query.createdAt as any).$lte = new Date(endDate);
+    }
+
+    if (isSummary) {
+      const cursor = db.collection('patients').aggregate([
+        { $match: query },
+        {
+          $group: {
+            _id: null,
+            totalPatients: { $sum: 1 },
+            activePatients: { $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] } },
+            averageAge: { $avg: { $ifNull: ['$age', 0] } },
+          },
+        },
+      ]);
+      const res = await cursor.toArray();
+      const s = res[0] || { totalPatients: 0, activePatients: 0, averageAge: 0 };
+      return NextResponse.json({ success: true, summary: { totalPatients: s.totalPatients || 0, activePatients: s.activePatients || 0, averageAge: Math.round(s.averageAge || 0) } });
     }
     
     const patients = await db
