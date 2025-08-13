@@ -78,7 +78,7 @@ export default function DrugOrdersPage() {
   const [drugs, setDrugs] = useState<Drug[]>([]);
   // Patients list for dropdown selection (replaces manual patient ID & name inputs)
   const [patients, setPatients] = useState<any[]>([]);
-  // Lab results for auto-filling latest lab result id by patient
+  // Lab results for auto-filling latest lab test id by patient
   const [labResults, setLabResults] = useState<MinimalLabResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -259,7 +259,7 @@ export default function DrugOrdersPage() {
     if (!formData.patientName.trim())
       newErrors.patientName = "Patient is required";
     if (!formData.labResultId.trim())
-      newErrors.labResultId = "Lab Result ID is required";
+      newErrors.labResultId = "Lab Test ID is required";
 
     if (!formData.items.length) {
       newErrors.items = "At least one drug item is required";
@@ -1025,7 +1025,7 @@ export default function DrugOrdersPage() {
             </FormField>
 
             <FormField
-              label="Lab Result ID"
+              label="Lab Test ID"
               required
               error={errors.labResultId}
             >
@@ -1034,7 +1034,7 @@ export default function DrugOrdersPage() {
                 onChange={(e) =>
                   handleInputChange("labResultId", e.target.value)
                 }
-                placeholder="Enter related lab result ID"
+                placeholder="Enter related lab test ID"
                 className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
               />
             </FormField>
@@ -1332,7 +1332,7 @@ export default function DrugOrdersPage() {
             </FormField>
 
             <FormField
-              label="Lab Result ID"
+              label="Lab Test ID"
               required
               error={errors.labResultId}
             >
@@ -1341,7 +1341,7 @@ export default function DrugOrdersPage() {
                 onChange={(e) =>
                   handleInputChange("labResultId", e.target.value)
                 }
-                placeholder="Enter related lab result ID"
+                placeholder="Enter related lab test ID"
                 className="w-full border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-transparent text-text-primary placeholder-text-muted bg-background"
               />
             </FormField>
@@ -1640,7 +1640,7 @@ export default function DrugOrdersPage() {
               {viewingDrugOrder.labResultId && (
                 <div>
                   <label className="block text-sm font-medium text-text-muted">
-                    Lab Result ID
+                    Lab Test ID
                   </label>
                   <p className="mt-1 text-sm text-text-primary">
                     {viewingDrugOrder.labResultId}
