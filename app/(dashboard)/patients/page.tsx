@@ -123,6 +123,7 @@ export default function PatientsPage() {
   // Lab request modal state (Nurse initiates lab tests from Patients page)
   const [isLabModalOpen, setIsLabModalOpen] = useState(false);
   const [labPatientId, setLabPatientId] = useState("");
+  const [labSubmitting, setLabSubmitting] = useState(false);
   const [labPatientName, setLabPatientName] = useState("");
   const [labTestType, setLabTestType] = useState<string>(LAB_TEST_TYPES.COMPLETE_BLOOD_COUNT);
   const [labAdditionalTests, setLabAdditionalTests] = useState<string[]>([]);
@@ -372,6 +373,7 @@ export default function PatientsPage() {
 
   const handleSubmitLabRequest = async () => {
     try {
+      setLabSubmitting(true);
       const body:any = {
         patientId: labPatientId,
         patientName: labPatientName,
@@ -415,7 +417,7 @@ export default function PatientsPage() {
     } catch (e:any) {
       console.error(e);
       toastManager.error(e.message || 'Failed to submit request');
-    }
+    } finally { setLabSubmitting(false); }
   };
 
   // Create display stats from real data
@@ -1665,6 +1667,7 @@ export default function PatientsPage() {
             <Button
               className="hover:bg-gray-700 cursor-pointer bg-[#1447E6]"
               onClick={handleSubmitLabRequest}
+              loading={labSubmitting}
             >
               {labEditingId ? 'Update Request' : 'Request Test'}
             </Button>
