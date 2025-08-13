@@ -50,7 +50,7 @@ This document outlines the requirements, business context, and technical approac
 
 ## 4. Key Features & Functional Requirements
 
-### 4.1. User Roles
+### 4.1. User Roles (Updated)
 - **Super Admin (Owner):**
   - Full access to all data and controls
   - Can monitor sales, inventory, cash flow, and patient records remotely
@@ -58,42 +58,38 @@ This document outlines the requirements, business context, and technical approac
   - Can view patient workflow from assessment to drug purchase
 - **Nurse:**
   - Conducts initial patient assessment and documents patient case
-  - Sends patient case to Laboratorist for testing
-  - Receives and reviews lab results from Laboratorist
+  - Requests/edits lab tests for patients (the “Request New Lab Test” and “Edit Lab Test Request” modals are owned by Nurse)
+  - Sends patient to Laboratorist; receives and reviews lab results
   - Orders drugs for patients based on lab results
-  - Manages patient records (add new patients, update existing records, search by patient ID)
-  - Views patient visit history and treatment plans
+  - Manages patient records (create/update/search by patient ID)
+  - Views visit history and treatment plans
 - **Laboratorist:**
-  - Receives patient cases from Nurse
-  - Performs medical checkups and tests based on patient documentation
-  - Sends test results back to Nurse digitally
-  - Manages test records and lab reports
-  - Views patient test history and results
+  - Receives lab test requests from Nurse
+  - Performs tests and records results (via “Record Lab Results” modal on Lab Results page)
+  - Marks tests completed and returns results to Nurse
+  - Manages test records and reports
 - **Pharmacist:**
-  - Manages drug inventory (add, update, remove drugs)
-  - Handles drug sales and processes payments (combined role)
-  - Views stock levels and generates restock requests
-  - Processes drug orders from Nurse
-  - Manages drug dispensing and payment collection
-  - Views sales and payment history
+  - Manages drug inventory (add/update/remove drugs)
+  - Processes Nurse-ordered prescriptions
+  - Records two direct, non-workflow operations:
+    - Drug Sales (walk-in/outside patients purchasing medication only)
+    - Walk‑in Services (e.g., injections, blood pressure/sugar checks ordered elsewhere)
+  - Handles payments for both prescription orders and walk-in activities
+  - Views sales/payment history and low-stock alerts
 
-### 4.2. Core Modules
+### 4.2. Core Modules (Updated)
 - **Authentication & Authorization:**
   - Secure login for all users (Clerk integration)
   - Role-based access control
 - **Patient Workflow Management:**
-  - Initial patient assessment by Nurse
-  - Digital communication between Nurse and Laboratorist
-  - Lab result management and review
-  - Drug ordering based on lab results
-  - Drug dispensing and payment processing
+  - Initial assessment (Nurse) → Lab test request (Nurse) → Test & record results (Laboratorist) → Drug order (Nurse) → Dispense & pay (Pharmacist)
 - **Drug Inventory Management:**
   - Add, update, and remove drugs
   - Track stock levels in real-time
   - Upload drug images (Cloudinary integration)
 - **Sales Management:**
-  - Record each drug sale (linked to inventory, payment, and patient)
-  - View sales history and analytics
+  - Prescription sales (workflow) and direct Drug Sales (walk‑in)
+  - Linked to inventory, payments; analytics by source
 - **Cash Management:**
   - Record payments received
   - Track total money collected
@@ -105,9 +101,9 @@ This document outlines the requirements, business context, and technical approac
   - Update patient information as needed
   - Track patient assessment, lab results, and treatment plans
 - **Lab Results Management:**
-  - Digital communication between Nurse and Laboratorist
-  - Test result documentation and storage
-  - Lab report generation and review
+  - Nurse requests/edits tests; Laboratorist records results and can save draft/mark completed
+  - Auto-generated Lab Result ID at request time for traceability
+  - Results recorded through a dedicated modal with parameters and summary
 - **Reporting & Dashboard:**
   - Real-time dashboard for super admin
   - Sales, inventory, cash flow, patient, and lab analytics
@@ -343,24 +339,18 @@ NODE_ENV=development
   - I want to track the complete patient workflow from assessment to drug purchase.
   - I want to manage staff access and permissions.
 - **As a Nurse:**
-  - I want to conduct initial patient assessments and document patient cases.
-  - I want to send patient cases to the Laboratorist for testing.
-  - I want to receive and review lab results from the Laboratorist.
-  - I want to order drugs for patients based on lab results.
-  - I want to register new patients and retrieve existing patient records by ID.
-  - I want to view patient visit history and treatment plans.
+  - I want to assess patients and request/modify lab tests.
+  - I want to receive recorded lab results from the Laboratorist.
+  - I want to order drugs based on those results.
+  - I want to manage patient records and history.
 - **As a Laboratorist:**
-  - I want to receive patient cases from the Nurse.
-  - I want to perform medical checkups and tests based on patient documentation.
-  - I want to send test results back to the Nurse digitally.
-  - I want to manage test records and lab reports.
-  - I want to view patient test history and results.
+  - I want to view the Nurse’s test requests, conduct tests, and record results via a focused modal.
+  - I want to save drafts and mark results completed.
+  - I want to view previous results for context.
 - **As a Pharmacist:**
-  - I want to add new drugs, update stock, and handle sales and payments.
-  - I want to see alerts for low-stock drugs.
-  - I want to process drug orders from the Nurse.
-  - I want to manage drug dispensing and payment collection.
-  - I want to view sales and payment history.
+  - I want to manage inventory and process Nurse-ordered prescriptions.
+  - I want to record walk‑in Drug Sales and Walk‑in Services not tied to the clinical workflow.
+  - I want the payments page to reflect both workflow payments and walk‑in revenue.
 
 ---
 
@@ -387,7 +377,7 @@ NODE_ENV=development
 
 ## 11. Conclusion
 
-This digital clinic management web application will modernize the client's business, providing real-time, remote control and insights, improving operational efficiency, and reducing manual errors. The new workflow with Nurse, Laboratorist, and Pharmacist roles ensures a streamlined patient experience from initial assessment to drug purchase. The proposed technology stack and folder structure ensure scalability, security, maintainability, and ease of use for all stakeholders.
+This digital clinic management web application modernizes the clinic, enabling remote control and insights, improving efficiency, and reducing errors. The clarified workflow assigns: Nurse for assessment and lab requests, Laboratorist for conducting and recording lab results, and Pharmacist for dispensing plus walk‑in Drug Sales and Walk‑in Services. Reports and dashboards summarize both clinical workflow revenue and non‑workflow (walk‑in) revenue. The stack and structure ensure scalability, security, maintainability, and usability for all stakeholders.
 
 ---
 
