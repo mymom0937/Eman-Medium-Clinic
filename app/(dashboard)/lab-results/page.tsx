@@ -133,37 +133,60 @@ export default function LabResultsPage() {
     return () => window.removeEventListener("resize", compute);
   }, []);
 
-  // Load lab results data on component mount
-  useEffect(() => {
-    const loadLabResults = async () => {
-      if (!isLoaded) return;
+  // Load lab results data on component mount and on external updates
+  const loadLabResults = async () => {
+    if (!isLoaded) return;
 
-      try {
-        setInitialLoading(true);
-        const [labRes, patientsRes] = await Promise.all([
-          fetch("/api/lab-results"),
-          // Request larger limit so we consistently have full patient list like Patients page
-          fetch("/api/patients?limit=1000&page=1"),
-        ]);
-        const labData = await labRes.json();
-        const patientsData = await patientsRes.json();
-        if (labRes.ok) {
-          setLabResults(labData);
-        }
-        if (patientsRes.ok && patientsData.success) {
-          const sorted = [...(patientsData.data || [])].sort((a:any,b:any)=>
-            (a.patientId||"").localeCompare(b.patientId||"")
-          );
-            setPatients(sorted);
-        }
-      } catch (error) {
-        console.error("Error loading lab results:", error);
-      } finally {
-        setInitialLoading(false);
+    try {
+      setInitialLoading(true);
+      const [labRes, patientsRes] = await Promise.all([
+        fetch("/api/lab-results"),
+        // Request larger limit so we consistently have full patient list like Patients page
+        fetch("/api/patients?limit=1000&page=1"),
+      ]);
+      const labData = await labRes.json();
+      const patientsData = await patientsRes.json();
+      if (labRes.ok) {
+        setLabResults(labData);
       }
-    };
+      if (patientsRes.ok && patientsData.success) {
+        const sorted = [...(patientsData.data || [])].sort((a:any,b:any)=>
+          (a.patientId||"").localeCompare(b.patientId||"")
+        );
+        setPatients(sorted);
+      }
+    } catch (error) {
+      console.error("Error loading lab results:", error);
+    } finally {
+      setInitialLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadLabResults();
+  }, [isLoaded]);
+
+  // Listen for cross-page update signals (from Patients modal create/edit)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = () => { loadLabResults(); };
+    // BroadcastChannel for robust same-tab route updates
+    const bc: BroadcastChannel | null = ("BroadcastChannel" in window)
+      ? new BroadcastChannel("lab-results-updates")
+      : null;
+    if (bc) bc.onmessage = handler;
+    // Custom event within same tab
+    window.addEventListener("lab-results-updated", handler);
+    // Storage event for other tabs
+    const storageHandler = (e: StorageEvent) => {
+      if (e.key === "lab-results-updated") handler();
+    };
+    window.addEventListener("storage", storageHandler);
+    return () => {
+      if (bc) bc.close();
+      window.removeEventListener("lab-results-updated", handler);
+      window.removeEventListener("storage", storageHandler);
+    };
   }, [isLoaded]);
 
   // Filter lab results based on search, filters and date range
@@ -593,10 +616,15 @@ export default function LabResultsPage() {
         userName={userName}
       >
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-text-primary">Lab Requests & Results</h1>
-              <p className="text-sm text-text-secondary mt-1">
+          <div className="flex justify-between items-start">
+            <div className="min-w-0 px-1 sm:px-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Lab Requests & Results</h1>
+              {/* Ultra-compact blurb for narrow phones (e.g., iPhone SE) */}
+              <p className="block sm:hidden text-xs text-text-secondary mt-1 leading-snug break-words pr-1">
+                Nurse-submitted lab requests and their status. Tap the flask to record results.
+              </p>
+              {/* Full blurb for ≥640px */}
+              <p className="hidden sm:!block text-sm text-text-secondary mt-1 leading-relaxed break-words sm:max-w-[75ch]">
                 This list shows lab test requests submitted by the nurse and their recording status. A Lab Test ID is assigned at the time of request. Use the flask icon to record results when you are the laboratorist.
               </p>
             </div>

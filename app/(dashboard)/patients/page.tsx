@@ -414,6 +414,24 @@ export default function PatientsPage() {
       } catch (e) {
         console.error('Failed to refresh latest test types for patient', e);
       }
+
+      // Signal Lab Results page to auto-refresh (same tab and other tabs)
+      if (typeof window !== 'undefined') {
+        try {
+          // BroadcastChannel
+          if ('BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('lab-results-updates');
+            bc.postMessage({ type: 'updated' });
+            bc.close();
+          }
+          // Custom event within same tab/app shell
+          window.dispatchEvent(new Event('lab-results-updated'));
+          // storage event for other tabs
+          localStorage.setItem('lab-results-updated', String(Date.now()));
+        } catch (e) {
+          // no-op
+        }
+      }
     } catch (e:any) {
       console.error(e);
       toastManager.error(e.message || 'Failed to submit request');

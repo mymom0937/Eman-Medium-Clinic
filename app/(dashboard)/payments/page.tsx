@@ -1413,6 +1413,15 @@ export default function PaymentsPage() {
                   handleInputChange("orderReference", orderReference);
                   handleInputChange("drugOrderId", orderReference);
                   handleInputChange("orderType", "DRUG_ORDER");
+                    // Auto-fill payment amount from the selected drug order total
+                    if (selectedOrder) {
+                      const amt = Number(
+                        selectedOrder.totalAmount ?? selectedOrder.total ?? selectedOrder.finalAmount ?? 0
+                      );
+                      handleInputChange("amount", amt > 0 ? String(amt) : "");
+                      // Tag as Drug Sale for clearer reporting
+                      handleInputChange("paymentType", "DRUG_SALE");
+                    }
                 }}
                 options={[
                   { value: "", label: "Select Drug Order (Optional)" },
@@ -1701,6 +1710,14 @@ export default function PaymentsPage() {
                   handleInputChange("orderReference", orderReference);
                   handleInputChange("drugOrderId", orderReference);
                   handleInputChange("orderType", "DRUG_ORDER");
+                    // Auto-fill payment amount for edit flow as well
+                    if (selectedOrder) {
+                      const amt = Number(
+                        selectedOrder.totalAmount ?? selectedOrder.total ?? selectedOrder.finalAmount ?? 0
+                      );
+                      handleInputChange("amount", amt > 0 ? String(amt) : "");
+                      handleInputChange("paymentType", "DRUG_SALE");
+                    }
                 }}
                 options={[
                   { value: "", label: "Select Drug Order (Optional)" },
