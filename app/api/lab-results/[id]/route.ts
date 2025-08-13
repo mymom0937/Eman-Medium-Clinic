@@ -174,6 +174,8 @@ export async function PATCH(
     }
 
     const { id } = await params;
+    // Ensure DB connection is established before updating
+    await connectToDatabase();
     const body: UpdateLabResultRequest = await request.json();
     const { status, results, notes, resultSummary } = body;
 

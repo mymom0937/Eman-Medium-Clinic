@@ -893,12 +893,11 @@ export default function LabResultsPage() {
                             </button>
                           )}
                           {(userRole === USER_ROLES.LABORATORIST ||
-                            userRole === USER_ROLES.SUPER_ADMIN) &&
-                            (result.status === 'PENDING' || result.status === 'IN_PROGRESS') && (
+                            userRole === USER_ROLES.SUPER_ADMIN) && (
                             <button
                               onClick={() => openRecordResults(result)}
                               className="text-blue-500 hover:text-blue-300 mr-3 p-1 rounded hover:bg-blue-900/20 transition-colors cursor-pointer"
-                              title="Record Lab Results"
+                                title={result.status === 'COMPLETED' ? 'Edit Lab Results' : 'Record Lab Results'}
                             >
                               <FaFlask size={16} />
                             </button>
@@ -1022,12 +1021,11 @@ export default function LabResultsPage() {
                           </button>
                         )}
                         {(userRole === USER_ROLES.LABORATORIST ||
-                          userRole === USER_ROLES.SUPER_ADMIN) &&
-                          (result.status === 'PENDING' || result.status === 'IN_PROGRESS') && (
+                          userRole === USER_ROLES.SUPER_ADMIN) && (
                           <button
                             onClick={() => openRecordResults(result)}
                             className="text-blue-500 hover:text-blue-300 p-1 rounded hover:bg-blue-900/20 transition-colors cursor-pointer"
-                            title="Record Lab Results"
+                            title={result.status === 'COMPLETED' ? 'Edit Lab Results' : 'Record Lab Results'}
                           >
                             <FaFlask size={16} />
                           </button>

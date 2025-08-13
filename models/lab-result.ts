@@ -74,7 +74,8 @@ const LabResultSchema = new Schema<ILabResult>(
 );
 
 // Indexes for better query performance
-LabResultSchema.index({ labResultId: 1 });
+// Note: labResultId already has `index: true` in the schema field definition
+// to avoid duplicate index warnings in Mongoose, we do not repeat it here.
 LabResultSchema.index({ patientId: 1, createdAt: -1 });
 LabResultSchema.index({ status: 1 });
 LabResultSchema.index({ requestedBy: 1 });
