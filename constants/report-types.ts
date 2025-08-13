@@ -1,7 +1,7 @@
 export const REPORT_TYPES = [
   { value: 'comprehensive', label: 'Comprehensive Report', description: 'Complete overview of all clinic operations' },
   { value: 'patients', label: 'Patients Report', description: 'Patient demographics and statistics' },
-  { value: 'lab-results', label: 'Lab Results Report', description: 'Laboratory test results and completion rates' },
+  { value: 'lab-results', label: 'Lab Requests & Results Report', description: 'Laboratory test requests, results, and completion rates' },
   { value: 'drug-orders', label: 'Drug Orders Report', description: 'Prescription and dispensing statistics' },
   { value: 'inventories', label: 'Inventory Report', description: 'Drug inventory levels and stock management' },
   { value: 'sales', label: 'Sales Report', description: 'Pharmacy sales and revenue statistics' },

@@ -93,6 +93,8 @@ export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [patientLatestTests, setPatientLatestTests] = useState<Record<string, { testType: string; additionalTestTypes: string[] }>>({});
   const [openTestTypesFor, setOpenTestTypesFor] = useState<string | null>(null);
+  // If a Test Types dropdown should open upward (when close to viewport bottom)
+  const [dropUpFor, setDropUpFor] = useState<string | null>(null);
   const [stats, setStats] = useState<PatientStats>({
     totalPatients: 0,
     newThisMonth: 0,
@@ -391,6 +393,25 @@ export default function PatientsPage() {
       setLabTestName('');
       setLabEditingId(null);
       toastManager.success(labEditingId ? 'Lab test request updated.' : 'Lab test requested.');
+
+      // Refresh the "Test Types" quick column for this patient so the table updates immediately
+      try {
+        const latestRes = await fetch(`/api/lab-results?patientId=${encodeURIComponent(labPatientId)}`);
+        const latestItems = await latestRes.json();
+        if (latestRes.ok && Array.isArray(latestItems) && latestItems.length > 0) {
+          const latest = [...latestItems]
+            .sort((a: any, b: any) => new Date(b.requestedAt || b.createdAt).getTime() - new Date(a.requestedAt || a.createdAt).getTime())[0];
+          setPatientLatestTests(prev => ({
+            ...prev,
+            [labPatientId]: {
+              testType: latest.testType,
+              additionalTestTypes: latest.additionalTestTypes || [],
+            },
+          }));
+        }
+      } catch (e) {
+        console.error('Failed to refresh latest test types for patient', e);
+      }
     } catch (e:any) {
       console.error(e);
       toastManager.error(e.message || 'Failed to submit request');
@@ -877,32 +898,40 @@ export default function PatientsPage() {
                              <td className="px-2 py-1 whitespace-nowrap text-sm text-text-primary">
                               {patient.bloodType || "-"}
                             </td>
-                             <td className="px-2 py-1 text-sm text-text-primary">
+                             <td className="px-2 py-1 text-sm text-text-primary w-52 align-top">
                                {(() => {
                                  const t = patientLatestTests[patient.patientId];
                                  if (!t) return <span className="text-text-secondary">-</span>;
                                  const label = LAB_TEST_LABELS[t.testType as keyof typeof LAB_TEST_LABELS] || t.testType;
                                  const extra = t.additionalTestTypes?.length || 0;
                                  return (
-                                   <div className="relative max-w-[220px]" data-pt-test-types>
-                                     <button
+                                   <div className="relative w-full" data-pt-test-types>
+                                      <button
                                        type="button"
                                        data-pt-test-types
-                                       onClick={() => setOpenTestTypesFor(prev => prev === patient.patientId ? null : patient.patientId)}
-                                       className="flex items-center space-x-2 text-left hover:bg-accent-color/10 px-2 py-1 rounded-md transition-colors whitespace-nowrap truncate border border-transparent focus:border-accent-color"
+                                        onClick={(e) => {
+                                          setOpenTestTypesFor(prev => prev === patient.patientId ? null : patient.patientId);
+                                          const winH = typeof window !== 'undefined' ? window.innerHeight : 0;
+                                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                          const spaceBelow = winH - rect.bottom;
+                                          const spaceAbove = rect.top;
+                                          const shouldDropUp = spaceBelow < 260 || rect.top > (winH / 2 && spaceAbove > spaceBelow);
+                                          setDropUpFor(shouldDropUp ? patient.patientId : null);
+                                        }}
+                                        className="flex items-center space-x-2 text-left hover:bg-accent-color/10 px-2 py-1 rounded-md transition-colors truncate border border-transparent focus:border-accent-color w-full overflow-hidden"
                                      >
                                        <span className="font-medium">{label}</span>
-                                       {extra > 0 && (
-                                         <span className="bg-accent-color text-white text-xs px-2 py-0.5 rounded-full">+{extra}</span>
+                                        {extra > 0 && (
+                                          <span className="bg-accent-color text-white text-xs px-2 py-0.5 rounded-full shrink-0">+{extra}</span>
                                        )}
-                                       <svg className="w-4 h-4 ml-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-4 h-4 ml-1 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                        </svg>
                                      </button>
-                                     {openTestTypesFor === patient.patientId && (
+                                      {openTestTypesFor === patient.patientId && (
                                        <div
                                          data-pt-test-types
-                                         className="absolute top-full left-0 z-50 mt-1 bg-card-bg border border-border-color rounded-md shadow-lg min-w-[200px] max-w-[300px]"
+                                          className={`absolute ${dropUpFor === patient.patientId ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 z-50 bg-card-bg border border-border-color rounded-md shadow-lg min-w-[200px] max-w-[300px] max-h-64 overflow-y-auto`}
                                        >
                                          <div className="p-3 border-b border-border-color">
                                            <h4 className="text-sm font-medium text-text-primary mb-2">All Test Types</h4>
@@ -1043,7 +1072,15 @@ export default function PatientsPage() {
                                <button
                                  type="button"
                                  data-pt-test-types
-                                 onClick={() => setOpenTestTypesFor(prev => prev === patient.patientId ? null : patient.patientId)}
+                                  onClick={(e) => {
+                                    setOpenTestTypesFor(prev => prev === patient.patientId ? null : patient.patientId);
+                                    const winH = typeof window !== 'undefined' ? window.innerHeight : 0;
+                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                    const spaceBelow = winH - rect.bottom;
+                                    const spaceAbove = rect.top;
+                                    const shouldDropUp = spaceBelow < 260 || (rect.top > winH / 2 && spaceAbove > spaceBelow);
+                                    setDropUpFor(shouldDropUp ? patient.patientId : null);
+                                  }}
                                  className="ml-2 inline-flex items-center gap-2 text-left hover:bg-accent-color/10 px-2 py-1 rounded-md transition-colors whitespace-nowrap"
                                >
                                  <span className="text-text-primary">{label}</span>
@@ -1054,10 +1091,10 @@ export default function PatientsPage() {
                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                  </svg>
                                </button>
-                               {openTestTypesFor === patient.patientId && (
+                                {openTestTypesFor === patient.patientId && (
                                  <div
                                    data-pt-test-types
-                                   className="absolute top-full left-0 z-50 mt-1 bg-card-bg border border-border-color rounded-md shadow-lg min-w-[200px] max-w-[300px]"
+                                    className={`absolute ${dropUpFor === patient.patientId ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 z-50 bg-card-bg border border-border-color rounded-md shadow-lg min-w-[200px] max-w-[300px] max-h-64 overflow-y-auto`}
                                  >
                                    <div className="p-3 border-b border-border-color">
                                      <h4 className="text-sm font-medium text-text-primary mb-2">All Test Types</h4>

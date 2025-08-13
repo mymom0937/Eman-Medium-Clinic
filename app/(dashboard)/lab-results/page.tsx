@@ -104,6 +104,8 @@ export default function LabResultsPage() {
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
   const [rangeStart, setRangeStart] = useState<string>('');
   const [rangeEnd, setRangeEnd] = useState<string>('');
+  // Track whether a Test Types dropdown should open upward for a specific result row
+  const [dropUpFor, setDropUpFor] = useState<string | null>(null);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -558,7 +560,7 @@ export default function LabResultsPage() {
   if (!isLoaded || initialLoading) {
     return (
       <DashboardLayout
-        title="Lab Results"
+        title="Lab Requests & Results"
         userRole={userRole}
         userName={userName}
       >
@@ -572,7 +574,7 @@ export default function LabResultsPage() {
   if (loading) {
     return (
       <DashboardLayout
-        title="Lab Results"
+        title="Lab Requests & Results"
         userRole={userRole}
         userName={userName}
       >
@@ -586,22 +588,25 @@ export default function LabResultsPage() {
   return (
     <>
       <DashboardLayout
-        title="Lab Results"
+        title="Lab Requests & Results"
         userRole={userRole}
         userName={userName}
       >
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-text-primary">
-              Lab Results
-            </h1>
+            <div>
+              <h1 className="text-3xl font-bold text-text-primary">Lab Requests & Results</h1>
+              <p className="text-sm text-text-secondary mt-1">
+                This list shows lab test requests submitted by the nurse and their recording status. A Lab Test ID is assigned at the time of request. Use the flask icon to record results when you are the laboratorist.
+              </p>
+            </div>
             {/* Requesting new tests is now done on the Patients page */}
           </div>
 
             <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <CardTitle>Lab Results Overview</CardTitle>
+                <CardTitle>Lab Requests & Results</CardTitle>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <select value={dateRange} onChange={(e)=>setDateRange(e.target.value as any)} className="w-full sm:w-auto border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background">
                     <option value="today">Today</option>
@@ -687,7 +692,7 @@ export default function LabResultsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Lab Result ID</TableHead>
+                    <TableHead>Lab Test ID</TableHead>
                       <TableHead>Patient</TableHead>
                       <TableHead>Test Types</TableHead>
                       <TableHead>Test Name</TableHead>
@@ -716,10 +721,10 @@ export default function LabResultsPage() {
                         </TableCell>
                         <TableCell className="text-text-primary">
                           <div className="relative">
-                            <button
+                              <button
                               type="button"
                               data-test-types-dropdown
-                              onClick={() => {
+                                onClick={(e) => {
                                 // Toggle dropdown for this specific result
                                 setLabResults((prev) =>
                                   prev.map((r) =>
@@ -732,8 +737,15 @@ export default function LabResultsPage() {
                                       : { ...r, showTestTypesDropdown: false }
                                   )
                                 );
+                                  // Decide open direction based on available viewport space
+                                  const winH = typeof window !== 'undefined' ? window.innerHeight : 0;
+                                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                  const spaceBelow = winH - rect.bottom;
+                                  const spaceAbove = rect.top;
+                                  const shouldDropUp = spaceBelow < 260 || (rect.top > winH / 2 && spaceAbove > spaceBelow);
+                                  setDropUpFor(shouldDropUp ? result._id : null);
                               }}
-                              className="flex items-center space-x-2 text-left hover:bg-accent-color/10 px-2 py-1 rounded-md transition-colors"
+                                className="flex items-center space-x-2 text-left hover:bg-accent-color/10 px-2 py-1 rounded-md transition-colors truncate"
                             >
                               <span className="font-medium">
                                 {result.testType === CUSTOM_TEST_TYPE_VALUE &&
@@ -769,7 +781,7 @@ export default function LabResultsPage() {
                             {result.showTestTypesDropdown && (
                               <div
                                 data-test-types-dropdown
-                                className="absolute top-full left-0 z-50 mt-1 bg-card-bg border border-border-color rounded-md shadow-lg min-w-[200px] max-w-[300px]"
+                                className={`absolute ${dropUpFor === result._id ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 z-50 bg-card-bg border border-border-color rounded-md shadow-lg min-w-[200px] max-w-[300px] max-h-64 overflow-y-auto`}
                               >
                                 <div className="p-3 border-b border-border-color">
                                   <h4 className="text-sm font-medium text-text-primary mb-2">
@@ -881,7 +893,8 @@ export default function LabResultsPage() {
                             </button>
                           )}
                           {(userRole === USER_ROLES.LABORATORIST ||
-                            userRole === USER_ROLES.SUPER_ADMIN) && (
+                            userRole === USER_ROLES.SUPER_ADMIN) &&
+                            (result.status === 'PENDING' || result.status === 'IN_PROGRESS') && (
                             <button
                               onClick={() => openRecordResults(result)}
                               className="text-blue-500 hover:text-blue-300 mr-3 p-1 rounded hover:bg-blue-900/20 transition-colors cursor-pointer"
@@ -1009,7 +1022,8 @@ export default function LabResultsPage() {
                           </button>
                         )}
                         {(userRole === USER_ROLES.LABORATORIST ||
-                          userRole === USER_ROLES.SUPER_ADMIN) && (
+                          userRole === USER_ROLES.SUPER_ADMIN) &&
+                          (result.status === 'PENDING' || result.status === 'IN_PROGRESS') && (
                           <button
                             onClick={() => openRecordResults(result)}
                             className="text-blue-500 hover:text-blue-300 p-1 rounded hover:bg-blue-900/20 transition-colors cursor-pointer"
