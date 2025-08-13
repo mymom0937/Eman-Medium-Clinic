@@ -333,72 +333,64 @@ export default function PaymentsPage() {
     });
   };
 
-  // Load payments and patients data on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      if (!isLoaded) return;
+  // Shared loader used on mount and when receiving cross-page update signals
+  const loadPaymentsAndPatients = async () => {
+    if (!isLoaded) return;
+    try {
+      setInitialLoading(true);
 
-      try {
-        setInitialLoading(true);
-
-        const paymentsResponse = await fetch("/api/payments");
-        const paymentsResult = await paymentsResponse.json();
-        if (paymentsResponse.ok && paymentsResult.success) {
-          const paymentsData: Payment[] = paymentsResult.data || [];
-          setPayments(paymentsData);
-          await computeAndSetStats(paymentsData);
-        }
-
-        // Fetch all patients across pages to populate dropdown completely
-        const fetchAllPatients = async (): Promise<any[]> => {
-          const limit = 100;
-          let page = 1;
-          let all: any[] = [];
-          while (true) {
-            const res = await fetch(`/api/patients?page=${page}&limit=${limit}`);
-            const json = await res.json();
-            if (!res.ok || !json.success) break;
-            const batch: any[] = json.data || [];
-            all = all.concat(batch);
-            const total = json.pagination?.total ?? batch.length;
-            if (all.length >= total || batch.length < limit) break;
-            page += 1;
-          }
-          return all;
-        };
-
-        const allPatients = await fetchAllPatients();
-        setPatients(allPatients);
-
-        // TODO: Uncomment when API is ready
-        // // Fetch payments and patients in parallel
-        // const [paymentsResponse, patientsResponse] = await Promise.all([
-        //   fetch('/api/payments'),
-        //   fetch('/api/patients')
-        // ]);
-
-        // const paymentsResult = await paymentsResponse.json();
-        // const patientsResult = await patientsResponse.json();
-
-        // if (paymentsResponse.ok && paymentsResult.success) {
-        //   setPayments(paymentsResult.data);
-
-        //   // Calculate enhanced stats
-        //   const calculatedStats = calculateStats(paymentsResult.data);
-        //   setStats(calculatedStats);
-        // }
-
-        // if (patientsResponse.ok && patientsResult.success) {
-        //   setPatients(patientsResult.data);
-        // }
-      } catch (error) {
-        console.error("Error loading data:", error);
-      } finally {
-        setInitialLoading(false);
+      const paymentsResponse = await fetch("/api/payments");
+      const paymentsResult = await paymentsResponse.json();
+      if (paymentsResponse.ok && paymentsResult.success) {
+        const paymentsData: Payment[] = paymentsResult.data || [];
+        setPayments(paymentsData);
+        await computeAndSetStats(paymentsData);
       }
-    };
 
-    loadData();
+      // Fetch all patients across pages to populate dropdown completely
+      const fetchAllPatients = async (): Promise<any[]> => {
+        const limit = 100;
+        let page = 1;
+        let all: any[] = [];
+        while (true) {
+          const res = await fetch(`/api/patients?page=${page}&limit=${limit}`);
+          const json = await res.json();
+          if (!res.ok || !json.success) break;
+          const batch: any[] = json.data || [];
+          all = all.concat(batch);
+          const total = json.pagination?.total ?? batch.length;
+          if (all.length >= total || batch.length < limit) break;
+          page += 1;
+        }
+        return all;
+      };
+
+      const allPatients = await fetchAllPatients();
+      setPatients(allPatients);
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  // Load on mount
+  useEffect(() => { loadPaymentsAndPatients(); }, [isLoaded]);
+
+  // Listen for cross-page update signals to refresh Drug Sales and Walk-in Services totals
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = () => { loadPaymentsAndPatients(); };
+    const bc: BroadcastChannel | null = ('BroadcastChannel' in window) ? new BroadcastChannel('payments-updates') : null;
+    if (bc) bc.onmessage = handler;
+    window.addEventListener('payments-updated', handler);
+    const storageHandler = (e: StorageEvent) => { if (e.key === 'payments-updated') handler(); };
+    window.addEventListener('storage', storageHandler);
+    return () => {
+      if (bc) bc.close();
+      window.removeEventListener('payments-updated', handler);
+      window.removeEventListener('storage', storageHandler);
+    };
   }, [isLoaded]);
 
   // Setup viewport listener

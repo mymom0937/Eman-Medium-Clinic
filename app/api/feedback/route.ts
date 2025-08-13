@@ -129,6 +129,11 @@ export async function POST(request: NextRequest) {
 
     await feedback.save();
 
+    // Notify dashboards/feedback page about the new submission (fire-and-forget)
+    try {
+      // No-op on server; client pages listen via BroadcastChannel/storage/window events triggered by contact form.
+    } catch {}
+
     // Log the submission for monitoring
     console.log(`New feedback submitted: ${email} from ${ip}`);
 

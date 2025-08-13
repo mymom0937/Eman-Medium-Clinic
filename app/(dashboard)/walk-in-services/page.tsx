@@ -432,6 +432,15 @@ export default function WalkInServicesPage() {
           }
         };
         loadServices();
+
+          // Signal payments dashboard to refresh (Walk-in Services totals)
+          if (typeof window !== 'undefined') {
+            try {
+              if ('BroadcastChannel' in window) { const bc = new BroadcastChannel('payments-updates'); bc.postMessage({ type: 'walkins' }); bc.close(); }
+              window.dispatchEvent(new Event('payments-updated'));
+              localStorage.setItem('payments-updated', String(Date.now()));
+            } catch {}
+          }
       } else {
         throw new Error(result.error || "Failed to record service");
       }
@@ -560,6 +569,15 @@ export default function WalkInServicesPage() {
           }
         };
         loadServices();
+
+        // Signal payments dashboard to refresh (Walk-in Services totals)
+        if (typeof window !== 'undefined') {
+          try {
+            if ('BroadcastChannel' in window) { const bc = new BroadcastChannel('payments-updates'); bc.postMessage({ type: 'walkins' }); bc.close(); }
+            window.dispatchEvent(new Event('payments-updated'));
+            localStorage.setItem('payments-updated', String(Date.now()));
+          } catch {}
+        }
       } else {
         throw new Error(result.error || "Failed to update service");
       }

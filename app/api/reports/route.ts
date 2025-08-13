@@ -394,15 +394,28 @@ async function generateWalkInServicesReport(db: any, startDate: Date, endDate: D
 }
 
 async function generateComprehensiveReport(db: any, startDate: Date, endDate: Date) {
+  // Apply date range filters consistently across collections
   const [patients, labResults, drugOrders, drugs, sales, payments, walkInServices] = await Promise.all([
-    db.collection('patients').find({}).toArray(),
-    db.collection('labresults').find({}).toArray(),
-    db.collection('drugorders').find({}).toArray(),
+    db.collection('patients').find({ createdAt: { $gte: startDate, $lte: endDate } }).toArray(),
+    db.collection('labresults').find({ requestedAt: { $gte: startDate, $lte: endDate } }).toArray(),
+    db.collection('drugorders').find({ orderedAt: { $gte: startDate, $lte: endDate } }).toArray(),
+    // Inventory is a snapshot; do not date filter
     db.collection('drugs').find({}).toArray(),
-    db.collection('sales').find({}).toArray(),
-    db.collection('payments').find({}).toArray(),
-    db.collection('walkinservices').find({}).toArray()
+    db.collection('sales').find({ createdAt: { $gte: startDate, $lte: endDate } }).toArray(),
+    db.collection('payments').find({ createdAt: { $gte: startDate, $lte: endDate } }).toArray(),
+    db.collection('walkinservices').find({ createdAt: { $gte: startDate, $lte: endDate } }).toArray()
   ]);
+
+  const paymentsRevenue = payments.reduce((sum: number, p: any) => {
+    const status = (p.paymentStatus || '').toString().toUpperCase();
+    const amt = Number((p.finalAmount ?? p.amount) || 0);
+    return status === 'COMPLETED' ? sum + amt : sum;
+  }, 0);
+  const salesRevenue = sales.reduce((sum: number, s: any) => sum + Number(s.total || 0), 0);
+  const walkInRevenue = walkInServices.reduce((sum: number, s: any) => {
+    const status = (s.paymentStatus || '').toString().toUpperCase();
+    return status === 'COMPLETED' ? sum + Number(s.amount || 0) : sum;
+  }, 0);
 
   const reportData = {
     overview: {
@@ -415,25 +428,25 @@ async function generateComprehensiveReport(db: any, startDate: Date, endDate: Da
       totalWalkInServices: walkInServices.length
     },
     financial: {
-      totalRevenue: payments.reduce((sum: number, p: any) => 
-        p.paymentStatus === 'COMPLETED' ? sum + p.amount : sum, 0),
-      totalPayments: payments.reduce((sum: number, p: any) => 
-        p.paymentStatus === 'COMPLETED' ? sum + p.amount : sum, 0),
-      walkInServicesRevenue: walkInServices.reduce((sum: number, s: any) => 
-        s.paymentStatus === 'COMPLETED' ? sum + s.amount : sum, 0),
-      inventoryValue: drugs.reduce((sum: number, d: any) => sum + (d.sellingPrice * d.stockQuantity), 0)
+      // Overall revenue equals completed payments within range
+      totalRevenue: paymentsRevenue,
+      // Breakdowns
+      salesRevenue,
+      paymentsRevenue,
+      walkInServicesRevenue: walkInRevenue,
+      inventoryValue: drugs.reduce((sum: number, d: any) => sum + (Number(d.sellingPrice || 0) * Number(d.stockQuantity || 0)), 0)
     },
     performance: {
-      labCompletionRate: labResults.length > 0 ? 
+      labCompletionRate: labResults.length > 0 ?
         (labResults.filter((lr: any) => lr.status === 'COMPLETED').length / labResults.length) * 100 : 0,
-      orderDispenseRate: drugOrders.length > 0 ? 
+      orderDispenseRate: drugOrders.length > 0 ?
         (drugOrders.filter((order: any) => order.status === 'DISPENSED').length / drugOrders.length) * 100 : 0,
-      paymentSuccessRate: payments.length > 0 ? 
+      paymentSuccessRate: payments.length > 0 ?
         (payments.filter((p: any) => p.paymentStatus === 'COMPLETED').length / payments.length) * 100 : 0,
-      walkInServicesSuccessRate: walkInServices.length > 0 ? 
+      walkInServicesSuccessRate: walkInServices.length > 0 ?
         (walkInServices.filter((s: any) => s.paymentStatus === 'COMPLETED').length / walkInServices.length) * 100 : 0
     }
   };
 
   return reportData;
-} 
+}

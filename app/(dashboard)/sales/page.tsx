@@ -205,6 +205,14 @@ export default function SalesPage() {
       const dres = await fetch('/api/drugs');
       const djson = await dres.json();
       if (dres.ok && djson.success) setDrugs(djson.data || []);
+      // Signal payments dashboard to refresh (Drug Sales totals)
+      if (typeof window !== 'undefined') {
+        try {
+          if ('BroadcastChannel' in window) { const bc = new BroadcastChannel('payments-updates'); bc.postMessage({ type: 'sales' }); bc.close(); }
+          window.dispatchEvent(new Event('payments-updated'));
+          localStorage.setItem('payments-updated', String(Date.now()));
+        } catch {}
+      }
     } catch (err: any) {
       toastManager.error(err?.message || 'Failed to create sale');
     } finally { setLoading(false); }

@@ -116,9 +116,13 @@ export default function DashboardPage() {
         const totalPayments = paymentsData.success
           ? paymentsData.data.length
           : 0;
+        // Sum completed payments using finalAmount when available
         const totalRevenue = paymentsData.success
           ? paymentsData.data.reduce(
-              (sum: number, payment: any) => sum + (payment.amount || 0),
+              (sum: number, payment: any) =>
+                (String(payment.paymentStatus || '').toUpperCase() === 'COMPLETED')
+                  ? sum + Number((payment.finalAmount ?? payment.amount) || 0)
+                  : sum,
               0
             )
           : 0;
@@ -144,9 +148,9 @@ export default function DashboardPage() {
 
         // Calculate today's services (approximation)
         const today = new Date();
-        const totalLabResults = Array.isArray(labResultsData)
+        const totalLabResults = (labResultsData && Array.isArray(labResultsData))
           ? labResultsData.length
-          : 0;
+          : (labResultsData && labResultsData.success && Array.isArray(labResultsData.data) ? labResultsData.data.length : 0);
         const totalWalkInServices = walkInServicesData.success
           ? walkInServicesData.data.length
           : 0;
@@ -177,7 +181,7 @@ export default function DashboardPage() {
               action: `Payment received from ${payment.patientName}`,
               time: getTimeAgo(new Date(payment.createdAt)),
               type: "sale",
-              amount: `$${(payment.amount || 0).toFixed(2)}`,
+              amount: `ETB ${(Number(payment.finalAmount ?? payment.amount) || 0).toFixed(2)}`,
             });
           });
         }
@@ -204,7 +208,7 @@ export default function DashboardPage() {
               action: `Drug order created for ${order.patientName}`,
               time: getTimeAgo(new Date(order.createdAt)),
               type: "service",
-              amount: `$${(order.totalAmount || 0).toFixed(2)}`,
+              amount: `ETB ${(Number(order.totalAmount || 0)).toFixed(2)}`,
             });
           });
         }
@@ -231,7 +235,7 @@ export default function DashboardPage() {
               action: `Walk-in service: ${service.serviceType} for ${service.patientName}`,
               time: getTimeAgo(new Date(service.createdAt)),
               type: "service",
-              amount: `$${(service.amount || 0).toFixed(2)}`,
+              amount: `ETB ${(Number(service.amount || 0)).toFixed(2)}`,
             });
           });
         }
@@ -463,7 +467,7 @@ export default function DashboardPage() {
     {
       title: "Total Payments",
       value: stats.totalSales.toString(),
-      change: `$${stats.totalRevenue.toFixed(2)} total revenue`,
+      change: `ETB ${stats.totalRevenue.toFixed(2)} total revenue`,
       changeType: "positive" as const,
       icon: "💰",
     },
@@ -638,7 +642,7 @@ export default function DashboardPage() {
                     Total Revenue
                   </p>
                   <p className="text-2xl font-bold text-text-primary">
-                    ${stats.totalRevenue.toFixed(2)}
+                    ETB {stats.totalRevenue.toFixed(2)}
                   </p>
                 </div>
                 <span className="text-2xl">💰</span>

@@ -63,6 +63,8 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [reportMeta, setReportMeta] = useState<ReportMeta | null>(null);
+  const [prevReportData, setPrevReportData] = useState<ReportData | null>(null);
+  const [prevReportMeta, setPrevReportMeta] = useState<ReportMeta | null>(null);
   const [showCustomDate, setShowCustomDate] = useState(false);
   const [scheduledReports, setScheduledReports] = useState<any[]>([]);
   // Pagination for scheduled reports
@@ -117,6 +119,34 @@ export default function ReportsPage() {
         setReportData(result.data);
         setReportMeta(result.meta);
         toastManager.success("Report generated successfully!");
+
+        // Fetch previous period for dynamic change percentages
+        try {
+          const meta = result.meta;
+          const start = new Date(meta.startDate);
+          const end = new Date(meta.endDate);
+          const durationMs = Math.max(0, end.getTime() - start.getTime());
+          const prevEnd = new Date(start.getTime() - 1000);
+          const prevStart = new Date(prevEnd.getTime() - durationMs);
+          const prevParams = new URLSearchParams({
+            type: selectedReport,
+            range: 'custom',
+            startDate: prevStart.toISOString(),
+            endDate: prevEnd.toISOString(),
+          });
+          const prevRes = await fetch(`/api/reports?${prevParams}`);
+          const prevJson = await prevRes.json();
+          if (prevRes.ok && prevJson.success) {
+            setPrevReportData(prevJson.data);
+            setPrevReportMeta(prevJson.meta);
+          } else {
+            setPrevReportData(null);
+            setPrevReportMeta(null);
+          }
+        } catch (e) {
+          setPrevReportData(null);
+          setPrevReportMeta(null);
+        }
       } else {
         throw new Error(result.error || "Failed to generate report");
       }
@@ -221,25 +251,58 @@ export default function ReportsPage() {
     const stats = [];
 
     if (selectedReport === "comprehensive") {
+      const prev = prevReportData;
+      const pct = (curr: number, p?: number) => {
+        if (typeof p !== 'number' || isNaN(p)) return undefined as any;
+        if (p === 0) return curr > 0 ? 100 : 0;
+        return ((curr - p) / p) * 100;
+      };
+      const baseline = (() => {
+        switch (selectedDateRange) {
+          case 'today': return 'vs yesterday';
+          case 'week': return 'vs last week';
+          case 'month': return 'vs last month';
+          case 'quarter': return 'vs last quarter';
+          case 'year': return 'vs last year';
+          case 'custom': return 'vs prior range';
+          default: return 'vs last period';
+        }
+      })();
+      const fmt = (v: number | undefined) => {
+        if (typeof v !== 'number' || !isFinite(v)) return undefined;
+        const sign = v >= 0 ? '+' : '';
+        return `${sign}${v.toFixed(1)}% ${baseline}`;
+      };
+
+      const patientsNow = reportData.overview?.totalPatients || 0;
+      const patientsPrev = prev?.overview?.totalPatients;
+      const salesNow = reportData.overview?.totalSales || 0;
+      const salesPrev = prev?.overview?.totalSales;
+      const labsNow = reportData.overview?.totalLabTests || 0;
+      const labsPrev = prev?.overview?.totalLabTests;
+      const inventoryNow = Number(reportData.financial?.inventoryValue || 0);
+      const inventoryPrev = prev?.financial ? Number(prev.financial.inventoryValue || 0) : undefined;
+      const inventoryChange = fmt(pct(inventoryNow, inventoryPrev));
+
       stats.push(
         {
           title: "Total Patients",
           value: reportData.overview?.totalPatients || 0,
-          change: "+12% from last month",
+          change: fmt(pct(patientsNow, patientsPrev)),
           changeType: "positive" as const,
           icon: "👥",
         },
         {
           title: "Total Sales",
           value: reportData.overview?.totalSales || 0,
-          change: "+8% from last month",
+          change: fmt(pct(salesNow, salesPrev)),
           changeType: "positive" as const,
           icon: "💰",
         },
         {
           title: "Lab Tests",
           value: reportData.overview?.totalLabTests || 0,
-          change: "+15% from last month",
+          change: fmt(pct(labsNow, labsPrev)),
           changeType: "positive" as const,
           icon: "🧪",
         },
@@ -248,7 +311,7 @@ export default function ReportsPage() {
           value: `EBR ${(reportData.financial?.inventoryValue || 0).toFixed(
             2
           )}`,
-          change: "+5% from last month",
+          change: inventoryChange,
           changeType: "positive" as const,
           icon: "📦",
         }
@@ -410,22 +473,30 @@ export default function ReportsPage() {
                   Financial Summary
                 </h3>
                 <div className="space-y-3">
-                  {Object.entries(reportData.financial || {}).map(
-                    ([key, value]) => (
-                      <div key={key} className="flex justify-between">
-                        <span className="text-text-secondary">
-                          {key
-                            .replace(/([A-Z])/g, " $1")
-                            .replace(/^./, (str) => str.toUpperCase())}
-                        </span>
+                  {/* Always show these keys in a friendly order when available */}
+                  {(() => {
+                    const f = reportData.financial || {};
+                    const rows: Array<{ label: string; value: number | string; isMoney?: boolean }> = [];
+                    if (typeof f.totalRevenue !== 'undefined') rows.push({ label: 'Total Revenue', value: Number(f.totalRevenue)||0, isMoney: true });
+                    if (typeof f.salesRevenue !== 'undefined') rows.push({ label: 'Sales Revenue', value: Number(f.salesRevenue)||0, isMoney: true });
+                    if (typeof f.paymentsRevenue !== 'undefined') rows.push({ label: 'Payments Revenue', value: Number(f.paymentsRevenue)||0, isMoney: true });
+                    if (typeof f.walkInServicesRevenue !== 'undefined') rows.push({ label: 'Walk In Services Revenue', value: Number(f.walkInServicesRevenue)||0, isMoney: true });
+                    if (typeof f.inventoryValue !== 'undefined') rows.push({ label: 'Inventory Value', value: Number(f.inventoryValue)||0, isMoney: true });
+                    // Fallback to any other keys
+                    Object.entries(f).forEach(([k,v])=>{
+                      const known = ['totalRevenue','salesRevenue','paymentsRevenue','walkInServicesRevenue','inventoryValue'];
+                      if (known.includes(k)) return;
+                      rows.push({ label: k.replace(/([A-Z])/g, ' $1').replace(/^./, (s)=>s.toUpperCase()), value: v as any, isMoney: /Value|Revenue/i.test(k) });
+                    });
+                    return rows.map((row, idx) => (
+                      <div key={idx} className="flex justify-between">
+                        <span className="text-text-secondary">{row.label}</span>
                         <span className="font-medium text-text-primary">
-                          {key.includes("Value") || key.includes("Revenue")
-                            ? `EBR ${Number(value).toFixed(2)}`
-                            : String(value)}
+                          {row.isMoney ? `EBR ${Number(row.value||0).toFixed(2)}` : String(row.value)}
                         </span>
                       </div>
-                    )
-                  )}
+                    ));
+                  })()}
                 </div>
               </div>
             </div>

@@ -121,6 +121,15 @@ export default function ContactPage() {
         setSubmitMessage(result.message);
         resetForm();
 
+        // Signal admin Feedback page to auto-refresh
+        if (typeof window !== 'undefined') {
+          try {
+            if ('BroadcastChannel' in window) { const bc = new BroadcastChannel('feedback-updates'); bc.postMessage({ type: 'new' }); bc.close(); }
+            window.dispatchEvent(new Event('feedback-updated'));
+            localStorage.setItem('feedback-updated', String(Date.now()));
+          } catch {}
+        }
+
         // Clear success message after 5 seconds
         setTimeout(() => {
           setSubmitStatus("idle");

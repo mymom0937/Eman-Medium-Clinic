@@ -33,6 +33,22 @@ export default function FeedbackPage({}: FeedbackPageProps) {
     }
   }, [currentPage, selectedStatus, searchEmail, isLoaded, user]);
 
+  // Auto-refresh when new feedback is submitted elsewhere
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = () => { loadFeedback(); };
+    const bc: BroadcastChannel | null = ('BroadcastChannel' in window) ? new BroadcastChannel('feedback-updates') : null;
+    if (bc) bc.onmessage = handler;
+    window.addEventListener('feedback-updated', handler);
+    const storageHandler = (e: StorageEvent) => { if (e.key === 'feedback-updated') handler(); };
+    window.addEventListener('storage', storageHandler);
+    return () => {
+      if (bc) bc.close();
+      window.removeEventListener('feedback-updated', handler);
+      window.removeEventListener('storage', storageHandler);
+    };
+  }, [isLoaded]);
+
   // Track viewport to toggle desktop table vs mobile/tablet cards
   useEffect(() => {
     const onResize = () =>
