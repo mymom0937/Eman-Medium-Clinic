@@ -18,7 +18,7 @@ User login and registration.
   "password": "password",
   "firstName": "John", // required for registration
   "lastName": "Doe",   // required for registration
-  "role": "SUPER_ADMIN" // required for registration
+  "role": "SUPER_ADMIN" // required for registration; one of: SUPER_ADMIN | NURSE | LABORATORIST | PHARMACIST
 }
 ```
 
@@ -381,6 +381,100 @@ Update payment status.
   "processedBy": "admin"
 }
 ```
+
+## Walk-in Services
+
+### GET /api/walk-in-services
+Get walk-in service records with pagination and search.
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 10)
+- `search` (optional): Search term for patient name or serviceId
+- `serviceType` (optional): Filter by service type
+- `paymentStatus` (optional): Filter by payment status
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "walkin_id",
+      "serviceId": "WIS000001",
+      "patientId": "PAT001",
+      "patientName": "John Doe",
+      "patientPhone": "+1234567890",
+      "patientAge": 35,
+      "patientGender": "MALE",
+      "serviceType": "INJECTION",
+      "serviceDetails": {
+        "injectionType": "IM",
+        "injectionSite": "Deltoid",
+        "notes": "No adverse reaction"
+      },
+      "amount": 50,
+      "paymentMethod": "CASH",
+      "paymentStatus": "COMPLETED",
+      "paymentId": "PAY123",
+      "recordedBy": "pharmacist_user_id",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 25,
+    "pages": 3
+  }
+}
+```
+
+### POST /api/walk-in-services
+Create a new walk-in service record. Amount is entered manually per record (no pre-pricing).
+
+**Request Body:**
+```json
+{
+  "patientId": "PAT001",
+  "patientName": "John Doe",
+  "patientPhone": "+1234567890",
+  "patientAge": 35,
+  "patientGender": "MALE",
+  "serviceType": "BLOOD_PRESSURE",
+  "serviceDetails": {
+    "bloodPressure": "120/80 mmHg"
+  },
+  "amount": 30,
+  "paymentMethod": "CASH",
+  "paymentStatus": "PENDING"
+}
+```
+
+### GET /api/walk-in-services/[id]
+Get a specific walk-in service record by `serviceId` or database `_id`.
+
+### PUT /api/walk-in-services/[id]
+Update a walk-in service record (e.g., details or payment status).
+
+**Request Body:**
+```json
+{
+  "paymentStatus": "COMPLETED",
+  "amount": 30,
+  "serviceDetails": {
+    "notes": "Follow-up in 1 week"
+  }
+}
+```
+
+### DELETE /api/walk-in-services/[id]
+Delete a walk-in service record.
+
+### Role-Based Access
+- Pharmacist, Super Admin: Full access
+- Nurse, Laboratorist: No access
 
 ## Services
 
