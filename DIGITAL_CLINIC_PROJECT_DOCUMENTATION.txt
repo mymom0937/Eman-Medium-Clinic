@@ -10,7 +10,7 @@ This document outlines the requirements, business context, and technical approac
 
 - **Location:**
   - Owner resides in Worabe, Southern Ethiopia.
-  - Clinic is located in Dalocha, Southern Ethiopia (95km from Worabe).
+  - Clinic is located in Dalocha, Southern Ethiopia (around 40km from Worabe).
 - **Staff:**
   - 1 Nurse (conducts initial patient assessment and orders drugs based on lab results)
   - 1 Laboratorist (performs patient checkups and provides test results)
@@ -369,7 +369,9 @@ NODE_ENV=development
 - SMS/email notifications for low stock, sales reports, lab results, or patient follow-ups
 - Multi-branch support for future expansion
 - Integration with accounting or ERP systems
+=======================MOST Recommended==============
 - Patient appointment scheduling and reminders
+=====================================================
 - Integration with local health authority reporting
 - Advanced lab result analytics and trending
 
