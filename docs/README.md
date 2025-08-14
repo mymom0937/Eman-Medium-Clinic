@@ -19,8 +19,9 @@ Eman Clinic is a comprehensive digital clinic management system built with Next.
 ### User Roles
 
 - **Super Admin (Owner)**: Full system access and management
-- **Pharmacist**: Drug inventory and sales management
-- **Cashier**: Sales and payment processing
+- **Nurse**: Conducts patient assessment, requests/edits lab tests, orders drugs based on results, manages patient records
+- **Laboratorist**: Performs tests, records and returns lab results to Nurse
+- **Pharmacist**: Manages drug inventory, dispenses prescriptions, handles payments and walk‑in sales/services
 
 ## Technology Stack
 
