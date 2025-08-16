@@ -41,7 +41,7 @@ export class DatabaseService {
   public async connect(): Promise<void> {
     try {
       if (mongoose.connection.readyState === 1) {
-        console.log('✅ Already connected to MongoDB');
+        // console.log('✅ Already connected to MongoDB');
         return;
       }
 
@@ -53,7 +53,7 @@ export class DatabaseService {
         bufferCommands: false,
       });
       
-      console.log('✅ Connected to MongoDB successfully');
+      // console.log('✅ Connected to MongoDB successfully');
     } catch (error) {
       console.error('❌ MongoDB connection failed:', error);
       throw error;
@@ -77,7 +77,7 @@ export class DatabaseService {
     try {
       if (mongoose.connection.readyState === 1) {
         await mongoose.disconnect();
-        console.log('✅ Disconnected from MongoDB');
+        // console.log('✅ Disconnected from MongoDB');
       }
     } catch (error) {
       console.error('❌ Error disconnecting from MongoDB:', error);
@@ -112,7 +112,7 @@ export class DatabaseService {
       const db = mongoose.connection.db;
       if (db) {
         await db.admin().ping();
-        console.log('✅ Database connection test successful');
+        // console.log('✅ Database connection test successful');
         return true;
       }
       return false;
@@ -163,7 +163,7 @@ export class DatabaseService {
       // Import models to ensure they're registered
       await import('../models');
 
-      console.log('✅ Database indexes will be created automatically by Mongoose schemas');
+      // console.log('✅ Database indexes will be created automatically by Mongoose schemas');
     } catch (error) {
       console.error('❌ Error creating database indexes:', error);
       throw error;

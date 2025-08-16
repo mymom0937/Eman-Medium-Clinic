@@ -6,15 +6,15 @@ export const APP_CONFIG = {
 
 export const USER_ROLES = {
   SUPER_ADMIN: 'SUPER_ADMIN',
+  NURSE: 'NURSE',
+  LABORATORIST: 'LABORATORIST',
   PHARMACIST: 'PHARMACIST',
-  CASHIER: 'CASHIER',
 } as const;
 
 export const PAYMENT_METHODS = {
   CASH: 'CASH',
   CARD: 'CARD',
   MOBILE_MONEY: 'MOBILE_MONEY',
-  BANK_TRANSFER: 'BANK_TRANSFER',
 } as const;
 
 export const PAYMENT_STATUS = {
