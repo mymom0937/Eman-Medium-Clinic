@@ -12,6 +12,7 @@ const isProtectedRoute = createRouteMatcher([
   "/drug-orders(.*)",
   "/feedback(.*)",
   "/walk-in-services(.*)",
+  "/sales(.*)",
 ]);
 
 const isProtectedApiRoute = createRouteMatcher(["/api/(.*)"]);
