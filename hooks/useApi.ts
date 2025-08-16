@@ -48,9 +48,10 @@ export function useApi<T = any>(options: UseApiOptions = {}): UseApiReturn<T> {
         throw new Error(responseData.error || 'API request failed');
       }
 
-      setData(responseData.data);
+      const result = responseData.data ?? null;
+      setData(result);
       options.onSuccess?.(responseData.data);
-      return responseData.data;
+      return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
       setError(errorMessage);

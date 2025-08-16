@@ -4,13 +4,14 @@ import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { hasDashboardAccess } from "@/lib/client-auth";
 import { useUserRole } from "@/hooks/useUserRole";
 
 export default function HomePage() {
   const { user, isSignedIn } = useUser();
   const { userRole } = useUserRole();
+  const { openSignIn, openSignUp } = useClerk();
 
   const features = [
     {
@@ -130,23 +131,21 @@ export default function HomePage() {
                 </Link>
               ) : !isSignedIn ? (
                 <>
-                  <Link href="/sign-up">
-                    <Button
-                      size="lg"
-                      className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
-                    >
-                      Start Free Trial
-                    </Button>
-                  </Link>
-                  <Link href="/sign-in">
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="text-lg px-8 py-4 border-2 border-border-color text-text-primary cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
-                    >
-                      Sign In
-                    </Button>
-                  </Link>
+                  <Button
+                    size="lg"
+                    onClick={() => openSignUp()}
+                    className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
+                  >
+                    Start Free Trial
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => openSignIn()}
+                    className="text-lg px-8 py-4 border-2 border-border-color text-text-primary cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
+                  >
+                    Sign In
+                  </Button>
                 </>
               ) : (
                 <div>
@@ -331,23 +330,21 @@ export default function HomePage() {
               </div>
             ) : (
               <>
-                <Link href="/sign-up">
-                  <Button
-                    size="lg"
-                    className="text-lg px-8 py-4 bg-accent-color text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
-                  >
-                    Start Free Trial
-                  </Button>
-                </Link>
-                <Link href="/sign-in">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="text-lg px-8 py-4 border-2 border-border-color text-text-primary hover:bg-card-bg cursor-pointer"
-                  >
-                    Sign In
-                  </Button>
-                </Link>
+                <Button
+                  size="lg"
+                  onClick={() => openSignUp()}
+                  className="text-lg px-8 py-4 bg-accent-color text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
+                >
+                  Start Free Trial
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => openSignIn()}
+                  className="text-lg px-8 py-4 border-2 border-border-color text-text-primary hover:bg-card-bg cursor-pointer"
+                >
+                  Sign In
+                </Button>
               </>
             )}
           </div>

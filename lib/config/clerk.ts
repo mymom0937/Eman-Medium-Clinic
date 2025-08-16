@@ -42,6 +42,20 @@ export const getClerkConfig = (theme: 'light' | 'dark' = 'dark') => {
         colorWarning: '#fbbf24',
       }
     },
+    localization: {
+      signIn: {
+        start: {
+          title: "Sign in to Eman Medium Clinic",
+          subtitle: "Welcome back! Please sign in to continue"
+        }
+      },
+      signUp: {
+        start: {
+          title: "Create account for Eman Medium Clinic",
+          subtitle: "Welcome! Please fill in the details to get started"
+        }
+      }
+    },
     publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     signInUrl: "/sign-in",
     signUpUrl: "/sign-up",

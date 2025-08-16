@@ -8,11 +8,13 @@ export interface User {
   updatedAt: Date;
 }
 
-export type UserRole = 'super_admin' | 'pharmacist' | 'cashier';
+export type UserRole = 'SUPER_ADMIN' | 'NURSE' | 'LABORATORIST' | 'PHARMACIST';
 
 export interface AuthSession {
   user: User;
-  isAuthenticated: boolean;
+  token: string;
+  expiresAt: Date;
+  isAuthenticated?: boolean;
 }
 
 export interface LoginCredentials {

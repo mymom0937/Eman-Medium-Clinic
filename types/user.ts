@@ -1,16 +1,10 @@
-export interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: UserRole;
+import { User, UserRole } from './auth';
+
+// Extend the base User interface with additional user management properties
+export interface UserWithManagement extends User {
   isActive: boolean;
   lastLoginAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
 }
-
-export type UserRole = 'super_admin' | 'pharmacist' | 'cashier';
 
 export interface UserFormData {
   email: string;
