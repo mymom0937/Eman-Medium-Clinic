@@ -21,6 +21,9 @@ export const metadata: Metadata = {
   title: "Eman Clinic - Digital Clinic Management System",
   description:
     "Comprehensive digital solution for managing drug inventory, patient records, sales transactions, and medical services.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
