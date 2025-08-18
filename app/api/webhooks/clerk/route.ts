@@ -101,8 +101,8 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Get role from public metadata or default to NURSE
-      const userRole = (public_metadata?.role as string) || USER_ROLES.NURSE;
+      // Get role from public metadata; no default. Empty string means unassigned
+      const userRole = (public_metadata?.role as string) || "";
 
       // First, persist the user. If this fails, we must return 500.
       let mongoUserId: string | undefined;
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
           email: primaryEmail,
           firstName: first_name || "",
           lastName: last_name || "",
-          role: userRole,
+          role: userRole || "",
           isActive: true,
         });
 
@@ -137,8 +137,8 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Best-effort: update Clerk metadata, but do NOT fail the webhook if this part errors
-      if (!public_metadata?.role) {
+      // Best-effort: update Clerk metadata only if role exists and is non-empty
+      if (!public_metadata?.role && userRole) {
         try {
           const clerk = createClerkClient({
             secretKey: process.env.CLERK_SECRET_KEY!,

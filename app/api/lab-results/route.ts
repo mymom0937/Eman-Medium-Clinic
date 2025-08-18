@@ -14,12 +14,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const isSummary = (searchParams.get('summary') || 'false') === 'true';
+    const isSummary = (searchParams.get("summary") || "false") === "true";
     const patientId = searchParams.get("patientId");
     const status = searchParams.get("status");
     const testType = searchParams.get("testType");
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
     await connectToDatabase();
 
@@ -44,21 +44,34 @@ export async function GET(request: NextRequest) {
     }
 
     if (isSummary) {
-      const db = (await import('mongoose')).connection.db;
-      const cursor = db.collection('labresults').aggregate([
+      const db = (await import("mongoose")).connection.db;
+      const cursor = db.collection("labresults").aggregate([
         { $match: query },
         {
           $group: {
             _id: null,
-            pending: { $sum: { $cond: [{ $eq: ['$status', 'PENDING'] }, 1, 0] } },
-            inProgress: { $sum: { $cond: [{ $eq: ['$status', 'IN_PROGRESS'] }, 1, 0] } },
-            completed: { $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] } },
-            cancelled: { $sum: { $cond: [{ $eq: ['$status', 'CANCELLED'] }, 1, 0] } },
+            pending: {
+              $sum: { $cond: [{ $eq: ["$status", "PENDING"] }, 1, 0] },
+            },
+            inProgress: {
+              $sum: { $cond: [{ $eq: ["$status", "IN_PROGRESS"] }, 1, 0] },
+            },
+            completed: {
+              $sum: { $cond: [{ $eq: ["$status", "COMPLETED"] }, 1, 0] },
+            },
+            cancelled: {
+              $sum: { $cond: [{ $eq: ["$status", "CANCELLED"] }, 1, 0] },
+            },
           },
         },
       ]);
       const res = await cursor.toArray();
-      const s = res[0] || { pending: 0, inProgress: 0, completed: 0, cancelled: 0 };
+      const s = res[0] || {
+        pending: 0,
+        inProgress: 0,
+        completed: 0,
+        cancelled: 0,
+      };
       return NextResponse.json({ success: true, summary: s });
     }
 
@@ -91,26 +104,12 @@ export async function POST(request: NextRequest) {
     // Check user role from Clerk's public metadata or database
     let userRole = user.publicMetadata?.role as string;
 
-    // If role is not in metadata, check database
+    // If role is not in metadata, check database (do NOT assign defaults)
     if (!userRole) {
       await connectToDatabase();
       const User = (await import("@/models/user")).default;
       const dbUser = await User.findOne({ clerkId: userId });
-
-      if (dbUser) {
-        userRole = dbUser.role;
-      } else {
-        // Create user in database if they don't exist
-        const newUser = new User({
-          clerkId: userId,
-          email: user.emailAddresses[0]?.emailAddress || "",
-          firstName: user.firstName || "",
-          lastName: user.lastName || "",
-          role: USER_ROLES.SUPER_ADMIN, // Default to super admin for now
-        });
-        await newUser.save();
-        userRole = USER_ROLES.SUPER_ADMIN;
-      }
+      userRole = dbUser?.role || "";
     }
 
     // Check if user has permission to create lab results
