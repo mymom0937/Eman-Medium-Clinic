@@ -76,12 +76,22 @@ export default function LabResultsPage() {
     null
   );
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
-  const [recordingLabResult, setRecordingLabResult] = useState<LabResult | null>(null);
+  const [recordingLabResult, setRecordingLabResult] =
+    useState<LabResult | null>(null);
   const [resultRows, setResultRows] = useState<LabTestResult[]>([
-    { parameter: "", value: "", unit: "", referenceRange: "", isAbnormal: false, notes: "" },
+    {
+      parameter: "",
+      value: "",
+      unit: "",
+      referenceRange: "",
+      isAbnormal: false,
+      notes: "",
+    },
   ]);
   const [recordSummary, setRecordSummary] = useState<string>("");
-  const [recordSummaryError, setRecordSummaryError] = useState<string | undefined>(undefined);
+  const [recordSummaryError, setRecordSummaryError] = useState<
+    string | undefined
+  >(undefined);
   const [formData, setFormData] = useState<LabResultFormData>({
     patientId: "",
     patientName: "",
@@ -101,9 +111,11 @@ export default function LabResultsPage() {
   const [page, setPage] = useState(1);
   const pageSize = 5; // Updated to show 5 lab results per page
   // Date range controls for overview
-  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
-  const [rangeStart, setRangeStart] = useState<string>('');
-  const [rangeEnd, setRangeEnd] = useState<string>('');
+  const [dateRange, setDateRange] = useState<
+    "today" | "week" | "month" | "year" | "custom"
+  >("month");
+  const [rangeStart, setRangeStart] = useState<string>("");
+  const [rangeEnd, setRangeEnd] = useState<string>("");
   // Track whether a Test Types dropdown should open upward for a specific result row
   const [dropUpFor, setDropUpFor] = useState<string | null>(null);
 
@@ -150,8 +162,8 @@ export default function LabResultsPage() {
         setLabResults(labData);
       }
       if (patientsRes.ok && patientsData.success) {
-        const sorted = [...(patientsData.data || [])].sort((a:any,b:any)=>
-          (a.patientId||"").localeCompare(b.patientId||"")
+        const sorted = [...(patientsData.data || [])].sort((a: any, b: any) =>
+          (a.patientId || "").localeCompare(b.patientId || "")
         );
         setPatients(sorted);
       }
@@ -169,11 +181,14 @@ export default function LabResultsPage() {
   // Listen for cross-page update signals (from Patients modal create/edit)
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const handler = () => { loadLabResults(); };
+    const handler = () => {
+      loadLabResults();
+    };
     // BroadcastChannel for robust same-tab route updates
-    const bc: BroadcastChannel | null = ("BroadcastChannel" in window)
-      ? new BroadcastChannel("lab-results-updates")
-      : null;
+    const bc: BroadcastChannel | null =
+      "BroadcastChannel" in window
+        ? new BroadcastChannel("lab-results-updates")
+        : null;
     if (bc) bc.onmessage = handler;
     // Custom event within same tab
     window.addEventListener("lab-results-updated", handler);
@@ -195,32 +210,48 @@ export default function LabResultsPage() {
     let start: Date | null = null;
     let end: Date | null = null;
     switch (dateRange) {
-      case 'today':
+      case "today":
         start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        end = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59
+        );
         break;
-      case 'week': {
+      case "week": {
         const ws = new Date(now);
         ws.setDate(now.getDate() - now.getDay());
         start = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate());
-        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        end = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59
+        );
         break;
       }
-      case 'month':
+      case "month":
         start = new Date(now.getFullYear(), now.getMonth(), 1);
         end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
         break;
-      case 'year':
+      case "year":
         start = new Date(now.getFullYear(), 0, 1);
         end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
         break;
-      case 'custom':
+      case "custom":
         if (rangeStart) start = new Date(rangeStart);
         if (rangeEnd) end = new Date(rangeEnd);
         break;
     }
     const isInRange = (() => {
-      const d = new Date((result as any).requestedAt || (result as any).createdAt);
+      const d = new Date(
+        (result as any).requestedAt || (result as any).createdAt
+      );
       return (!start || d >= start) && (!end || d <= end);
     })();
     const matchesSearch =
@@ -388,9 +419,19 @@ export default function LabResultsPage() {
 
   const openRecordResults = (labResult: LabResult) => {
     setRecordingLabResult(labResult);
-    const rows = (labResult.results && labResult.results.length > 0)
-      ? labResult.results
-      : [{ parameter: "", value: "", unit: "", referenceRange: "", isAbnormal: false, notes: "" }];
+    const rows =
+      labResult.results && labResult.results.length > 0
+        ? labResult.results
+        : [
+            {
+              parameter: "",
+              value: "",
+              unit: "",
+              referenceRange: "",
+              isAbnormal: false,
+              notes: "",
+            },
+          ];
     setResultRows(rows);
     // preload prior recorded summary (not nurse notes)
     setRecordSummary(((labResult as any).resultSummary as string) || "");
@@ -398,16 +439,32 @@ export default function LabResultsPage() {
     setIsRecordModalOpen(true);
   };
 
-  const updateResultRow = (index: number, field: keyof LabTestResult, value: any) => {
-    setResultRows(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
+  const updateResultRow = (
+    index: number,
+    field: keyof LabTestResult,
+    value: any
+  ) => {
+    setResultRows((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, [field]: value } : r))
+    );
   };
 
   const addResultRow = () => {
-    setResultRows(prev => [...prev, { parameter: "", value: "", unit: "", referenceRange: "", isAbnormal: false, notes: "" }]);
+    setResultRows((prev) => [
+      ...prev,
+      {
+        parameter: "",
+        value: "",
+        unit: "",
+        referenceRange: "",
+        isAbnormal: false,
+        notes: "",
+      },
+    ]);
   };
 
   const removeResultRow = (index: number) => {
-    setResultRows(prev => prev.filter((_, i) => i !== index));
+    setResultRows((prev) => prev.filter((_, i) => i !== index));
   };
 
   const submitResults = async (markCompleted: boolean) => {
@@ -417,22 +474,29 @@ export default function LabResultsPage() {
         setRecordSummaryError("Result Summary/Interpretation is required");
         return;
       }
-      const response = await fetch(`/api/lab-results/${recordingLabResult._id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          results: resultRows,
-          resultSummary: recordSummary.trim(),
-          status: markCompleted ? "COMPLETED" : undefined,
-        }),
-      });
+      const response = await fetch(
+        `/api/lab-results/${recordingLabResult._id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            results: resultRows,
+            resultSummary: recordSummary.trim(),
+            status: markCompleted ? "COMPLETED" : undefined,
+          }),
+        }
+      );
       if (!response.ok) throw new Error("Failed to save results");
       const labResultsResponse = await fetch("/api/lab-results");
       const labResultsResult = await labResultsResponse.json();
       if (labResultsResponse.ok) setLabResults(labResultsResult);
       setIsRecordModalOpen(false);
       setRecordingLabResult(null);
-      toastManager.success(markCompleted ? "Results recorded and marked completed" : "Results saved");
+      toastManager.success(
+        markCompleted
+          ? "Results recorded and marked completed"
+          : "Results saved"
+      );
     } catch (e) {
       console.error(e);
       toastManager.error("Failed to save results");
@@ -618,35 +682,55 @@ export default function LabResultsPage() {
         <div className="space-y-6">
           <div className="flex justify-between items-start">
             <div className="min-w-0 px-1 sm:px-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Lab Requests & Results</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">
+                Lab Requests & Results
+              </h1>
               {/* Ultra-compact blurb for narrow phones (e.g., iPhone SE) */}
               <p className="block sm:hidden text-xs text-text-secondary mt-1 leading-snug break-words pr-1">
-                Nurse-submitted lab requests and their status. Tap the flask to record results.
+                Nurse-submitted lab requests and their status. Tap the flask to
+                record results.
               </p>
               {/* Full blurb for ≥640px */}
               <p className="hidden sm:!block text-sm text-text-secondary mt-1 leading-relaxed break-words sm:max-w-[75ch]">
-                This list shows lab test requests submitted by the nurse and their recording status. A Lab Test ID is assigned at the time of request. Use the flask icon to record results when you are the laboratorist.
+                This list shows lab test requests submitted by the nurse and
+                their recording status. A Lab Test ID is assigned at the time of
+                request. Use the flask icon to record results when you are the
+                laboratorist.
               </p>
             </div>
             {/* Requesting new tests is now done on the Patients page */}
           </div>
 
-            <Card>
+          <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <CardTitle>Lab Requests & Results</CardTitle>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <select value={dateRange} onChange={(e)=>setDateRange(e.target.value as any)} className="w-full sm:w-auto border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background">
+                  <select
+                    value={dateRange}
+                    onChange={(e) => setDateRange(e.target.value as any)}
+                    className="w-full sm:w-auto border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+                  >
                     <option value="today">Today</option>
                     <option value="week">This week</option>
                     <option value="month">This month</option>
                     <option value="year">This year</option>
                     <option value="custom">Custom</option>
                   </select>
-                  {dateRange==='custom' && (
+                  {dateRange === "custom" && (
                     <div className="flex gap-3">
-                      <input type="date" value={rangeStart} onChange={(e)=>setRangeStart(e.target.value)} className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background" />
-                      <input type="date" value={rangeEnd} onChange={(e)=>setRangeEnd(e.target.value)} className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background" />
+                      <input
+                        type="date"
+                        value={rangeStart}
+                        onChange={(e) => setRangeStart(e.target.value)}
+                        className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+                      />
+                      <input
+                        type="date"
+                        value={rangeEnd}
+                        onChange={(e) => setRangeEnd(e.target.value)}
+                        className="border border-border-color rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-color text-text-primary bg-background"
+                      />
                     </div>
                   )}
                 </div>
@@ -720,7 +804,7 @@ export default function LabResultsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                    <TableHead>Lab Test ID</TableHead>
+                      <TableHead>Lab Test ID</TableHead>
                       <TableHead>Patient</TableHead>
                       <TableHead>Test Types</TableHead>
                       <TableHead>Test Name</TableHead>
@@ -749,10 +833,10 @@ export default function LabResultsPage() {
                         </TableCell>
                         <TableCell className="text-text-primary">
                           <div className="relative">
-                              <button
+                            <button
                               type="button"
                               data-test-types-dropdown
-                                onClick={(e) => {
+                              onClick={(e) => {
                                 // Toggle dropdown for this specific result
                                 setLabResults((prev) =>
                                   prev.map((r) =>
@@ -765,15 +849,23 @@ export default function LabResultsPage() {
                                       : { ...r, showTestTypesDropdown: false }
                                   )
                                 );
-                                  // Decide open direction based on available viewport space
-                                  const winH = typeof window !== 'undefined' ? window.innerHeight : 0;
-                                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                  const spaceBelow = winH - rect.bottom;
-                                  const spaceAbove = rect.top;
-                                  const shouldDropUp = spaceBelow < 260 || (rect.top > winH / 2 && spaceAbove > spaceBelow);
-                                  setDropUpFor(shouldDropUp ? result._id : null);
+                                // Decide open direction based on available viewport space
+                                const winH =
+                                  typeof window !== "undefined"
+                                    ? window.innerHeight
+                                    : 0;
+                                const rect = (
+                                  e.currentTarget as HTMLElement
+                                ).getBoundingClientRect();
+                                const spaceBelow = winH - rect.bottom;
+                                const spaceAbove = rect.top;
+                                const shouldDropUp =
+                                  spaceBelow < 260 ||
+                                  (rect.top > winH / 2 &&
+                                    spaceAbove > spaceBelow);
+                                setDropUpFor(shouldDropUp ? result._id : null);
                               }}
-                                className="flex items-center space-x-2 text-left hover:bg-accent-color/10 px-2 py-1 rounded-md transition-colors truncate"
+                              className="flex items-center space-x-2 text-left hover:bg-accent-color/10 px-2 py-1 rounded-md transition-colors truncate"
                             >
                               <span className="font-medium">
                                 {result.testType === CUSTOM_TEST_TYPE_VALUE &&
@@ -809,7 +901,11 @@ export default function LabResultsPage() {
                             {result.showTestTypesDropdown && (
                               <div
                                 data-test-types-dropdown
-                                className={`absolute ${dropUpFor === result._id ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 z-50 bg-card-bg border border-border-color rounded-md shadow-lg min-w-[200px] max-w-[300px] max-h-64 overflow-y-auto`}
+                                className={`absolute ${
+                                  dropUpFor === result._id
+                                    ? "bottom-full mb-1"
+                                    : "top-full mt-1"
+                                } left-0 z-50 bg-card-bg border border-border-color rounded-md shadow-lg min-w-[200px] max-w-[300px] max-h-64 overflow-y-auto`}
                               >
                                 <div className="p-3 border-b border-border-color">
                                   <h4 className="text-sm font-medium text-text-primary mb-2">
@@ -925,7 +1021,11 @@ export default function LabResultsPage() {
                             <button
                               onClick={() => openRecordResults(result)}
                               className="text-blue-500 hover:text-blue-300 mr-3 p-1 rounded hover:bg-blue-900/20 transition-colors cursor-pointer"
-                                title={result.status === 'COMPLETED' ? 'Edit Lab Results' : 'Record Lab Results'}
+                              title={
+                                result.status === "COMPLETED"
+                                  ? "Edit Lab Results"
+                                  : "Record Lab Results"
+                              }
                             >
                               <FaFlask size={16} />
                             </button>
@@ -1053,7 +1153,11 @@ export default function LabResultsPage() {
                           <button
                             onClick={() => openRecordResults(result)}
                             className="text-blue-500 hover:text-blue-300 p-1 rounded hover:bg-blue-900/20 transition-colors cursor-pointer"
-                            title={result.status === 'COMPLETED' ? 'Edit Lab Results' : 'Record Lab Results'}
+                            title={
+                              result.status === "COMPLETED"
+                                ? "Edit Lab Results"
+                                : "Record Lab Results"
+                            }
                           >
                             <FaFlask size={16} />
                           </button>
@@ -1123,9 +1227,13 @@ export default function LabResultsPage() {
                 />
                 {selectedPatient && (
                   <div className="mt-2 text-xs text-text-secondary bg-card-bg border border-border-color rounded p-2">
-                    <div className="font-medium text-text-primary mb-1">Current Illness / Symptoms</div>
+                    <div className="font-medium text-text-primary mb-1">
+                      Current Illness / Symptoms
+                    </div>
                     <div className="whitespace-pre-wrap">
-                      {(selectedPatient.medicalHistory || selectedPatient.notes || "No symptoms recorded by nurse.")}
+                      {selectedPatient.medicalHistory ||
+                        selectedPatient.notes ||
+                        "No symptoms recorded by nurse."}
                     </div>
                   </div>
                 )}
@@ -1219,25 +1327,25 @@ export default function LabResultsPage() {
               <FormField label="Result Parameters (optional)">
                 <TextArea
                   value={formData.notes}
-                  onChange={(e)=>handleInputChange('notes', e.target.value)}
+                  onChange={(e) => handleInputChange("notes", e.target.value)}
                   placeholder="Laboratorist notes about what to test/observe (will also be visible to Nurse)"
                   rows={3}
                 />
               </FormField>
             </div>
 
-             <FormField
-               label="Lab Test Description"
-               required
-               error={errors.notes}
-             >
-               <TextArea
-                 value={formData.notes}
-                 onChange={(e) => handleInputChange("notes", e.target.value)}
-                 placeholder="Describe the lab test requirements, symptoms, or specific conditions to be tested..."
-                 rows={4}
-               />
-             </FormField>
+            <FormField
+              label="Lab Test Description"
+              required
+              error={errors.notes}
+            >
+              <TextArea
+                value={formData.notes}
+                onChange={(e) => handleInputChange("notes", e.target.value)}
+                placeholder="Describe the lab test requirements, symptoms, or specific conditions to be tested..."
+                rows={4}
+              />
+            </FormField>
 
             <div className="flex justify-end space-x-3 pt-4">
               <Button
@@ -1302,9 +1410,13 @@ export default function LabResultsPage() {
                 />
                 {selectedPatient && (
                   <div className="mt-2 text-xs text-text-secondary bg-card-bg border border-border-color rounded p-2">
-                    <div className="font-medium text-text-primary mb-1">Current Illness / Symptoms</div>
+                    <div className="font-medium text-text-primary mb-1">
+                      Current Illness / Symptoms
+                    </div>
                     <div className="whitespace-pre-wrap">
-                      {(selectedPatient.medicalHistory || selectedPatient.notes || "No symptoms recorded by nurse.")}
+                      {selectedPatient.medicalHistory ||
+                        selectedPatient.notes ||
+                        "No symptoms recorded by nurse."}
                     </div>
                   </div>
                 )}
@@ -1698,7 +1810,10 @@ export default function LabResultsPage() {
       {/* Record Lab Results Modal */}
       <Modal
         isOpen={isRecordModalOpen}
-        onClose={() => { setIsRecordModalOpen(false); setRecordingLabResult(null); }}
+        onClose={() => {
+          setIsRecordModalOpen(false);
+          setRecordingLabResult(null);
+        }}
         title="Record Lab Results"
         size="lg"
       >
@@ -1706,44 +1821,132 @@ export default function LabResultsPage() {
           <div className="text-sm text-text-secondary">
             {recordingLabResult && (
               <>
-                <div><span className="font-medium text-text-primary">Patient:</span> {recordingLabResult.patientName} ({recordingLabResult.patientId})</div>
-                <div><span className="font-medium text-text-primary">Test:</span> {LAB_TEST_LABELS[recordingLabResult.testType as keyof typeof LAB_TEST_LABELS] || recordingLabResult.testType}</div>
+                <div>
+                  <span className="font-medium text-text-primary">
+                    Patient:
+                  </span>{" "}
+                  {recordingLabResult.patientName} (
+                  {recordingLabResult.patientId})
+                </div>
+                <div>
+                  <span className="font-medium text-text-primary">Test:</span>{" "}
+                  {LAB_TEST_LABELS[
+                    recordingLabResult.testType as keyof typeof LAB_TEST_LABELS
+                  ] || recordingLabResult.testType}
+                </div>
               </>
             )}
           </div>
           <div className="space-y-3">
             {resultRows.map((row, idx) => (
-              <div key={idx} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
-                <Input placeholder="Parameter" value={row.parameter} onChange={(e)=>updateResultRow(idx,'parameter',e.target.value)} />
-                <Input placeholder="Value" value={String(row.value||"")} onChange={(e)=>updateResultRow(idx,'value',e.target.value)} />
-                <Input placeholder="Unit" value={row.unit||""} onChange={(e)=>updateResultRow(idx,'unit',e.target.value)} />
-                <Input placeholder="Reference Range" value={row.referenceRange||""} onChange={(e)=>updateResultRow(idx,'referenceRange',e.target.value)} />
-                <select value={row.isAbnormal? 'true':'false'} onChange={(e)=>updateResultRow(idx,'isAbnormal', e.target.value==='true')} className="border border-border-color rounded-md px-3 py-2 bg-background text-text-primary">
+              <div
+                key={idx}
+                className="grid grid-cols-1 md:grid-cols-6 gap-2 items-start"
+              >
+                <Input
+                  placeholder="Parameter"
+                  value={row.parameter}
+                  onChange={(e) =>
+                    updateResultRow(idx, "parameter", e.target.value)
+                  }
+                />
+                <Input
+                  placeholder="Value"
+                  value={String(row.value || "")}
+                  onChange={(e) =>
+                    updateResultRow(idx, "value", e.target.value)
+                  }
+                />
+                <Input
+                  placeholder="Unit"
+                  value={row.unit || ""}
+                  onChange={(e) => updateResultRow(idx, "unit", e.target.value)}
+                />
+                <Input
+                  placeholder="Reference Range"
+                  value={row.referenceRange || ""}
+                  onChange={(e) =>
+                    updateResultRow(idx, "referenceRange", e.target.value)
+                  }
+                />
+                <select
+                  value={row.isAbnormal ? "true" : "false"}
+                  onChange={(e) =>
+                    updateResultRow(
+                      idx,
+                      "isAbnormal",
+                      e.target.value === "true"
+                    )
+                  }
+                  className="border border-border-color rounded-md px-3 py-2 bg-background text-text-primary"
+                >
                   <option value="false">Normal</option>
                   <option value="true">Abnormal</option>
                 </select>
                 <div className="flex gap-2">
-                  <Button variant="secondary" onClick={()=>removeResultRow(idx)}>Remove</Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => removeResultRow(idx)}
+                  >
+                    Remove
+                  </Button>
                 </div>
                 <div className="md:col-span-6">
-                  <TextArea placeholder="Parameter Notes (optional)" value={row.notes||""} onChange={(e)=>updateResultRow(idx,'notes',e.target.value)} rows={2} />
+                  <TextArea
+                    placeholder="Parameter Notes (optional)"
+                    value={row.notes || ""}
+                    onChange={(e) =>
+                      updateResultRow(idx, "notes", e.target.value)
+                    }
+                    rows={2}
+                  />
                 </div>
               </div>
             ))}
-            <Button className="hover:bg-gray-700 cursor-pointer bg-[#1447E6]" onClick={addResultRow}>Add Parameter</Button>
+            <Button
+              className="hover:bg-gray-700 cursor-pointer bg-[#1447E6]"
+              onClick={addResultRow}
+            >
+              Add Parameter
+            </Button>
           </div>
-          <FormField label="Result Summary/Interpretation" required error={recordSummaryError}>
+          <FormField
+            label="Result Summary/Interpretation"
+            required
+            error={recordSummaryError}
+          >
             <TextArea
               value={recordSummary}
-              onChange={(e)=>{ setRecordSummary(e.target.value); if (recordSummaryError) setRecordSummaryError(undefined); }}
+              onChange={(e) => {
+                setRecordSummary(e.target.value);
+                if (recordSummaryError) setRecordSummaryError(undefined);
+              }}
               placeholder="Summarize findings, interpretation, and remarks for the nurse"
               rows={4}
             />
           </FormField>
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={()=>{ setIsRecordModalOpen(false); setRecordingLabResult(null); }}>Cancel</Button>
-            <Button className="hover:bg-gray-700 cursor-pointer bg-[#1447E6]" onClick={()=>submitResults(false)}>Save Draft</Button>
-            <Button className="hover:bg-green-700 bg-green-600" onClick={()=>submitResults(true)}>Save & Mark Completed</Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsRecordModalOpen(false);
+                setRecordingLabResult(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="hover:bg-gray-700 cursor-pointer bg-[#1447E6]"
+              onClick={() => submitResults(false)}
+            >
+              Save Draft
+            </Button>
+            <Button
+              className="hover:bg-green-700 bg-green-600"
+              onClick={() => submitResults(true)}
+            >
+              Save & Mark Completed
+            </Button>
           </div>
         </div>
       </Modal>
