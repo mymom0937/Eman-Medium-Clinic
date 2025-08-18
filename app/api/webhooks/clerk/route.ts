@@ -58,6 +58,8 @@ export async function POST(req: NextRequest) {
       return new Response("Error occurred", { status: 400 });
     }
 
+    console.log("✅ Svix signature verified");
+
     const { id, type, data } = evt;
     console.log(`📬 Clerk webhook - ID: ${id}, Type: ${type}`);
     console.log("📋 Webhook data:", JSON.stringify(data, null, 2));
@@ -102,6 +104,8 @@ export async function POST(req: NextRequest) {
       // Get role from public metadata or default to NURSE
       const userRole = (public_metadata?.role as string) || USER_ROLES.NURSE;
 
+      // First, persist the user. If this fails, we must return 500.
+      let mongoUserId: string | undefined;
       try {
         const newUser = new User({
           clerkId,
@@ -113,29 +117,12 @@ export async function POST(req: NextRequest) {
         });
 
         await newUser.save();
+        mongoUserId = String(newUser._id);
         console.log("✅ User created in MongoDB:", {
           clerkId,
           email: primaryEmail,
           role: userRole,
           mongoId: newUser._id,
-        });
-
-        // Update Clerk user with role in public metadata if not already set
-        if (!public_metadata?.role) {
-          const clerk = createClerkClient({
-            secretKey: process.env.CLERK_SECRET_KEY!,
-          });
-          await clerk.users.updateUserMetadata(clerkId, {
-            publicMetadata: {
-              role: userRole,
-            },
-          });
-        }
-
-        return NextResponse.json({
-          success: true,
-          message: "User created successfully",
-          userId: newUser._id,
         });
       } catch (error) {
         console.error("❌ Error creating user in MongoDB:", error);
@@ -149,6 +136,30 @@ export async function POST(req: NextRequest) {
           { status: 500 }
         );
       }
+
+      // Best-effort: update Clerk metadata, but do NOT fail the webhook if this part errors
+      if (!public_metadata?.role) {
+        try {
+          const clerk = createClerkClient({
+            secretKey: process.env.CLERK_SECRET_KEY!,
+          });
+          await clerk.users.updateUserMetadata(clerkId, {
+            publicMetadata: { role: userRole },
+          });
+          console.log("✅ Clerk public metadata updated with role", userRole);
+        } catch (error) {
+          console.warn(
+            "⚠️ Failed to update Clerk public metadata. Proceeding anyway.",
+            error
+          );
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "User created successfully",
+        userId: mongoUserId,
+      });
     }
 
     if (type === "user.updated") {

@@ -18,6 +18,11 @@ const isProtectedRoute = createRouteMatcher([
 const isProtectedApiRoute = createRouteMatcher(["/api/(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
+  // Allow unauthenticated access for webhooks
+  if (req.nextUrl.pathname.startsWith("/api/webhooks/")) {
+    return;
+  }
+
   const { userId } = await auth();
 
   // API protection
