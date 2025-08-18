@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema(
       type: String, 
       required: true, 
       enum: ['SUPER_ADMIN', 'NURSE', 'LABORATORIST', 'PHARMACIST'],
-      default: 'NURSE'
+      default: ''
     },
     isActive: { type: Boolean, default: true },
     lastLoginAt: { type: Date },
