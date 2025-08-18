@@ -136,7 +136,7 @@ export default function HomePage() {
                     onClick={() => openSignUp()}
                     className="text-lg px-8 py-4 bg-accent-color  text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
                   >
-                    Start Free Trial
+                    Get Started
                   </Button>
                   <Button
                     variant="outline"
@@ -335,7 +335,7 @@ export default function HomePage() {
                   onClick={() => openSignUp()}
                   className="text-lg px-8 py-4 bg-accent-color text-white shadow-lg cursor-pointer bg-[#1447E6]  hover:bg-gray-700"
                 >
-                  Start Free Trial
+                  Get Started
                 </Button>
                 <Button
                   size="lg"
