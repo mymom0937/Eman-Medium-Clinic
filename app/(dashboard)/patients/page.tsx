@@ -1043,9 +1043,8 @@ export default function PatientsPage() {
                                         const spaceAbove = rect.top;
                                         const shouldDropUp =
                                           spaceBelow < 260 ||
-                                          rect.top >
-                                            (winH / 2 &&
-                                              spaceAbove > spaceBelow);
+                                          (rect.top > winH / 2 &&
+                                            spaceAbove > spaceBelow);
                                         setDropUpFor(
                                           shouldDropUp
                                             ? patient.patientId
