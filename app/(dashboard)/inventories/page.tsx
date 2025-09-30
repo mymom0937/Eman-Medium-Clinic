@@ -61,9 +61,11 @@ export default function InventoryPage() {
     totalValue: 0,
   });
   // Date range controls for stats
-  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
-  const [rangeStart, setRangeStart] = useState<string>('');
-  const [rangeEnd, setRangeEnd] = useState<string>('');
+  const [dateRange, setDateRange] = useState<
+    "today" | "week" | "month" | "year" | "custom"
+  >("month");
+  const [rangeStart, setRangeStart] = useState<string>("");
+  const [rangeEnd, setRangeEnd] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -99,7 +101,7 @@ export default function InventoryPage() {
     const loadDrugs = async () => {
       try {
         setInitialLoading(true);
-        const response = await fetch("/api/drugs");
+        const response = await fetch("/api/drugs?limit=1000");
         const result = await response.json();
 
         if (response.ok && result.success) {
@@ -134,7 +136,12 @@ export default function InventoryPage() {
                 sum + drug.sellingPrice * drug.stockQuantity,
               0
             );
-            setStats({ totalDrugs, lowStockItems, outOfStockItems, totalValue });
+            setStats({
+              totalDrugs,
+              lowStockItems,
+              outOfStockItems,
+              totalValue,
+            });
           };
 
           // Apply current date range filter
@@ -174,26 +181,40 @@ export default function InventoryPage() {
     let start: Date | null = null;
     let end: Date | null = null;
     switch (dateRange) {
-      case 'today':
+      case "today":
         start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        end = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59
+        );
         break;
-      case 'week': {
+      case "week": {
         const ws = new Date(now);
         ws.setDate(now.getDate() - now.getDay());
         start = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate());
-        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        end = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59
+        );
         break;
       }
-      case 'month':
+      case "month":
         start = new Date(now.getFullYear(), now.getMonth(), 1);
         end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
         break;
-      case 'year':
+      case "year":
         start = new Date(now.getFullYear(), 0, 1);
         end = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
         break;
-      case 'custom':
+      case "custom":
         if (rangeStart) start = new Date(rangeStart);
         if (rangeEnd) end = new Date(rangeEnd);
         break;
@@ -210,9 +231,16 @@ export default function InventoryPage() {
       return (!start || created >= start) && (!end || created <= end);
     });
     const totalDrugs = inRange.length;
-    const lowStockItems = inRange.filter((drug: Drug) => drug.stockQuantity <= 10 && drug.stockQuantity > 0).length;
-    const outOfStockItems = inRange.filter((drug: Drug) => drug.stockQuantity === 0).length;
-    const totalValue = inRange.reduce((sum: number, drug: Drug) => sum + drug.sellingPrice * drug.stockQuantity, 0);
+    const lowStockItems = inRange.filter(
+      (drug: Drug) => drug.stockQuantity <= 10 && drug.stockQuantity > 0
+    ).length;
+    const outOfStockItems = inRange.filter(
+      (drug: Drug) => drug.stockQuantity === 0
+    ).length;
+    const totalValue = inRange.reduce(
+      (sum: number, drug: Drug) => sum + drug.sellingPrice * drug.stockQuantity,
+      0
+    );
     setStats({ totalDrugs, lowStockItems, outOfStockItems, totalValue });
   }, [dateRange, rangeStart, rangeEnd, drugs]);
 
@@ -334,7 +362,8 @@ export default function InventoryPage() {
     if (!formData.category) {
       newErrors.category = "Category is required";
     } else if (
-      formData.category === CUSTOM_CATEGORY_VALUE && !customCategory.trim()
+      formData.category === CUSTOM_CATEGORY_VALUE &&
+      !customCategory.trim()
     ) {
       newErrors.category = "Please enter a custom category";
     }
@@ -350,7 +379,8 @@ export default function InventoryPage() {
     if (!formData.supplier) {
       newErrors.supplier = "Manufacturer is required";
     } else if (
-      formData.supplier === CUSTOM_SUPPLIER_VALUE && !customSupplier.trim()
+      formData.supplier === CUSTOM_SUPPLIER_VALUE &&
+      !customSupplier.trim()
     ) {
       newErrors.supplier = "Please enter a custom manufacturer";
     }
@@ -683,33 +713,38 @@ export default function InventoryPage() {
   };
 
   // Prepare stats for display
-  const comparisonLabel = dateRange === 'today' ? 'vs yesterday' : dateRange === 'custom' ? '' : `compared to last ${dateRange}`;
+  const comparisonLabel =
+    dateRange === "today"
+      ? "vs yesterday"
+      : dateRange === "custom"
+      ? ""
+      : `compared to last ${dateRange}`;
   const displayStats = [
     {
       title: "Total Drugs",
       value: stats.totalDrugs.toString(),
-      change: dateRange === 'custom' ? undefined : comparisonLabel,
+      change: dateRange === "custom" ? undefined : comparisonLabel,
       changeType: "positive" as const,
       icon: "💊",
     },
     {
       title: "Low Stock Items",
       value: stats.lowStockItems.toString(),
-      change: dateRange === 'custom' ? undefined : comparisonLabel,
+      change: dateRange === "custom" ? undefined : comparisonLabel,
       changeType: "negative" as const,
       icon: "⚠️",
     },
     {
       title: "Out of Stock",
       value: stats.outOfStockItems.toString(),
-      change: dateRange === 'custom' ? undefined : comparisonLabel,
+      change: dateRange === "custom" ? undefined : comparisonLabel,
       changeType: "negative" as const,
       icon: "❌",
     },
     {
       title: "Total Value",
       value: `EBR ${stats.totalValue.toFixed(2)}`,
-      change: dateRange === 'custom' ? undefined : comparisonLabel,
+      change: dateRange === "custom" ? undefined : comparisonLabel,
       changeType: "positive" as const,
       icon: "💰",
     },
@@ -793,7 +828,7 @@ export default function InventoryPage() {
                   <option value="year">This year</option>
                   <option value="custom">Custom</option>
                 </select>
-                {dateRange === 'custom' && (
+                {dateRange === "custom" && (
                   <div className="flex gap-3">
                     <input
                       type="date"
@@ -812,16 +847,16 @@ export default function InventoryPage() {
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-            {displayStats.map((stat, index) => (
-              <StatsCard
-                key={index}
-                title={stat.title}
-                value={stat.value}
-                change={stat.change}
-                changeType={stat.changeType}
-                icon={stat.icon}
-              />
-            ))}
+              {displayStats.map((stat, index) => (
+                <StatsCard
+                  key={index}
+                  title={stat.title}
+                  value={stat.value}
+                  change={stat.change}
+                  changeType={stat.changeType}
+                  icon={stat.icon}
+                />
+              ))}
             </div>
           </div>
 
