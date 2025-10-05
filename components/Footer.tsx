@@ -39,13 +39,13 @@ const socialItems: SocialItem[] = [
     sizeClass: "w-6",
     alt: "WhatsApp",
   },
-  {
-    name: "Telegram",
-    href: "https://t.me/your_username", // TODO: replace with real username
-    getSrc: () => assets.telegram_icon,
-    sizeClass: "w-6",
-    alt: "Telegram",
-  },
+  // {
+  //   name: "Telegram",
+  //   href: "https://t.me/your_username",
+  //   getSrc: () => assets.telegram_icon,
+  //   sizeClass: "w-6",
+  //   alt: "Telegram",
+  // },
 ];
 
 const Footer: React.FC = () => {
