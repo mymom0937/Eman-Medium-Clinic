@@ -1,0 +1,35 @@
+export const ROUTES = {
+  HOME: '/',
+  SIGN_IN: '/sign-in',
+  SIGN_UP: '/sign-up',
+  DASHBOARD: '/dashboard',
+  INVENTORIES: '/inventories',
+  PATIENTS: '/patients',
+  PAYMENTS: '/payments',
+  LAB_RESULTS: '/lab-results',
+  DRUG_ORDERS: '/drug-orders',
+  SALES: '/sales',
+  WALK_IN_SERVICES: '/walk-in-services',
+  REPORTS: '/reports',
+  FEEDBACK: '/feedback',
+  PROFILE: '/profile',
+} as const;
+
+export const PROTECTED_ROUTES = [
+  ROUTES.DASHBOARD,
+  ROUTES.INVENTORIES,
+  ROUTES.PATIENTS,
+  ROUTES.PAYMENTS,
+  ROUTES.LAB_RESULTS,
+  ROUTES.DRUG_ORDERS,
+  ROUTES.SALES,
+  ROUTES.WALK_IN_SERVICES,
+  ROUTES.REPORTS,
+  ROUTES.FEEDBACK,
+];
+
+export const PUBLIC_ROUTES = [
+  '/',
+  '/sign-in',
+  '/sign-up',
+] as const; 
